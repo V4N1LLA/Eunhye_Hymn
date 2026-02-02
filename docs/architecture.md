@@ -1,61 +1,61 @@
-# Eunhye Hymn Architecture
+# Eunhye Hymn 아키텍처
 
-## 1. Goals
-- Maintainable, testable services with strict boundaries.
-- Clear API contracts to enable AI-assisted development.
-- Support web admin and mobile clients from a single API.
+## 1. 목표
+- 테스트 가능하고 유지보수 가능한 구조.
+- AI 보조 개발을 위한 명확한 계약과 경계.
+- 웹 관리자/모바일 클라이언트가 동일 API를 사용.
 
-## 2. System Overview
-- **Client Apps**:
-  - Admin Web (apps/admin)
-  - Mobile App (apps/mobile)
-- **API Service** (apps/api):
-  - Authentication, hymn metadata, media access, invites.
-- **Storage**:
-  - Relational DB for metadata.
-  - S3 for PDFs and MP3s.
+## 2. 시스템 개요
+- **클라이언트**
+  - 관리자 웹 (apps/admin)
+  - 모바일 앱 (apps/mobile)
+- **API 서비스** (apps/api)
+  - 인증, 찬송가 메타데이터, 미디어 접근, 초대 코드.
+- **저장소**
+  - 관계형 DB(메타데이터)
+  - S3(PDF/MP3)
 
-## 3. Clean Architecture Boundaries
-### 3.1 Layers
+## 3. Clean Architecture 경계
+### 3.1 레이어
 - **Domain (Entities + Value Objects)**
-  - Core hymn/user/invite models.
-  - No framework dependencies.
-- **Use Cases (Application Services)**
-  - Orchestrate business logic (create hymn, issue invite).
-  - Depend on interfaces (ports) for persistence and external services.
+  - 핵심 모델 정의.
+  - 프레임워크 의존성 없음.
+- **Application (Use Cases)**
+  - 비즈니스 규칙을 조합/실행.
+  - 외부 의존은 포트(인터페이스)로 추상화.
 - **Interface Adapters**
-  - Controllers, presenters, DTOs, mappers.
-  - Translate HTTP requests into use case calls.
+  - 컨트롤러, DTO, 매퍼.
+  - HTTP 요청을 유스케이스로 변환.
 - **Infrastructure**
-  - Database implementation, S3 client, OAuth clients.
+  - DB, S3, OAuth 등 구현체.
 
-### 3.2 Dependency Rule
-- Dependencies must point inward.
-- Outer layers must not be referenced by inner layers.
-- Cross-cutting concerns (logging, metrics) are provided via interfaces.
+### 3.2 의존성 규칙
+- 의존성은 항상 안쪽으로 향해야 한다.
+- 도메인은 스프링/JPA/AWS에 의존하지 않는다.
+- 로그/메트릭 등 횡단 관심사는 인터페이스로 제공한다.
 
-## 4. Bounded Contexts
-- **Identity & Access**: invite codes, social login, JWT issuance.
-- **Hymn Catalog**: hymn metadata, tags, and search.
-- **Media Access**: S3 pre-signed URL generation.
-- **Audit & Analytics**: basic events (view counts, admin changes).
+## 4. Bounded Context
+- **Identity & Access**: 초대 코드, 소셜 로그인, JWT 발급.
+- **Hymn Catalog**: 찬송가 메타데이터, 태그, 검색.
+- **Media Access**: S3 서명 URL 발급.
+- **Audit & Analytics**: 조회 및 변경 이벤트.
 
-## 5. API Contract First
-- API request/response structures defined in `docs/api-contract.md`.
-- Versioning via `/api/v1`.
-- Additive changes only in minor versions.
+## 5. API 계약 우선
+- 요청/응답 형태는 `docs/api-contract.md`에 먼저 정의.
+- 버전은 `/api/v1`.
+- 마이너 버전에서는 후방 호환(추가만 허용).
 
-## 6. Data Management
-- Relational DB with indexed search fields.
-- Use soft deletes for hymns and invites.
-- Maintain audit tables for admin actions.
+## 6. 데이터 관리
+- 관계형 DB + 적절한 인덱스.
+- 보관 처리(soft delete) 활용.
+- 관리자 변경 로그 유지.
 
-## 7. Security
-- JWT access/refresh with rotation.
-- Role-based authorization in use case layer.
-- S3 access via short-lived signed URLs.
+## 7. 보안
+- JWT 액세스/리프레시 토큰 로테이션.
+- 유스케이스 레벨의 역할 기반 인가.
+- S3 접근은 짧은 만료의 서명 URL 사용.
 
-## 8. AI-Assisted Development Practices
-- Keep documentation explicit and structured.
-- Use stable interfaces and DTOs for predictable code generation.
-- Maintain consistent naming for entities and endpoints.
+## 8. AI 보조 개발 원칙
+- 문서는 명확한 섹션/불릿 형태로 작성.
+- DTO/엔드포인트 명명 규칙을 일관되게 유지.
+- 작은 단위로 변경하여 자동 생성 코드의 안정성을 높인다.

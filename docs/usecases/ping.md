@@ -1,23 +1,23 @@
-# Use Case: Ping Health Check
+# 유스케이스: Ping 헬스 체크
 
-## Goal
-- Provide a lightweight endpoint to verify API availability.
+## 목표
+- API 가용성을 빠르게 확인한다.
 
-## Primary Actor
-- API client (admin web or mobile).
+## 주요 사용자
+- API 클라이언트(관리자 웹/모바일).
 
-## Preconditions
-- API service is running.
+## 사전 조건
+- API 서비스가 실행 중이다.
 
-## Happy Path
-1. Client sends `GET /ping`.
-2. API returns a success envelope with `{ "ok": true }`.
+## 정상 흐름
+1. 클라이언트가 `GET /ping` 요청을 보낸다.
+2. API는 `{ "ok": true }` 데이터를 성공 엔벨로프로 반환한다.
 
-## Alternate Flows
-- If the server is unavailable, the client receives a network error.
+## 예외 흐름
+- 서버 장애 시 네트워크 오류가 반환된다.
 
-## Data Touched
-- None.
+## 관련 데이터
+- 없음.
 
-## API References
+## API 참조
 - `GET /ping`

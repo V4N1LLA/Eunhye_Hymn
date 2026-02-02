@@ -1,86 +1,85 @@
-# Eunhye Hymn MVP Requirements
+# Eunhye Hymn MVP 요구사항
 
-## 1. Purpose
-- Provide an internal church platform to manage hymn content, scores, and part-practice audio.
-- Support administrators with content curation and member access management.
-- Enable members to discover hymns and practice parts with PDFs/MP3s.
+## 1. 목적
+- 교회 내부에서 찬송가 콘텐츠, 악보, 파트 연습 음원을 관리한다.
+- 관리자가 콘텐츠를 선별·등록하고, 성도는 안전하게 접근한다.
+- 검색과 연습 흐름을 단순하게 유지한다.
 
-## 2. Scope (MVP)
-### 2.1 In Scope
-- User authentication via:
-  - Invite code (required for first-time access).
-  - Google login.
-  - Kakao login.
-  - JWT access/refresh token flow.
-- Hymn content management:
-  - Create, update, archive hymns.
-  - Manage hymn metadata (title, number, key, tempo, tags).
-- Media delivery:
-  - PDF score files served from S3.
-  - MP3 part-practice audio served from S3.
-- Search and browse:
-  - Text search (title, number).
-  - Filter by tag, key, tempo, and service season.
-- Admin portal:
-  - Manage hymns and media links.
-  - Manage invites and user roles.
-- Basic analytics:
-  - View counts for hymns.
+## 2. 범위 (MVP)
+### 2.1 포함 범위
+- 사용자 인증:
+  - 초대 코드(첫 로그인 시 필수)
+  - Google 로그인
+  - Kakao 로그인
+  - JWT 액세스/리프레시 토큰
+- 찬송가 관리:
+  - 등록/수정/보관 처리
+  - 메타데이터(번호, 제목, 조성, 템포, 태그) 관리
+- 미디어 제공:
+  - PDF 악보(S3 제공)
+  - MP3 파트 음원(S3 제공)
+- 검색/탐색:
+  - 제목/번호 검색
+  - 태그/조성/템포/절기 필터
+- 관리자 기능:
+  - 찬송가 및 미디어 링크 관리
+  - 초대 코드 및 권한 관리
+- 기본 분석:
+  - 조회 수 집계
 
-### 2.2 Out of Scope (Future)
-- MIDI automation for part extraction.
-- In-app audio processing or mixing.
-- Public access or anonymous users.
+### 2.2 제외 범위 (향후)
+- MIDI 자동화 및 파트 추출
+- 앱 내 오디오 편집/믹싱
+- 공개/비회원 접근
 
-## 3. Personas
-- **Admin**: Curates hymns, uploads media, manages users and invite codes.
-- **Member**: Searches hymns, views scores, listens to part audio.
+## 3. 사용자 페르소나
+- **관리자**: 찬송가 등록, 미디어 연결, 초대 코드 및 권한 관리.
+- **성도**: 찬송가 검색, 악보 열람, 파트 음원 청취.
 
-## 4. Functional Requirements
-### 4.1 Authentication & Authorization
-- Invite code must be validated before social login succeeds.
-- Social login providers: Google, Kakao.
-- Access token (short-lived) + refresh token (long-lived, revocable).
-- Roles: `admin`, `member`.
+## 4. 기능 요구사항
+### 4.1 인증/인가
+- 초대 코드 검증 후 소셜 로그인이 완료된다.
+- 소셜 로그인 제공자: Google, Kakao.
+- 액세스 토큰(단기) + 리프레시 토큰(장기, 폐기 가능).
+- 역할: `admin`, `member`.
 
-### 4.2 Hymn Management
-- Create hymn records with required fields:
-  - Hymn number, title, key, tempo, tags, season.
-- Attach media references:
-  - Score PDF URL (S3).
-  - Part audio URLs (S3, multiple parts allowed).
-- Soft-delete/archiving support.
+### 4.2 찬송가 관리
+- 필수 필드: 번호, 제목, 조성, 템포, 태그, 절기.
+- 미디어 참조:
+  - 악보 PDF URL(S3).
+  - 파트 음원 URL(S3, 복수 파트 지원).
+- 소프트 삭제(보관 처리) 지원.
 
-### 4.3 Search & Browse
-- Search by title or number.
-- Filter by tags, key, season, tempo.
-- Paginated results.
+### 4.3 검색/탐색
+- 제목 또는 번호 검색.
+- 태그/조성/절기/템포 필터.
+- 페이지네이션.
 
-### 4.4 Media Access
-- Secure S3 access via signed URLs.
-- Download/view score PDF.
-- Stream or download MP3s.
+### 4.4 미디어 접근
+- S3 서명 URL을 통한 안전한 접근.
+- PDF 다운로드/열람.
+- MP3 스트리밍 또는 다운로드.
 
-### 4.5 Admin Functions
-- Create and revoke invite codes.
-- Assign roles to users.
-- Audit recent changes.
+### 4.5 관리자 기능
+- 초대 코드 생성/폐기.
+- 사용자 권한 부여.
+- 변경 이력 확인.
 
-## 5. Non-Functional Requirements
-- Maintainable structure with clear boundaries (Clean Architecture).
-- API-first design with explicit contracts.
-- Logs and audit trail for admin actions.
-- Basic monitoring hooks (health checks).
-- Compatibility:
-  - Web admin (React or similar).
-  - Mobile (Flutter).
+## 5. 비기능 요구사항
+- Clean Architecture 경계 준수.
+- API 계약 우선 설계.
+- 관리자 액션에 대한 감사 로그.
+- 기본 모니터링/헬스체크.
+- 호환성:
+  - 관리자 웹(React 등)
+  - 모바일(Flutter)
 
-## 6. Success Criteria
-- Admin can publish a hymn with valid PDF + MP3 links.
-- Member can login with invite code and access hymns within 3 minutes.
-- Search results return within 1 second for typical query sizes.
+## 6. 성공 기준
+- 관리자가 PDF+MP3 링크가 포함된 찬송가를 등록 가능.
+- 성도가 초대 코드로 로그인하여 3분 이내 접근 가능.
+- 일반적인 검색에서 1초 내 응답.
 
-## 7. Risks & Assumptions
-- Assumes S3 bucket exists and access is controlled by signed URLs.
-- Assumes availability of Google/Kakao OAuth credentials.
-- Data volume is modest (church-level scale).
+## 7. 전제 및 리스크
+- S3 버킷 및 서명 URL 발급 설정이 준비되어야 한다.
+- Google/Kakao OAuth 자격증명이 필요하다.
+- 데이터 규모는 교회 단위 수준으로 가정한다.

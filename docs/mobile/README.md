@@ -1,9 +1,9 @@
-# Mobile Documentation
+# 모바일 문서
 
-Reserved for mobile app requirements, screen lists, and UX notes.
+모바일 앱 요구사항, 화면 목록, UX 메모를 정리한다.
 
-## Suggested Sections
-- Screen inventory
-- Navigation map
-- Offline considerations
-- Media playback UX
+## 추천 섹션
+- 화면 인벤토리
+- 네비게이션 맵
+- 오프라인 고려 사항
+- 미디어 재생 UX

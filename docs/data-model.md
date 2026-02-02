@@ -1,9 +1,9 @@
-# Eunhye Hymn Data Model (MVP)
+# Eunhye Hymn 데이터 모델 (MVP)
 
-## 1. Tables
+## 1. 테이블
 ### 1.1 users
 - `id` (PK, UUID)
-- `email` (unique, nullable for Kakao if not provided)
+- `email` (unique, Kakao는 nullable 가능)
 - `name`
 - `role` (enum: admin, member)
 - `provider` (enum: google, kakao)
@@ -61,18 +61,18 @@
 - `metadata` (json)
 - `created_at`
 
-## 2. Indexes
+## 2. 인덱스
 - `users(provider, provider_user_id)` unique
 - `users(email)` unique (nullable)
 - `invites(expires_at)`
 - `hymns(number)`
 - `hymns(title)`
-- `hymns(tags)` (GIN index if supported)
+- `hymns(tags)` (지원 시 GIN 인덱스)
 - `hymn_parts(hymn_id)`
 - `refresh_tokens(user_id)`
 - `hymn_views(hymn_id, viewed_at)`
 - `admin_audit_log(actor_id, created_at)`
 
-## 3. Notes
-- Use soft delete via `archived` on hymns and `revoked` on invites/tokens.
-- `score_pdf_key` and `audio_key` map to S3 object keys.
+## 3. 메모
+- 찬송가는 `archived`, 초대 코드는 `revoked`로 소프트 삭제.
+- `score_pdf_key`, `audio_key`는 S3 객체 키를 의미.

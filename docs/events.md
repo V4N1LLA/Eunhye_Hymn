@@ -1,7 +1,7 @@
-# Eunhye Hymn Event Types
+# Eunhye Hymn 이벤트 정의
 
-## 1. Event Metadata Schema
-All events share a common envelope:
+## 1. 이벤트 메타데이터 스키마
+모든 이벤트는 동일한 엔벨로프를 가진다:
 ```json
 {
   "eventId": "evt_123",
@@ -19,7 +19,7 @@ All events share a common envelope:
 }
 ```
 
-## 2. MVP Event Types
+## 2. MVP 이벤트 타입
 ### 2.1 hymn.viewed
 - Payload:
 ```json
@@ -71,6 +71,6 @@ All events share a common envelope:
 }
 ```
 
-## 3. Notes
-- Events are used for audit, analytics, and debugging.
-- Event publication can be a no-op in MVP; ensure schema is stable for future.
+## 3. 메모
+- 이벤트는 감사 로그, 분석, 디버깅에 활용.
+- MVP에서는 발행이 no-op이어도 스키마는 고정한다.

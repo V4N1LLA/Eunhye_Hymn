@@ -1,9 +1,9 @@
-# Admin Documentation
+# 관리자 문서
 
-Reserved for admin portal specs, UI flows, and operational guidance.
+관리자 웹의 정보 구조, 화면 흐름, 운영 가이드를 정리한다.
 
-## Suggested Sections
-- Admin information architecture
-- Hymn management workflows
-- Invite and role management
-- Audit and analytics views
+## 추천 섹션
+- 관리자 정보 구조
+- 찬송가 관리 흐름
+- 초대 코드/권한 관리
+- 감사 로그 및 분석 화면

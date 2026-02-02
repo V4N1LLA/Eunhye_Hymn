@@ -1,17 +1,17 @@
-# Eunhye Hymn API Contract (MVP)
+# Eunhye Hymn API 계약 (MVP)
 
 Base URL: `/api/v1`
 
-## 1. Auth
-### 1.1 Validate Invite Code
+## 1. 인증
+### 1.1 초대 코드 검증
 - **POST** `/auth/invite/validate`
-- Request:
+- 요청:
 ```json
 {
   "inviteCode": "ABC123"
 }
 ```
-- Response:
+- 응답:
 ```json
 {
   "valid": true,
@@ -19,9 +19,9 @@ Base URL: `/api/v1`
 }
 ```
 
-### 1.2 Social Login (Google/Kakao)
+### 1.2 소셜 로그인 (Google/Kakao)
 - **POST** `/auth/social`
-- Request:
+- 요청:
 ```json
 {
   "provider": "google",
@@ -29,7 +29,7 @@ Base URL: `/api/v1`
   "inviteCode": "ABC123"
 }
 ```
-- Response:
+- 응답:
 ```json
 {
   "accessToken": "jwt-access",
@@ -43,15 +43,15 @@ Base URL: `/api/v1`
 }
 ```
 
-### 1.3 Refresh Token
+### 1.3 토큰 갱신
 - **POST** `/auth/refresh`
-- Request:
+- 요청:
 ```json
 {
   "refreshToken": "jwt-refresh"
 }
 ```
-- Response:
+- 응답:
 ```json
 {
   "accessToken": "jwt-access",
@@ -59,10 +59,10 @@ Base URL: `/api/v1`
 }
 ```
 
-## 2. Hymns
-### 2.1 List/Search Hymns
+## 2. 찬송가
+### 2.1 찬송가 목록/검색
 - **GET** `/hymns?query=grace&tag=advent&key=C&tempo=80&page=1&pageSize=20`
-- Response:
+- 응답:
 ```json
 {
   "items": [
@@ -82,9 +82,9 @@ Base URL: `/api/v1`
 }
 ```
 
-### 2.2 Get Hymn Detail
+### 2.2 찬송가 상세
 - **GET** `/hymns/{id}`
-- Response:
+- 응답:
 ```json
 {
   "id": "hymn_001",
@@ -104,10 +104,10 @@ Base URL: `/api/v1`
 }
 ```
 
-### 2.3 Create/Update Hymn (Admin)
+### 2.3 찬송가 생성/수정 (관리자)
 - **POST** `/hymns`
 - **PUT** `/hymns/{id}`
-- Request:
+- 요청:
 ```json
 {
   "number": 123,
@@ -125,33 +125,33 @@ Base URL: `/api/v1`
   ]
 }
 ```
-- Response:
+- 응답:
 ```json
 {
   "id": "hymn_001"
 }
 ```
 
-### 2.4 Archive Hymn (Admin)
+### 2.4 찬송가 보관 처리 (관리자)
 - **DELETE** `/hymns/{id}`
-- Response:
+- 응답:
 ```json
 {
   "archived": true
 }
 ```
 
-## 3. Invites (Admin)
-### 3.1 Create Invite
+## 3. 초대 코드 (관리자)
+### 3.1 초대 코드 생성
 - **POST** `/invites`
-- Request:
+- 요청:
 ```json
 {
   "maxUses": 10,
   "expiresAt": "2025-01-01T00:00:00Z"
 }
 ```
-- Response:
+- 응답:
 ```json
 {
   "inviteCode": "ABC123",
@@ -160,26 +160,26 @@ Base URL: `/api/v1`
 }
 ```
 
-### 3.2 Revoke Invite
+### 3.2 초대 코드 폐기
 - **POST** `/invites/{code}/revoke`
-- Response:
+- 응답:
 ```json
 {
   "revoked": true
 }
 ```
 
-## 4. Media
-### 4.1 Get Signed URL
+## 4. 미디어
+### 4.1 서명 URL 발급
 - **POST** `/media/sign`
-- Request:
+- 요청:
 ```json
 {
   "objectKey": "scores/amazing-grace.pdf",
   "contentType": "application/pdf"
 }
 ```
-- Response:
+- 응답:
 ```json
 {
   "signedUrl": "https://s3...",
