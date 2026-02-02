@@ -1,0 +1,65 @@
+# Node
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+.pnp.*
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.ctxt
+hs_err_pid*
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+.packages
+build/
+**/build/
+*.lock
+
+# Android (Flutter)
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+
+# iOS (Flutter)
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# Environment
+.env
+.env.*
+
+# Logs
+logs/
+*.log
