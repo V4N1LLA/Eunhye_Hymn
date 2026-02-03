@@ -62,3 +62,7 @@
 ## 9. Gradle Wrapper 정책
 - 저장소 정책상 Wrapper 바이너리(jar)를 포함하지 않는다.
 - 따라서 `./gradlew` 대신 시스템 Gradle을 사용해야 한다.
+
+## 10. CI 자동 테스트
+- PR을 올리면 GitHub Actions에서 자동으로 테스트가 실행됩니다.
+- CI 환경에서도 Gradle 플러그인 해석을 위해 pluginManagement 설정이 필요합니다.
