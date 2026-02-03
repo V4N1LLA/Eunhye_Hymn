@@ -55,50 +55,79 @@ Base URL: `/api/v1`
 ```json
 {
   "accessToken": "jwt-access",
-  "expiresIn": 3600
+  "refreshToken": "jwt-refresh-rotated"
+}
+```
+
+### 1.4 로그아웃
+- **POST** `/auth/logout`
+- 요청:
+```json
+{
+  "refreshToken": "jwt-refresh"
+}
+```
+- 응답:
+```json
+{
+  "success": true
+}
+```
+
+### 1.5 DEV 로그인 (개발 환경 전용)
+- **POST** `/auth/dev/login`
+- 요청:
+```json
+{
+  "userId": "00000000-0000-0000-0000-000000000000",
+  "role": "USER",
+  "displayName": "개발 사용자"
+}
+```
+- 응답:
+```json
+{
+  "accessToken": "jwt-access",
+  "refreshToken": "jwt-refresh"
 }
 ```
 
 ## 2. 찬송가
-### 2.1 찬송가 목록/검색
-- **GET** `/hymns?query=grace&tag=advent&key=C&tempo=80&page=1&pageSize=20`
+### 2.1 찬송가 목록
+- **GET** `/hymns`
+- 공개 엔드포인트 (인증 불필요)
 - 응답:
 ```json
-{
-  "items": [
-    {
-      "id": "hymn_001",
-      "number": 123,
-      "title": "Amazing Grace",
-      "key": "C",
-      "tempo": 80,
-      "tags": ["advent"],
-      "season": "advent"
-    }
-  ],
-  "page": 1,
-  "pageSize": 20,
-  "total": 200
-}
+[
+  {
+    "id": "hymn_001",
+    "title": "Amazing Grace",
+    "number": "123",
+    "tags": "advent"
+  }
+]
 ```
 
 ### 2.2 찬송가 상세
 - **GET** `/hymns/{id}`
+- 인증 필요
 - 응답:
 ```json
 {
   "id": "hymn_001",
-  "number": 123,
   "title": "Amazing Grace",
-  "key": "C",
-  "tempo": 80,
-  "tags": ["advent"],
-  "season": "advent",
-  "scorePdfUrl": "https://s3.../score.pdf",
-  "parts": [
+  "number": "123",
+  "tags": "advent",
+  "enabled": true,
+  "lastOpenedAt": "2025-01-01T00:00:00Z",
+  "assets": [
     {
-      "part": "soprano",
-      "audioUrl": "https://s3.../soprano.mp3"
+      "id": "asset_001",
+      "type": "PDF",
+      "part": null,
+      "url": "https://s3.../score.pdf",
+      "checksum": null,
+      "version": "v1"
     }
   ]
 }
@@ -141,7 +170,60 @@ Base URL: `/api/v1`
 }
 ```
 
-## 3. 초대 코드 (관리자)
+## 3. 내 정보
+### 3.1 즐겨찾기 토글
+- **POST** `/me/favorites/{hymnId}`
+- 인증 필요
+- 응답:
+```json
+{
+  "favorite": true
+}
+```
+
+### 3.2 노트 조회
+- **GET** `/me/hymns/{hymnId}/note`
+- 인증 필요
+- 응답:
+```json
+{
+  "content": "메모 내용"
+}
+```
+
+### 3.3 노트 저장
+- **PUT** `/me/hymns/{hymnId}/note`
+- 인증 필요
+- 요청:
+```json
+{
+  "content": "메모 내용"
+}
+```
+- 응답:
+```json
+{
+  "content": "메모 내용"
+}
+```
+
+### 3.4 최근 열람 기록
+- **GET** `/me/history`
+- 인증 필요
+- 응답:
+```json
+[
+  {
+    "id": "hymn_001",
+    "title": "Amazing Grace",
+    "number": "123",
+    "tags": "advent",
+    "lastOpenedAt": "2025-01-01T00:00:00Z"
+  }
+]
+```
+
+## 4. 초대 코드 (관리자)
 ### 3.1 초대 코드 생성
 - **POST** `/invites`
 - 요청:
@@ -169,7 +251,7 @@ Base URL: `/api/v1`
 }
 ```
 
-## 4. 미디어
+## 5. 미디어
 ### 4.1 서명 URL 발급
 - **POST** `/media/sign`
 - 요청:
@@ -184,5 +266,37 @@ Base URL: `/api/v1`
 {
   "signedUrl": "https://s3...",
   "expiresIn": 300
+}
+```
+
+## 6. 이벤트
+### 6.1 이벤트 기록
+- **POST** `/events`
+- 인증 필요
+- 단건 또는 배열 허용
+- 요청(단건):
+```json
+{
+  "eventType": "HYMN_OPENED",
+  "hymnId": "hymn_001",
+  "part": "S",
+  "metadataJson": "{\"device\":\"ios\"}"
+}
+```
+- 요청(배열):
+```json
+[
+  {
+    "eventType": "PART_PLAYED",
+    "hymnId": "hymn_001",
+    "part": "A",
+    "metadataJson": null
+  }
+]
+```
+- 응답:
+```json
+{
+  "success": true
 }
 ```

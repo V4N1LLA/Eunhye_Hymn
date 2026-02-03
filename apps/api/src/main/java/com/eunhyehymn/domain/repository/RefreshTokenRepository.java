@@ -8,4 +8,6 @@ public interface RefreshTokenRepository {
     RefreshToken save(RefreshToken token);
 
     Optional<RefreshToken> findById(UUID id);
+
+    Optional<RefreshToken> findByTokenHash(String tokenHash);
 }

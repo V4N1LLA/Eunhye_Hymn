@@ -8,4 +8,6 @@ public interface HymnNoteRepository {
     HymnNote save(HymnNote note);
 
     Optional<HymnNote> findById(UUID id);
+
+    Optional<HymnNote> findByUserIdAndHymnId(UUID userId, UUID hymnId);
 }

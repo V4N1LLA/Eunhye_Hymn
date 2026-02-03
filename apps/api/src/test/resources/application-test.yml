@@ -8,3 +8,9 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+
+security:
+  jwt:
+    secret: test-secret
+    access-token-ttl-seconds: 3600
+    refresh-token-ttl-seconds: 1209600
