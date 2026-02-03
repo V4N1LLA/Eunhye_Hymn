@@ -83,7 +83,8 @@ public class MeController {
                 item.hymn().number(),
                 item.hymn().tags(),
                 item.lastOpenedAt()
-            ))\n            .toList();
+            ))
+            .toList();
         return ApiResponse.success(items);
     }
 
