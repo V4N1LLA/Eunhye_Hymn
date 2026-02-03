@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Why: Use a local Gradle install in this environment where the wrapper binary is unavailable.
+
+exec gradle "$@"

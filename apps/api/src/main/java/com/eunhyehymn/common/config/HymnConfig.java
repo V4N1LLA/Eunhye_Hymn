@@ -1,0 +1,58 @@
+package com.eunhyehymn.common.config;
+
+import com.eunhyehymn.application.usecases.GetHistoryUseCase;
+import com.eunhyehymn.application.usecases.GetHymnDetailUseCase;
+import com.eunhyehymn.application.usecases.GetHymnNoteUseCase;
+import com.eunhyehymn.application.usecases.ListHymnsUseCase;
+import com.eunhyehymn.application.usecases.RecordEventsUseCase;
+import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
+import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
+import com.eunhyehymn.domain.repository.AssetRepository;
+import com.eunhyehymn.domain.repository.EventRepository;
+import com.eunhyehymn.domain.repository.HymnNoteRepository;
+import com.eunhyehymn.domain.repository.HymnRepository;
+import com.eunhyehymn.domain.repository.UserHymnStateRepository;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class HymnConfig {
+    @Bean
+    ListHymnsUseCase listHymnsUseCase(HymnRepository hymnRepository) {
+        return new ListHymnsUseCase(hymnRepository);
+    }
+
+    @Bean
+    GetHymnDetailUseCase getHymnDetailUseCase(
+        HymnRepository hymnRepository,
+        AssetRepository assetRepository,
+        UserHymnStateRepository userHymnStateRepository
+    ) {
+        return new GetHymnDetailUseCase(hymnRepository, assetRepository, userHymnStateRepository);
+    }
+
+    @Bean
+    ToggleFavoriteUseCase toggleFavoriteUseCase(UserHymnStateRepository userHymnStateRepository) {
+        return new ToggleFavoriteUseCase(userHymnStateRepository);
+    }
+
+    @Bean
+    GetHymnNoteUseCase getHymnNoteUseCase(HymnNoteRepository hymnNoteRepository) {
+        return new GetHymnNoteUseCase(hymnNoteRepository);
+    }
+
+    @Bean
+    SaveHymnNoteUseCase saveHymnNoteUseCase(HymnNoteRepository hymnNoteRepository) {
+        return new SaveHymnNoteUseCase(hymnNoteRepository);
+    }
+
+    @Bean
+    GetHistoryUseCase getHistoryUseCase(UserHymnStateRepository userHymnStateRepository, HymnRepository hymnRepository) {
+        return new GetHistoryUseCase(userHymnStateRepository, hymnRepository);
+    }
+
+    @Bean
+    RecordEventsUseCase recordEventsUseCase(EventRepository eventRepository) {
+        return new RecordEventsUseCase(eventRepository);
+    }
+}
