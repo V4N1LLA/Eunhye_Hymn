@@ -11,4 +11,6 @@ public interface HymnRepository {
     List<Hymn> findEnabled();
 
     Optional<Hymn> findById(UUID id);
+
+    List<Hymn> findByIdIn(List<UUID> ids);
 }

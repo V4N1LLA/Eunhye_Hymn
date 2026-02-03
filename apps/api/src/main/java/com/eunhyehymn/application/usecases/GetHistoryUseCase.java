@@ -7,6 +7,7 @@ import com.eunhyehymn.domain.repository.UserHymnStateRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class GetHistoryUseCase {
     private final UserHymnStateRepository userHymnStateRepository;
@@ -19,11 +20,16 @@ public class GetHistoryUseCase {
 
     public List<HistoryItem> getHistory(UUID userId) {
         List<UserHymnState> states = userHymnStateRepository.findByUserIdOrderByLastOpenedAtDesc(userId);
+        List<UUID> hymnIds = states.stream().map(UserHymnState::hymnId).toList();
+        var hymnsById = hymnRepository.findByIdIn(hymnIds).stream()
+            .collect(Collectors.toMap(Hymn::id, hymn -> hymn));
+
         List<HistoryItem> result = new ArrayList<>();
         for (UserHymnState state : states) {
-            hymnRepository.findById(state.hymnId()).ifPresent(hymn ->
-                result.add(new HistoryItem(hymn, state.lastOpenedAt()))
-            );
+            Hymn hymn = hymnsById.get(state.hymnId());
+            if (hymn != null) {
+                result.add(new HistoryItem(hymn, state.lastOpenedAt()));
+            }
         }
         return result;
     }

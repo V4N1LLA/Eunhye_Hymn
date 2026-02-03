@@ -8,6 +8,7 @@
 ## 2. 사전 준비
 - Java 17+
 - Docker + Docker Compose
+- Gradle 8.7 (시스템 설치 필요)
 
 ## 3. API 로컬 실행
 1. 환경 변수 템플릿 복사:
@@ -19,13 +20,17 @@
 4. API 실행:
    ```bash
    cd apps/api
-   ./gradlew bootRun
+   gradle bootRun
+   ```
+5. Gradle 버전 확인(예시):
+   ```bash
+   gradle -v
    ```
 
 ## 4. 테스트 실행
 - `apps/api`에서 실행:
   ```bash
-  ./gradlew test
+  gradle test --no-daemon
   ```
 
 ## 5. DB 환경 변수 설명
@@ -47,7 +52,13 @@
 - `DB_USER`
 - `DB_PASS`
 - `JWT_SECRET`
+- `JWT_ACCESS_TTL_SECONDS`
+- `JWT_REFRESH_TTL_SECONDS`
 - `INVITE_CODE`
 - `GOOGLE_CLIENT_ID`
 - `KAKAO_CLIENT_ID`
 - `S3_BUCKET`
+
+## 9. Gradle Wrapper 정책
+- 저장소 정책상 Wrapper 바이너리(jar)를 포함하지 않는다.
+- 따라서 `./gradlew` 대신 시스템 Gradle을 사용해야 한다.

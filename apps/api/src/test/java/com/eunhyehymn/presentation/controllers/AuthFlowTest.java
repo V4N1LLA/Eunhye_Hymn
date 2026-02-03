@@ -30,7 +30,20 @@ class AuthFlowTest {
     @Test
     void meEndpointRequiresAuthentication() throws Exception {
         mockMvc.perform(get("/me/profile"))
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("unauthorized"));
+    }
+
+    @Test
+    void adminEndpointReturnsForbiddenEnvelope() throws Exception {
+        TokenPair tokens = devLogin();
+
+        mockMvc.perform(get("/admin/test")
+                .header("Authorization", "Bearer " + tokens.accessToken()))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("forbidden"));
     }
 
     @Test

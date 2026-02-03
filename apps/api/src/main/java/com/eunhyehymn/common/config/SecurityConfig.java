@@ -1,10 +1,11 @@
 package com.eunhyehymn.common.config;
 
+import com.eunhyehymn.common.error.ApiAccessDeniedHandler;
+import com.eunhyehymn.common.error.ApiAuthenticationEntryPoint;
 import com.eunhyehymn.infrastructure.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -13,7 +14,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
+    SecurityFilterChain securityFilterChain(
+        HttpSecurity http,
+        JwtAuthenticationFilter jwtAuthenticationFilter,
+        ApiAuthenticationEntryPoint apiAuthenticationEntryPoint,
+        ApiAccessDeniedHandler apiAccessDeniedHandler
+    )
         throws Exception {
         // Why: default-deny and opt-in per path until auth flows are complete.
         return http
@@ -29,9 +35,10 @@ public class SecurityConfig {
                 .anyRequest().denyAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, exception) -> {
-                response.sendError(HttpStatus.UNAUTHORIZED.value());
-            }))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(apiAuthenticationEntryPoint)
+                .accessDeniedHandler(apiAccessDeniedHandler)
+            )
             .build();
     }
 }
