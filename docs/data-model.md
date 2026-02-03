@@ -2,77 +2,78 @@
 
 ## 1. 테이블
 ### 1.1 users
-- `id` (PK, UUID)
-- `email` (unique, Kakao는 nullable 가능)
-- `name`
-- `role` (enum: admin, member)
-- `provider` (enum: google, kakao)
-- `provider_user_id`
-- `created_at`, `updated_at`
+- `id` (UUID, PK)
+- `display_name` (varchar)
+- `role` (varchar, USER/ADMIN)
+- `status` (varchar, ACTIVE/DISABLED)
+- `created_at` (timestamp)
+- `last_login_at` (timestamp, nullable)
 
-### 1.2 invites
-- `code` (PK, string)
-- `max_uses`
-- `use_count`
-- `expires_at`
-- `revoked` (bool)
-- `created_by` (FK -> users.id)
-- `created_at`, `updated_at`
+### 1.2 auth_identities
+- `id` (UUID, PK)
+- `user_id` (UUID, FK -> users.id)
+- `provider` (varchar, GOOGLE/KAKAO)
+- `provider_subject` (varchar)
+- `email` (varchar, nullable)
+- `created_at` (timestamp)
+- UNIQUE(`provider`, `provider_subject`)
 
-### 1.3 hymns
-- `id` (PK, UUID)
-- `number` (int)
-- `title` (string)
-- `key` (string)
-- `tempo` (int)
-- `season` (string)
-- `tags` (string[])
-- `score_pdf_key` (string)
-- `archived` (bool)
-- `created_at`, `updated_at`
+### 1.3 refresh_tokens
+- `id` (UUID, PK)
+- `user_id` (UUID, FK -> users.id)
+- `token_hash` (varchar)
+- `expires_at` (timestamp)
+- `revoked_at` (timestamp, nullable)
+- `created_at` (timestamp)
+- INDEX(`user_id`)
 
-### 1.4 hymn_parts
-- `id` (PK, UUID)
-- `hymn_id` (FK -> hymns.id)
-- `part` (enum: soprano, alto, tenor, bass, piano, etc.)
-- `audio_key` (string)
-- `created_at`, `updated_at`
+### 1.4 hymns
+- `id` (UUID, PK)
+- `title` (varchar)
+- `number` (varchar, nullable)
+- `tags` (varchar, nullable, 콤마 구분)
+- `enabled` (boolean)
+- `created_at` (timestamp)
 
-### 1.5 refresh_tokens
-- `id` (PK, UUID)
-- `user_id` (FK -> users.id)
-- `token_hash` (string)
-- `expires_at`
-- `revoked` (bool)
-- `created_at`, `updated_at`
+### 1.5 assets
+- `id` (UUID, PK)
+- `hymn_id` (UUID, FK -> hymns.id)
+- `type` (varchar, PDF/AUDIO)
+- `part` (varchar, nullable, S/A/T/B/ALL)
+- `url` (varchar)
+- `checksum` (varchar, nullable)
+- `version` (varchar, nullable)
+- `created_at` (timestamp)
+- INDEX(`hymn_id`)
 
-### 1.6 hymn_views
-- `id` (PK, UUID)
-- `hymn_id` (FK -> hymns.id)
-- `user_id` (FK -> users.id)
-- `viewed_at`
+### 1.6 hymn_notes
+- `id` (UUID, PK)
+- `user_id` (UUID, FK -> users.id)
+- `hymn_id` (UUID, FK -> hymns.id)
+- `content` (text)
+- `updated_at` (timestamp)
+- UNIQUE(`user_id`, `hymn_id`)
 
-### 1.7 admin_audit_log
-- `id` (PK, UUID)
-- `actor_id` (FK -> users.id)
-- `action` (string)
-- `entity_type` (string)
-- `entity_id` (string)
-- `metadata` (json)
-- `created_at`
+### 1.7 user_hymn_state
+- `user_id` (UUID, FK -> users.id)
+- `hymn_id` (UUID, FK -> hymns.id)
+- `favorite` (boolean)
+- `last_opened_at` (timestamp, nullable)
+- `last_part_played` (varchar, nullable)
+- `last_play_position_ms` (bigint, nullable)
+- PRIMARY KEY(`user_id`, `hymn_id`)
+- INDEX(`user_id`, `last_opened_at`)
 
-## 2. 인덱스
-- `users(provider, provider_user_id)` unique
-- `users(email)` unique (nullable)
-- `invites(expires_at)`
-- `hymns(number)`
-- `hymns(title)`
-- `hymns(tags)` (지원 시 GIN 인덱스)
-- `hymn_parts(hymn_id)`
-- `refresh_tokens(user_id)`
-- `hymn_views(hymn_id, viewed_at)`
-- `admin_audit_log(actor_id, created_at)`
+### 1.8 events
+- `id` (UUID, PK)
+- `user_id` (UUID, FK -> users.id)
+- `event_type` (varchar, HYMN_OPENED/PART_PLAYED/NOTE_SAVED/FAVORITE_TOGGLED)
+- `hymn_id` (UUID, nullable)
+- `part` (varchar, nullable)
+- `metadata_json` (text, nullable)
+- `created_at` (timestamp)
+- INDEX(`user_id`, `created_at`)
 
-## 3. 메모
-- 찬송가는 `archived`, 초대 코드는 `revoked`로 소프트 삭제.
-- `score_pdf_key`, `audio_key`는 S3 객체 키를 의미.
+## 2. 메모
+- MVP에서는 태그를 콤마 구분 문자열로 저장한다.
+- JSON은 MVP에서 문자열로 저장하고, 확장 시 JSON 컬럼으로 변경한다.
