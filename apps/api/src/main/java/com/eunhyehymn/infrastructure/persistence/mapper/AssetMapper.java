@@ -14,6 +14,7 @@ public final class AssetMapper {
             entity.getType(),
             entity.getPart(),
             entity.getUrl(),
+            entity.getObjectKey(),
             entity.getChecksum(),
             entity.getVersion(),
             entity.getCreatedAt()
@@ -27,6 +28,7 @@ public final class AssetMapper {
             asset.type(),
             asset.part(),
             asset.url(),
+            asset.objectKey(),
             asset.checksum(),
             asset.version(),
             asset.createdAt()

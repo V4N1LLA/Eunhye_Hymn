@@ -292,6 +292,58 @@ Base URL: `/api/v1`
 }
 ```
 
+### 4.2 관리자 에셋 업로드 프리사인
+- 관리자 권한 필요
+
+#### 4.2.1 업로드 URL 발급
+- **POST** `/admin/assets/presign`
+- part가 없으면 ALL로 처리
+- 요청:
+```json
+{
+  "hymnId": "hymn_001",
+  "type": "PDF",
+  "part": "S",
+  "filename": "score.pdf",
+  "contentType": "application/pdf"
+}
+```
+- 응답:
+```json
+{
+  "uploadUrl": "https://s3.../presigned",
+  "publicUrl": "https://cdn.../hymns/hymn_001/PDF/S/score.pdf",
+  "objectKey": "hymns/hymn_001/PDF/S/score.pdf"
+}
+```
+
+#### 4.2.2 업로드 확인
+- **POST** `/admin/assets/confirm`
+- objectKey는 `hymns/{hymnId}/{type}/{part}/` 형식을 따라야 함
+- 요청:
+```json
+{
+  "hymnId": "hymn_001",
+  "type": "PDF",
+  "part": "S",
+  "publicUrl": "https://cdn.../hymns/hymn_001/PDF/S/score.pdf",
+  "objectKey": "hymns/hymn_001/PDF/S/score.pdf",
+  "checksum": "abc123",
+  "version": "v1"
+}
+```
+- 응답:
+```json
+{
+  "assetId": "asset_001",
+  "hymnId": "hymn_001",
+  "type": "PDF",
+  "part": "S",
+  "url": "https://cdn.../hymns/hymn_001/PDF/S/score.pdf",
+  "objectKey": "hymns/hymn_001/PDF/S/score.pdf"
+}
+```
+
 ## 6. 이벤트
 ### 6.1 이벤트 기록
 - **POST** `/events`

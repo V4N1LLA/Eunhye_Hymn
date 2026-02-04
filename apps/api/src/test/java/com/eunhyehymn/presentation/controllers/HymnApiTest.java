@@ -89,7 +89,17 @@ class HymnApiTest {
     void detailRequiresAuthAndUpdatesHistory() throws Exception {
         UUID hymnId = UUID.randomUUID();
         hymnJpaRepository.save(new HymnEntity(hymnId, "상세", "3", "tag", true, Instant.now()));
-        assetJpaRepository.save(new AssetEntity(UUID.randomUUID(), hymnId, com.eunhyehymn.domain.model.AssetType.PDF, null, "url", null, null, Instant.now()));
+        assetJpaRepository.save(new AssetEntity(
+            UUID.randomUUID(),
+            hymnId,
+            com.eunhyehymn.domain.model.AssetType.PDF,
+            com.eunhyehymn.domain.model.PartType.ALL,
+            "url",
+            "hymns/" + hymnId + "/PDF/ALL/asset.pdf",
+            null,
+            null,
+            Instant.now()
+        ));
 
         mockMvc.perform(get("/hymns/" + hymnId))
             .andExpect(status().isUnauthorized());

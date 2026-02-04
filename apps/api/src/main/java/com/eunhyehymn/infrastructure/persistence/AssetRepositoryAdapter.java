@@ -31,4 +31,9 @@ public class AssetRepositoryAdapter implements AssetRepository {
     public List<Asset> findByHymnId(UUID hymnId) {
         return assetJpaRepository.findByHymnId(hymnId).stream().map(AssetMapper::toDomain).toList();
     }
+
+    @Override
+    public void deleteByHymnIdAndTypeAndPart(UUID hymnId, com.eunhyehymn.domain.model.AssetType type, com.eunhyehymn.domain.model.PartType part) {
+        assetJpaRepository.deleteByHymnIdAndTypeAndPart(hymnId, type, part);
+    }
 }

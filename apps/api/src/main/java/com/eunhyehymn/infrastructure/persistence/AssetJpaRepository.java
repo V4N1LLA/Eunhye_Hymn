@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AssetJpaRepository extends JpaRepository<AssetEntity, UUID> {
     List<AssetEntity> findByHymnId(UUID hymnId);
+
+    void deleteByHymnIdAndTypeAndPart(UUID hymnId, com.eunhyehymn.domain.model.AssetType type, com.eunhyehymn.domain.model.PartType part);
 }

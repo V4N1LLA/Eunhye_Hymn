@@ -9,6 +9,7 @@ public record Asset(
     AssetType type,
     PartType part,
     String url,
+    String objectKey,
     String checksum,
     String version,
     Instant createdAt

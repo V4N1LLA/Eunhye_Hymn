@@ -30,3 +30,11 @@ security:
     refresh-token-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS:1209600}
   invite:
     code: ${INVITE_CODE:change-me}
+
+storage:
+  s3:
+    bucket: ${S3_BUCKET:local-bucket}
+    region: ${S3_REGION:ap-northeast-2}
+    endpoint: ${S3_ENDPOINT:}
+    public-base-url: ${S3_PUBLIC_BASE_URL:}
+    presign-expires-minutes: ${S3_PRESIGN_EXPIRES_MINUTES:15}

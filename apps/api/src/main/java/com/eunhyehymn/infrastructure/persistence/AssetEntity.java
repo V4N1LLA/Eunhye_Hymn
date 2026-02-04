@@ -32,11 +32,14 @@ public class AssetEntity {
     private AssetType type;
 
     @Enumerated(EnumType.STRING)
-    @Column
+    @Column(nullable = false)
     private PartType part;
 
     @Column(nullable = false)
     private String url;
+
+    @Column(name = "object_key", nullable = false)
+    private String objectKey;
 
     @Column
     private String checksum;
@@ -56,6 +59,7 @@ public class AssetEntity {
         AssetType type,
         PartType part,
         String url,
+        String objectKey,
         String checksum,
         String version,
         Instant createdAt
@@ -65,6 +69,7 @@ public class AssetEntity {
         this.type = type;
         this.part = part;
         this.url = url;
+        this.objectKey = objectKey;
         this.checksum = checksum;
         this.version = version;
         this.createdAt = createdAt;
@@ -88,6 +93,10 @@ public class AssetEntity {
 
     public String getUrl() {
         return url;
+    }
+
+    public String getObjectKey() {
+        return objectKey;
     }
 
     public String getChecksum() {
