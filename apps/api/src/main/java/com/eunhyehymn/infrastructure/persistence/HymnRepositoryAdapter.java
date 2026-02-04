@@ -28,6 +28,11 @@ public class HymnRepositoryAdapter implements HymnRepository {
     }
 
     @Override
+    public List<Hymn> findAll() {
+        return hymnJpaRepository.findAll().stream().map(HymnMapper::toDomain).toList();
+    }
+
+    @Override
     public Optional<Hymn> findById(UUID id) {
         return hymnJpaRepository.findById(id).map(HymnMapper::toDomain);
     }

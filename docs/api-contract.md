@@ -133,41 +133,64 @@ Base URL: `/api/v1`
 }
 ```
 
-### 2.3 찬송가 생성/수정 (관리자)
-- **POST** `/hymns`
-- **PUT** `/hymns/{id}`
+### 2.3 찬송가 관리 (관리자)
+- 관리자 권한 필요
+
+#### 2.3.1 찬송가 생성
+- **POST** `/admin/hymns`
 - 요청:
 ```json
 {
-  "number": 123,
   "title": "Amazing Grace",
-  "key": "C",
-  "tempo": 80,
-  "tags": ["advent"],
-  "season": "advent",
-  "scorePdfKey": "scores/amazing-grace.pdf",
-  "parts": [
-    {
-      "part": "soprano",
-      "audioKey": "audio/amazing-grace-soprano.mp3"
-    }
-  ]
+  "number": "123",
+  "tags": "advent",
+  "enabled": true
 }
 ```
 - 응답:
 ```json
 {
-  "id": "hymn_001"
+  "id": "hymn_001",
+  "title": "Amazing Grace",
+  "number": "123",
+  "tags": "advent",
+  "enabled": true
 }
 ```
 
-### 2.4 찬송가 보관 처리 (관리자)
-- **DELETE** `/hymns/{id}`
+#### 2.3.2 찬송가 수정
+- **PATCH** `/admin/hymns/{id}`
+- 요청:
+```json
+{
+  "title": "Amazing Grace (수정)",
+  "enabled": false
+}
+```
 - 응답:
 ```json
 {
-  "archived": true
+  "id": "hymn_001",
+  "title": "Amazing Grace (수정)",
+  "number": "123",
+  "tags": "advent",
+  "enabled": false
 }
+```
+
+#### 2.3.3 찬송가 전체 목록 (관리자)
+- **GET** `/admin/hymns`
+- 응답:
+```json
+[
+  {
+    "id": "hymn_001",
+    "title": "Amazing Grace",
+    "number": "123",
+    "tags": "advent",
+    "enabled": true
+  }
+]
 ```
 
 ## 3. 내 정보

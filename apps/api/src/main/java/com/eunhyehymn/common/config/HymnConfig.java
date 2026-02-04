@@ -1,5 +1,8 @@
 package com.eunhyehymn.common.config;
 
+import com.eunhyehymn.application.usecases.AdminCreateHymnUseCase;
+import com.eunhyehymn.application.usecases.AdminListHymnsUseCase;
+import com.eunhyehymn.application.usecases.AdminUpdateHymnUseCase;
 import com.eunhyehymn.application.usecases.GetHistoryUseCase;
 import com.eunhyehymn.application.usecases.GetHymnDetailUseCase;
 import com.eunhyehymn.application.usecases.GetHymnNoteUseCase;
@@ -49,6 +52,21 @@ public class HymnConfig {
     @Bean
     GetHistoryUseCase getHistoryUseCase(UserHymnStateRepository userHymnStateRepository, HymnRepository hymnRepository) {
         return new GetHistoryUseCase(userHymnStateRepository, hymnRepository);
+    }
+
+    @Bean
+    AdminCreateHymnUseCase adminCreateHymnUseCase(HymnRepository hymnRepository) {
+        return new AdminCreateHymnUseCase(hymnRepository);
+    }
+
+    @Bean
+    AdminUpdateHymnUseCase adminUpdateHymnUseCase(HymnRepository hymnRepository) {
+        return new AdminUpdateHymnUseCase(hymnRepository);
+    }
+
+    @Bean
+    AdminListHymnsUseCase adminListHymnsUseCase(HymnRepository hymnRepository) {
+        return new AdminListHymnsUseCase(hymnRepository);
     }
 
     @Bean
