@@ -1,0 +1,11 @@
+package com.eunhyehymn.domain.repository;
+
+import com.eunhyehymn.domain.model.User;
+import java.util.Optional;
+import java.util.UUID;
+
+public interface UserRepository {
+    User save(User user);
+
+    Optional<User> findById(UUID id);
+}
