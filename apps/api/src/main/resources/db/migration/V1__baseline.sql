@@ -1,0 +1,1 @@
+-- Flyway baseline (빈 파일)
