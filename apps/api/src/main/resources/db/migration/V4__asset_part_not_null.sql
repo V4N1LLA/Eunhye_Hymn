@@ -1,0 +1,6 @@
+UPDATE assets
+SET part = 'ALL'
+WHERE part IS NULL;
+
+ALTER TABLE assets
+    ALTER COLUMN part SET NOT NULL;
