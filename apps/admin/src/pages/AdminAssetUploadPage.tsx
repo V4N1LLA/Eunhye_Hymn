@@ -22,43 +22,80 @@ export default function AdminAssetUploadPage() {
   const [version, setVersion] = useState("");
   const [lastError, setLastError] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>("idle");
+  const [isPresigning, setIsPresigning] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const partValue = useMemo(() => (part === "" ? undefined : part), [part]);
 
-  const handlePresign = async () => {
-    if (!file) {
-      setLastError("파일을 선택해 주세요.");
+  const handlePresign = async (selectedFile: File) => {
+    if (!hymnId) {
+      setLastError("찬송가 ID를 입력해 주세요.");
       return;
     }
     setLastError(null);
     setConfirmResult(null);
+    setIsPresigning(true);
     try {
       const result = await presignAsset({
         hymnId,
         type: assetType,
         part: partValue,
-        filename: file.name,
-        contentType: file.type || "application/octet-stream",
+        filename: selectedFile.name,
+        contentType: selectedFile.type || "application/octet-stream",
       });
       setPresignResult(result);
       setUploadState("presigned");
     } catch (error) {
       setLastError(error instanceof Error ? error.message : "프리사인 실패");
+    } finally {
+      setIsPresigning(false);
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!presignResult) {
       setLastError("프리사인 결과가 없습니다.");
       return;
     }
+    if (!file) {
+      setLastError("업로드할 파일이 없습니다.");
+      return;
+    }
     setLastError(null);
-    setUploadState("uploaded");
+    setIsUploading(true);
+    try {
+      const response = await fetch(presignResult.uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
+        body: file,
+      });
+
+      if (!response.ok) {
+        throw new Error(`업로드 실패 (status: ${response.status})`);
+      }
+
+      setUploadState("uploaded");
+    } catch (error) {
+      setLastError(error instanceof Error ? error.message : "업로드 실패");
+      setUploadState("presigned");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleConfirm = async () => {
     if (!presignResult) {
       setLastError("프리사인 결과가 없습니다.");
+      return;
+    }
+    if (uploadState !== "uploaded") {
+      setLastError("업로드 완료 후 확인할 수 있습니다.");
+      return;
+    }
+    if (!presignResult.objectKey || !presignResult.publicUrl) {
+      setLastError("확인에 필요한 값이 없습니다.");
       return;
     }
     setLastError(null);
@@ -76,6 +113,7 @@ export default function AdminAssetUploadPage() {
       setUploadState("confirmed");
     } catch (error) {
       setLastError(error instanceof Error ? error.message : "확인 실패");
+      setUploadState("uploaded");
     }
   };
 
@@ -117,18 +155,27 @@ export default function AdminAssetUploadPage() {
 
         <label>
           파일 선택
-          <input type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+          <input
+            type="file"
+            onChange={(event) => {
+              const selectedFile = event.target.files?.[0] ?? null;
+              setFile(selectedFile);
+              if (selectedFile) {
+                handlePresign(selectedFile);
+              }
+            }}
+          />
         </label>
       </section>
 
       <section style={{ marginTop: 16, display: "flex", gap: 8 }}>
-        <button type="button" onClick={handlePresign}>
+        <button type="button" disabled>
           Presign
         </button>
-        <button type="button" onClick={handleUpload} disabled={!presignResult}>
+        <button type="button" onClick={handleUpload} disabled={!presignResult || isUploading}>
           Upload
         </button>
-        <button type="button" onClick={handleConfirm} disabled={!presignResult}>
+        <button type="button" onClick={handleConfirm} disabled={!presignResult || uploadState !== "uploaded"}>
           Confirm
         </button>
       </section>
@@ -175,7 +222,18 @@ export default function AdminAssetUploadPage() {
 
       <section style={{ marginTop: 24 }}>
         <h2>상태</h2>
-        <div>현재 상태: {uploadState}</div>
+        <div>
+          현재 상태:{" "}
+          {isPresigning
+            ? "프리사인 중"
+            : uploadState === "idle"
+              ? "대기"
+              : uploadState === "presigned"
+                ? "프리사인 완료"
+                : uploadState === "uploaded"
+                  ? "업로드 완료"
+                  : "확인 완료"}
+        </div>
         {lastError && <div style={{ color: "red" }}>오류: {lastError}</div>}
       </section>
     </div>
