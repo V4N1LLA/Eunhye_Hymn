@@ -7,6 +7,7 @@ import com.eunhyehymn.domain.model.UserHymnState;
 import com.eunhyehymn.domain.repository.HymnRepository;
 import com.eunhyehymn.domain.repository.UserHymnStateRepository;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,6 +56,11 @@ class GetHistoryUseCaseTest {
             @Override
             public Optional<Hymn> findById(UUID id) {
                 return Optional.empty();
+            }
+
+            @Override
+            public List<Hymn> findAll() {
+                return Collections.emptyList();
             }
 
             @Override

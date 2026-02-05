@@ -11,8 +11,10 @@ import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.infrastructure.persistence.AssetEntity;
 import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnEntity;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.HymnNoteJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserEntity;
 import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserJpaRepository;
@@ -57,11 +59,19 @@ class HymnApiTest {
     @Autowired
     private UserHymnStateJpaRepository userHymnStateJpaRepository;
 
+    @Autowired
+    private HymnNoteJpaRepository hymnNoteJpaRepository;
+
+    @Autowired
+    private EventJpaRepository eventJpaRepository;
+
     private UUID userId;
     private String accessToken;
 
     @BeforeEach
     void setUp() {
+        eventJpaRepository.deleteAll();
+        hymnNoteJpaRepository.deleteAll();
         userHymnStateJpaRepository.deleteAll();
         assetJpaRepository.deleteAll();
         hymnJpaRepository.deleteAll();

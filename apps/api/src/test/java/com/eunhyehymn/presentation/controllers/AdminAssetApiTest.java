@@ -198,8 +198,12 @@ class AdminAssetApiTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.objectKey").value("hymns/" + hymnId + "/PDF/ALL/new.pdf"));
 
-        assertThat(assetJpaRepository.findAll()).hasSize(1);
-        assertThat(assetJpaRepository.findAll().get(0).getObjectKey()).isEqualTo("hymns/" + hymnId + "/PDF/ALL/new.pdf");
+        var sameKeyAssets = assetJpaRepository.findByHymnId(hymnId).stream()
+            .filter(asset -> asset.getType() == AssetType.PDF)
+            .filter(asset -> asset.getPart() == com.eunhyehymn.domain.model.PartType.ALL)
+            .toList();
+        assertThat(sameKeyAssets).hasSize(1);
+        assertThat(sameKeyAssets.get(0).getObjectKey()).isEqualTo("hymns/" + hymnId + "/PDF/ALL/new.pdf");
     }
 
     @Test
