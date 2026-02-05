@@ -29,7 +29,7 @@ export default function AdminAssetUploadPage() {
 
   const handlePresign = async (selectedFile: File) => {
     if (!hymnId) {
-      setLastError("찬송가 ID를 입력해 주세요.");
+      setLastError("찬송가 ID(hymnId)를 입력해 주세요.");
       return;
     }
     setLastError(null);
@@ -46,7 +46,7 @@ export default function AdminAssetUploadPage() {
       setPresignResult(result);
       setUploadState("presigned");
     } catch (error) {
-      setLastError(error instanceof Error ? error.message : "프리사인 실패");
+      setLastError(error instanceof Error ? error.message : "프리사인 요청에 실패했습니다.");
     } finally {
       setIsPresigning(false);
     }
@@ -58,7 +58,7 @@ export default function AdminAssetUploadPage() {
       return;
     }
     if (!file) {
-      setLastError("업로드할 파일이 없습니다.");
+      setLastError("업로드할 파일을 선택해 주세요.");
       return;
     }
     setLastError(null);
@@ -78,7 +78,7 @@ export default function AdminAssetUploadPage() {
 
       setUploadState("uploaded");
     } catch (error) {
-      setLastError(error instanceof Error ? error.message : "업로드 실패");
+      setLastError(error instanceof Error ? error.message : "업로드에 실패했습니다.");
       setUploadState("presigned");
     } finally {
       setIsUploading(false);
@@ -112,7 +112,7 @@ export default function AdminAssetUploadPage() {
       setConfirmResult(result);
       setUploadState("confirmed");
     } catch (error) {
-      setLastError(error instanceof Error ? error.message : "확인 실패");
+      setLastError(error instanceof Error ? error.message : "확인 요청에 실패했습니다.");
       setUploadState("uploaded");
     }
   };
@@ -169,13 +169,17 @@ export default function AdminAssetUploadPage() {
       </section>
 
       <section style={{ marginTop: 16, display: "flex", gap: 8 }}>
-        <button type="button" disabled>
+        <button type="button" disabled={!hymnId || !file || isPresigning}>
           Presign
         </button>
-        <button type="button" onClick={handleUpload} disabled={!presignResult || isUploading}>
+        <button type="button" onClick={handleUpload} disabled={!presignResult || !file || isUploading}>
           Upload
         </button>
-        <button type="button" onClick={handleConfirm} disabled={!presignResult || uploadState !== "uploaded"}>
+        <button
+          type="button"
+          onClick={handleConfirm}
+          disabled={!presignResult || uploadState !== "uploaded"}
+        >
           Confirm
         </button>
       </section>
@@ -187,6 +191,10 @@ export default function AdminAssetUploadPage() {
           <div>publicUrl: {presignResult?.publicUrl ?? "-"}</div>
           <div>objectKey: {presignResult?.objectKey ?? "-"}</div>
         </div>
+        <div style={{ marginTop: 8, color: "#555" }}>
+          objectKey는 서버 규칙에 따라 hymns/{"{hymnId}"}/{"{type}"}/{"{part}"}/ 로 시작해야 합니다.
+        </div>
+        <div style={{ color: "#555" }}>part가 없으면 ALL로 처리됩니다.</div>
       </section>
 
       <section style={{ marginTop: 24 }}>
