@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:eunhye_hymn_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+security:
+  jwt:
+    secret: test-secret
+    access-token-ttl-seconds: 3600
+    refresh-token-ttl-seconds: 1209600
