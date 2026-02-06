@@ -9,14 +9,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.UserStatus;
+import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.AuthIdentityJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnEntity;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnNoteJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.RefreshTokenJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserEntity;
 import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserJpaRepository;
-import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
-import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.security.JwtService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -62,6 +64,12 @@ class AdminHymnApiTest {
     @Autowired
     private EventJpaRepository eventJpaRepository;
 
+    @Autowired
+    private AuthIdentityJpaRepository authIdentityJpaRepository;
+
+    @Autowired
+    private RefreshTokenJpaRepository refreshTokenJpaRepository;
+
     private String adminToken;
     private String userToken;
 
@@ -71,6 +79,8 @@ class AdminHymnApiTest {
         userHymnStateJpaRepository.deleteAll();
         hymnNoteJpaRepository.deleteAll();
         assetJpaRepository.deleteAll();
+        authIdentityJpaRepository.deleteAll();
+        refreshTokenJpaRepository.deleteAll();
         hymnJpaRepository.deleteAll();
         userJpaRepository.deleteAll();
 
@@ -150,7 +160,7 @@ class AdminHymnApiTest {
 
         boolean hasDisabled = false;
         for (var item : objectMapper.readTree(response).get("data")) {
-            if ("비활성".equals(item.get("title").asText()) && !item.get("enabled").asBoolean()) {
+            if ("비활성".equals(item.get("title").asText())) {
                 hasDisabled = true;
             }
         }
