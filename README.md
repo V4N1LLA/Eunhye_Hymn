@@ -6,9 +6,9 @@ AI 보조 개발 효율을 높이는 것을 목표로 합니다.
 
 ## 저장소 구조
 - `apps/`
-  - `apps/api`: 백엔드 API 서비스 (구현은 아직 없음)
-  - `apps/admin`: 관리자 웹 앱 (구현은 아직 없음)
-  - `apps/mobile`: 모바일 앱 (Flutter) (구현은 아직 없음)
+  - `apps/api`: 백엔드 API 서비스 (Spring Boot)
+  - `apps/admin`: 관리자 웹 앱 (에셋 업로드 관련 코드 포함)
+  - `apps/mobile`: 모바일 앱 (Flutter, 현재 미포함)
 - `infra/`
   - `infra/docker`: 로컬 개발/컨테이너 오케스트레이션
   - `infra/aws`: AWS 인프라 정의
@@ -32,7 +32,11 @@ AI 보조 개발 효율을 높이는 것을 목표로 합니다.
 - 미디어: PDF 악보 및 MP3 파트 음원은 S3에서 제공.
 - 빌드/테스트는 Gradle 8.7 설치 후 `gradle ...` 명령으로 실행합니다.
 
----
+## API 로컬 실행
+1. 환경 변수 파일 생성: `cp apps/api/.env.example apps/api/.env`
+2. `apps/api/.env` 값을 로컬 환경에 맞게 수정
+3. PostgreSQL 실행
+4. API 실행: `cd apps/api && gradle bootRun`
+5. 테스트 실행: `cd apps/api && gradle test --no-daemon --stacktrace`
 
-제안하는 원자적 커밋 메시지:
-- `chore: scaffold api db integration`
+상세 절차는 `docs/dev-guide.md`를 참고합니다.

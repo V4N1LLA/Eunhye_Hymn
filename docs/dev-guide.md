@@ -1,36 +1,44 @@
 # Eunhye Hymn 개발 가이드
 
 ## 1. 로컬 개발 계획
-- Docker로 DB 및 로컬 의존성을 구동한다.
-- API는 로컬에서 실행하고, S3는 mock 또는 localstack을 사용한다.
-- 관리자 웹/모바일 앱은 `http://localhost` API를 사용한다.
+- API는 로컬에서 실행한다.
+- DB는 로컬 PostgreSQL 또는 Docker로 실행한다.
+- S3는 실제 S3 또는 로컬 endpoint를 사용한다.
 
 ## 2. 사전 준비
 - Java 17+
-- Docker + Docker Compose
 - Gradle 8.7 (시스템 설치 필요)
+- PostgreSQL (로컬 설치 또는 Docker)
 
 ## 3. API 로컬 실행
-1. 환경 변수 템플릿 복사:
+1. 환경 변수 파일 생성:
    ```bash
    cp apps/api/.env.example apps/api/.env
    ```
 2. `apps/api/.env` 값을 로컬 환경에 맞게 수정.
-3. 로컬 PostgreSQL 실행(Docker 또는 로컬 설치).
-4. API 실행:
+3. 환경 변수 로드:
+   ```powershell
+   Get-Content apps/api/.env | ForEach-Object {
+     if ($_ -match '^\s*#' -or $_ -match '^\s*$') { return }
+     $name, $value = $_ -split '=', 2
+     Set-Item -Path "Env:$name" -Value $value
+   }
+   ```
+4. PostgreSQL 실행 (`DB_URL` 기준).
+5. API 실행:
    ```bash
    cd apps/api
    gradle bootRun
    ```
-5. Gradle 버전 확인(예시):
+6. 헬스체크 확인:
    ```bash
-   gradle -v
+   curl http://localhost:8080/actuator/health
    ```
 
 ## 4. 테스트 실행
 - `apps/api`에서 실행:
   ```bash
-  gradle test --no-daemon
+  gradle test --no-daemon --stacktrace
   ```
 
 ## 5. DB 환경 변수 설명
@@ -55,9 +63,11 @@
 - `JWT_ACCESS_TTL_SECONDS`
 - `JWT_REFRESH_TTL_SECONDS`
 - `INVITE_CODE`
-- `GOOGLE_CLIENT_ID`
-- `KAKAO_CLIENT_ID`
 - `S3_BUCKET`
+- `S3_REGION`
+- `S3_ENDPOINT`
+- `S3_PUBLIC_BASE_URL`
+- `S3_PRESIGN_EXPIRES_MINUTES`
 
 ## 9. Gradle Wrapper 정책
 - 저장소 정책상 Wrapper 바이너리(jar)를 포함하지 않는다.
