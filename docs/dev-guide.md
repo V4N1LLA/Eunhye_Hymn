@@ -32,7 +32,7 @@
    ```
 6. 헬스체크 확인:
    ```bash
-   curl http://localhost:8080/actuator/health
+   curl http://localhost:8080/api/v1/actuator/health
    ```
 
 ## 4. 테스트 실행

@@ -1,6 +1,7 @@
 # Eunhye Hymn API 계약 (MVP)
 
 Base URL: `/api/v1`
+모든 경로는 위 Base URL 기준 상대 경로다.
 
 ## 1. 인증
 ### 1.1 초대 코드 검증
