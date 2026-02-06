@@ -20,9 +20,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Gradle 8.7 설치
+      - name: Gradle 캐시 설정
         uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: "8.7"
+      - name: Gradle Wrapper 실행 권한 부여
+        run: chmod +x gradlew
       - name: 테스트 실행
-        run: gradle test --no-daemon --stacktrace
+        run: ./gradlew test --no-daemon --stacktrace
