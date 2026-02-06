@@ -160,7 +160,7 @@ class AdminHymnApiTest {
 
         boolean hasDisabled = false;
         for (var item : objectMapper.readTree(response).get("data")) {
-            if ("비활성".equals(item.get("title").asText())) {
+            if (!item.get("enabled").asBoolean()) {
                 hasDisabled = true;
             }
         }
