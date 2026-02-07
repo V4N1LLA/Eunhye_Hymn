@@ -16,6 +16,8 @@
    cp apps/api/.env.example apps/api/.env
    ```
 2. `apps/api/.env` 값을 로컬 환경에 맞게 수정.
+   - `JWT_SECRET`, `INVITE_CODE`, `JWT_ACCESS_TTL_SECONDS`, `JWT_REFRESH_TTL_SECONDS`는 필수값이다.
+   - 누락되거나 빈값이면 애플리케이션이 부팅 단계에서 즉시 실패한다.
 3. 환경 변수 로드:
    ```powershell
    Get-Content apps/api/.env | ForEach-Object {

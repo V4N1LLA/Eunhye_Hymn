@@ -29,11 +29,11 @@ management:
 
 security:
   jwt:
-    secret: ${JWT_SECRET:change-me}
-    access-token-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:3600}
-    refresh-token-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS:1209600}
+    secret: ${JWT_SECRET}
+    access-token-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS}
+    refresh-token-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS}
   invite:
-    code: ${INVITE_CODE:change-me}
+    code: ${INVITE_CODE}
 
 storage:
   s3:
