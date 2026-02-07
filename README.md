@@ -40,3 +40,8 @@ AI 보조 개발 효율을 높이는 것을 목표로 합니다.
 5. 테스트 실행: `cd apps/api && gradle test --no-daemon --stacktrace`
 
 상세 절차는 `docs/dev-guide.md`를 참고합니다.
+
+## Admin 로컬 실행
+1. `cd apps/admin`
+2. `npm install`
+3. `npm run dev` (개발 서버) / `npm run build` (빌드)
