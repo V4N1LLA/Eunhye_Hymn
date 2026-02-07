@@ -67,3 +67,4 @@ logs/
 # Gradle
 .gradle/
 !apps/api/.env.example
+!apps/api/gradle/wrapper/gradle-wrapper.jar
