@@ -320,19 +320,47 @@ com.eunhyehymn/
 
 ## 13. Admin 프론트엔드 현황
 
+### 기술 스택
+- React 18 + TypeScript + Vite (ESM, `"type": "module"`)
+- react-router-dom v7 — 클라이언트 라우팅
+- Tailwind CSS v4 (`@tailwindcss/vite` 플러그인)
+- `@vitejs/plugin-react` — React HMR/Fast Refresh
+- Vite dev server `/api/v1` → `http://localhost:8080` 프록시
+
 ### 구현된 기능
-- `AdminAssetUploadPage.tsx` (250줄): 에셋 업로드 3단계 UI (presign → upload → confirm)
-- `adminAssets.ts`: API 클라이언트 (`presignAsset`, `confirmAsset`)
-- `App.tsx`: AdminAssetUploadPage를 렌더링하는 루트 컴포넌트
+
+| 파일 | 역할 |
+|------|------|
+| `src/api/client.ts` | 공통 fetch wrapper (`apiGet`, `apiPost`, `apiPatch`), Bearer 토큰 자동 추가, 401 시 로그인 redirect |
+| `src/api/auth.ts` | Dev 로그인, 토큰 갱신, 로그아웃 API |
+| `src/api/hymns.ts` | 찬양 목록/생성/수정/상세 API |
+| `src/api/adminAssets.ts` | 에셋 presign/confirm API (공통 클라이언트 사용) |
+| `src/auth/AuthContext.tsx` | AuthProvider + `useAuth()` 훅, JWT 파싱, localStorage 토큰 관리 |
+| `src/auth/ProtectedRoute.tsx` | 미인증 시 `/login` redirect |
+| `src/components/Layout.tsx` | 사이드바(찬양 관리, 에셋 업로드) + 로그아웃 |
+| `src/pages/LoginPage.tsx` | Dev Login 폼 (ADMIN 역할, UUID 자동생성) |
+| `src/pages/HymnListPage.tsx` | 찬양 목록 테이블 (번호, 제목, 태그, 활성 상태) |
+| `src/pages/HymnCreatePage.tsx` | 찬양 생성 폼 (title, number, tags, enabled) |
+| `src/pages/HymnEditPage.tsx` | 찬양 수정 폼 + 에셋 목록 + 임베디드 업로드 |
+| `src/pages/AdminAssetUploadPage.tsx` | 에셋 업로드 3단계 UI (Tailwind 스타일, hymnId props 지원) |
+| `src/App.tsx` | BrowserRouter 라우팅 설정 |
+
+### 라우팅 구조
+
+| 경로 | 페이지 | 인증 |
+|------|--------|------|
+| `/login` | LoginPage | 공개 |
+| `/` | → `/hymns` redirect | 필요 |
+| `/hymns` | HymnListPage | 필요 |
+| `/hymns/new` | HymnCreatePage | 필요 |
+| `/hymns/:id/edit` | HymnEditPage | 필요 |
+| `/assets/upload` | AdminAssetUploadPage | 필요 |
 
 ### 미구현 기능
-- 로그인/인증 페이지
-- 찬양 목록/검색 페이지
-- 찬양 생성/수정 폼
+- 소셜 로그인 (현재 Dev Login만 지원)
 - 초대코드 관리
-- 라우팅 (react-router 등)
-- 상태 관리
-- 레이아웃/네비게이션
+- 찬양 검색/필터
+- 사용자/역할 관리
 
 ---
 
@@ -359,7 +387,7 @@ com.eunhyehymn/
 
 ## 16. 현재 진행 상태 및 남은 작업
 
-### 완료 (MVP Backend)
+### 완료
 - Spring Boot API 전체 구현 (15개 UseCase, 8개 Controller)
 - JWT 인증 + 소셜 로그인 + 초대코드
 - 찬양 CRUD + S3 에셋 관리
@@ -368,9 +396,10 @@ com.eunhyehymn/
 - 테스트 전체 통과
 - CI/CD 파이프라인
 - 문서화
+- **Admin 웹 프론트엔드 기반**: 라우팅, Tailwind 스타일링, 인증 컨텍스트, 공통 API 클라이언트, Dev 로그인, 찬양 목록/생성/수정, 에셋 업로드, 사이드바 레이아웃
 
 ### 미완료 (우선순위순)
-1. **Admin 웹 프론트엔드**: 로그인, 찬양 관리, 라우팅, 레이아웃 등 대부분 미구현
+1. **Admin 추가 기능**: 소셜 로그인 연동, 초대코드 관리, 찬양 검색/필터, 사용자/역할 관리
 2. **Docker Compose**: 로컬 개발 환경 (PostgreSQL, LocalStack)
 3. **AWS 인프라**: VPC, RDS, S3, ECS/EKS, IAM (전부 placeholder)
 4. **배포 자동화**: Staging/Production 파이프라인
