@@ -112,10 +112,10 @@ class HymnApiTest {
         assetJpaRepository.save(new AssetEntity(
             UUID.randomUUID(),
             hymnId,
-            com.eunhyehymn.domain.model.AssetType.PDF,
+            com.eunhyehymn.domain.model.AssetType.PNG,
             com.eunhyehymn.domain.model.PartType.ALL,
             "url",
-            "hymns/" + hymnId + "/PDF/ALL/asset.pdf",
+            "hymns/" + hymnId + "/PNG/ALL/asset.png",
             null,
             null,
             Instant.now()

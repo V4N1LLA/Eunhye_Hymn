@@ -21,8 +21,8 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp }: Props) {
   const initialHymnId = hymnIdProp ?? params.hymnId ?? "";
 
   const [hymnId, setHymnId] = useState(initialHymnId);
-  const [assetType, setAssetType] = useState<AssetType>("PDF");
-  const [part, setPart] = useState<PartType | "">("");
+  const [assetType, setAssetType] = useState<AssetType>("PNG");
+  const [part, setPart] = useState<PartType | "">("ALL");
   const [file, setFile] = useState<File | null>(null);
   const [presignResult, setPresignResult] = useState<PresignResponse | null>(null);
   const [confirmResult, setConfirmResult] = useState<ConfirmResponse | null>(null);
@@ -136,11 +136,15 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp }: Props) {
           <select
             id="assetType"
             value={assetType}
-            onChange={(e) => setAssetType(e.target.value as AssetType)}
+            onChange={(e) => {
+              const newType = e.target.value as AssetType;
+              setAssetType(newType);
+              if (newType === "PNG") setPart("ALL");
+            }}
             className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="PDF">PDF</option>
-            <option value="AUDIO">AUDIO</option>
+            <option value="PNG">PNG</option>
+            <option value="MIDI">MIDI</option>
           </select>
         </div>
 
@@ -150,9 +154,10 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp }: Props) {
           </label>
           <select
             id="partType"
-            value={part}
+            value={assetType === "PNG" ? "ALL" : part}
             onChange={(e) => setPart(e.target.value as PartType | "")}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            disabled={assetType === "PNG"}
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
           >
             <option value="">(없음)</option>
             <option value="ALL">ALL</option>

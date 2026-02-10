@@ -7,7 +7,7 @@
 
 ## 1. 프로젝트 개요
 
-**Eunhye Hymn**은 교회 내부용 찬양 악보(PDF) 및 파트 연습 음원(MP3) 관리 시스템입니다.
+**Eunhye Hymn**은 교회 내부용 찬양 악보(PNG) 및 파트 연습 음원(MIDI) 관리 시스템입니다.
 
 - **모노레포 구조**: 백엔드 API, 관리자 웹, 모바일 앱, 인프라를 한 저장소에서 관리
 - **대상 사용자**: 관리자(콘텐츠/초대 관리), 멤버(검색/연습)
@@ -150,7 +150,7 @@ com.eunhyehymn/
 |------|-----|
 | **Role** | `USER`, `ADMIN` |
 | **UserStatus** | `ACTIVE`, `DISABLED` |
-| **AssetType** | `PDF`, `AUDIO` |
+| **AssetType** | `PNG`, `MIDI` |
 | **PartType** | `S`, `A`, `T`, `B`, `ALL` |
 | **EventType** | `HYMN_OPENED`, `PART_PLAYED`, `NOTE_SAVED`, `FAVORITE_TOGGLED` |
 
@@ -251,6 +251,7 @@ com.eunhyehymn/
 | `V2__init.sql` | 8개 테이블 전체 생성 (users, auth_identities, refresh_tokens, hymns, assets, hymn_notes, user_hymn_state, events) |
 | `V3__asset_object_key.sql` | assets에 object_key 컬럼 추가 (NOT NULL) |
 | `V4__asset_part_not_null.sql` | assets.part NULL → 'ALL' 변환 후 NOT NULL 제약 |
+| `V5__asset_type_png_midi.sql` | assets.type PDF → PNG, AUDIO → MIDI 변환 |
 
 ### 주요 인덱스
 - `idx_refresh_tokens_user_id` ON refresh_tokens(user_id)
@@ -397,6 +398,7 @@ com.eunhyehymn/
 - CI/CD 파이프라인
 - 문서화
 - **Admin 웹 프론트엔드 기반**: 라우팅, Tailwind 스타일링, 인증 컨텍스트, 공통 API 클라이언트, Dev 로그인, 찬양 목록/생성/수정, 에셋 업로드, 사이드바 레이아웃
+- **AssetType 변경 (PDF/AUDIO → PNG/MIDI)**: 백엔드 enum, DB 마이그레이션(V5), 테스트, 프론트엔드 타입/UI 전체 반영. PNG는 항상 PartType.ALL, MIDI는 파트별 구분 가능
 
 ### 미완료 (우선순위순)
 1. **Admin 추가 기능**: 소셜 로그인 연동, 초대코드 관리, 찬양 검색/필터, 사용자/역할 관리

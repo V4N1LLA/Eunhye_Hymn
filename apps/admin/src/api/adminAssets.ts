@@ -1,6 +1,6 @@
 import { apiPost } from "./client";
 
-export type AssetType = "PDF" | "AUDIO";
+export type AssetType = "PNG" | "MIDI";
 export type PartType = "S" | "A" | "T" | "B" | "ALL";
 
 export interface PresignRequest {

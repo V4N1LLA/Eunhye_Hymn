@@ -82,9 +82,9 @@ class AdminAssetApiTest {
     void presignRequiresAdminRole() throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of(
             "hymnId", hymnId.toString(),
-            "type", AssetType.PDF.name(),
-            "filename", "score.pdf",
-            "contentType", "application/pdf"
+            "type", AssetType.PNG.name(),
+            "filename", "score.png",
+            "contentType", "image/png"
         ));
 
         mockMvc.perform(post("/admin/assets/presign")
@@ -101,16 +101,16 @@ class AdminAssetApiTest {
         when(storageService.presignUpload(any())).thenReturn(
             new StorageService.PresignResult(
                 "https://upload.local/presigned",
-                "https://public.local/hymns/asset.pdf",
-                "hymns/asset.pdf"
+                "https://public.local/hymns/asset.png",
+                "hymns/asset.png"
             )
         );
 
         String payload = objectMapper.writeValueAsString(Map.of(
             "hymnId", hymnId.toString(),
-            "type", AssetType.PDF.name(),
-            "filename", "score.pdf",
-            "contentType", "application/pdf"
+            "type", AssetType.PNG.name(),
+            "filename", "score.png",
+            "contentType", "image/png"
         ));
 
         mockMvc.perform(post("/admin/assets/presign")
@@ -119,17 +119,17 @@ class AdminAssetApiTest {
                 .content(payload))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.uploadUrl").value("https://upload.local/presigned"))
-            .andExpect(jsonPath("$.data.publicUrl").value("https://public.local/hymns/asset.pdf"))
-            .andExpect(jsonPath("$.data.objectKey").value("hymns/asset.pdf"));
+            .andExpect(jsonPath("$.data.publicUrl").value("https://public.local/hymns/asset.png"))
+            .andExpect(jsonPath("$.data.objectKey").value("hymns/asset.png"));
     }
 
     @Test
     void adminCanConfirmAsset() throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of(
             "hymnId", hymnId.toString(),
-            "type", AssetType.PDF.name(),
-            "publicUrl", "https://public.local/hymns/asset.pdf",
-            "objectKey", "hymns/" + hymnId + "/PDF/ALL/asset.pdf",
+            "type", AssetType.PNG.name(),
+            "publicUrl", "https://public.local/hymns/asset.png",
+            "objectKey", "hymns/" + hymnId + "/PNG/ALL/asset.png",
             "checksum", "abc123",
             "version", "v1"
         ));
@@ -140,9 +140,9 @@ class AdminAssetApiTest {
                 .content(payload))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.hymnId").value(hymnId.toString()))
-            .andExpect(jsonPath("$.data.type").value(AssetType.PDF.name()))
-            .andExpect(jsonPath("$.data.url").value("https://public.local/hymns/asset.pdf"))
-            .andExpect(jsonPath("$.data.objectKey").value("hymns/" + hymnId + "/PDF/ALL/asset.pdf"))
+            .andExpect(jsonPath("$.data.type").value(AssetType.PNG.name()))
+            .andExpect(jsonPath("$.data.url").value("https://public.local/hymns/asset.png"))
+            .andExpect(jsonPath("$.data.objectKey").value("hymns/" + hymnId + "/PNG/ALL/asset.png"))
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -156,9 +156,9 @@ class AdminAssetApiTest {
     void confirmRejectsInvalidObjectKey() throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of(
             "hymnId", hymnId.toString(),
-            "type", AssetType.PDF.name(),
-            "publicUrl", "https://public.local/hymns/asset.pdf",
-            "objectKey", "hymns/" + UUID.randomUUID() + "/PDF/ALL/asset.pdf"
+            "type", AssetType.PNG.name(),
+            "publicUrl", "https://public.local/hymns/asset.png",
+            "objectKey", "hymns/" + UUID.randomUUID() + "/PNG/ALL/asset.png"
         ));
 
         mockMvc.perform(post("/admin/assets/confirm")
@@ -175,10 +175,10 @@ class AdminAssetApiTest {
         assetJpaRepository.save(new com.eunhyehymn.infrastructure.persistence.AssetEntity(
             UUID.randomUUID(),
             hymnId,
-            AssetType.PDF,
+            AssetType.PNG,
             com.eunhyehymn.domain.model.PartType.ALL,
-            "https://public.local/hymns/old.pdf",
-            "hymns/" + hymnId + "/PDF/ALL/old.pdf",
+            "https://public.local/hymns/old.png",
+            "hymns/" + hymnId + "/PNG/ALL/old.png",
             null,
             null,
             Instant.now()
@@ -186,9 +186,9 @@ class AdminAssetApiTest {
 
         String payload = objectMapper.writeValueAsString(Map.of(
             "hymnId", hymnId.toString(),
-            "type", AssetType.PDF.name(),
-            "publicUrl", "https://public.local/hymns/new.pdf",
-            "objectKey", "hymns/" + hymnId + "/PDF/ALL/new.pdf"
+            "type", AssetType.PNG.name(),
+            "publicUrl", "https://public.local/hymns/new.png",
+            "objectKey", "hymns/" + hymnId + "/PNG/ALL/new.png"
         ));
 
         mockMvc.perform(post("/admin/assets/confirm")
@@ -196,23 +196,23 @@ class AdminAssetApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.objectKey").value("hymns/" + hymnId + "/PDF/ALL/new.pdf"));
+            .andExpect(jsonPath("$.data.objectKey").value("hymns/" + hymnId + "/PNG/ALL/new.png"));
 
         var sameKeyAssets = assetJpaRepository.findByHymnId(hymnId).stream()
-            .filter(asset -> asset.getType() == AssetType.PDF)
+            .filter(asset -> asset.getType() == AssetType.PNG)
             .filter(asset -> asset.getPart() == com.eunhyehymn.domain.model.PartType.ALL)
             .toList();
         assertThat(sameKeyAssets).hasSize(1);
-        assertThat(sameKeyAssets.get(0).getObjectKey()).isEqualTo("hymns/" + hymnId + "/PDF/ALL/new.pdf");
+        assertThat(sameKeyAssets.get(0).getObjectKey()).isEqualTo("hymns/" + hymnId + "/PNG/ALL/new.png");
     }
 
     @Test
     void confirmUsesAllWhenPartIsMissing() throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of(
             "hymnId", hymnId.toString(),
-            "type", AssetType.PDF.name(),
-            "publicUrl", "https://public.local/hymns/asset.pdf",
-            "objectKey", "hymns/" + hymnId + "/PDF/ALL/missing-part.pdf"
+            "type", AssetType.PNG.name(),
+            "publicUrl", "https://public.local/hymns/asset.png",
+            "objectKey", "hymns/" + hymnId + "/PNG/ALL/missing-part.png"
         ));
 
         String response = mockMvc.perform(post("/admin/assets/confirm")
@@ -220,7 +220,7 @@ class AdminAssetApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.objectKey").value("hymns/" + hymnId + "/PDF/ALL/missing-part.pdf"))
+            .andExpect(jsonPath("$.data.objectKey").value("hymns/" + hymnId + "/PNG/ALL/missing-part.png"))
             .andReturn()
             .getResponse()
             .getContentAsString();
