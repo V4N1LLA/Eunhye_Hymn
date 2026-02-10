@@ -21,13 +21,6 @@ public class ValidateInviteUseCase {
         if (!invite.isValid()) {
             return new Result(false, invite.expiresAt());
         }
-        // increment usedCount
-        InviteCode updated = new InviteCode(
-            invite.id(), invite.code(), invite.maxUses(),
-            invite.usedCount() + 1,
-            invite.expiresAt(), invite.revokedAt(), invite.createdAt()
-        );
-        inviteCodeRepository.save(updated);
         return new Result(true, invite.expiresAt());
     }
 

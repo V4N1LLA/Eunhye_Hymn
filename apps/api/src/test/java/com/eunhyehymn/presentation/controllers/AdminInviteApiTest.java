@@ -127,6 +127,31 @@ class AdminInviteApiTest {
     }
 
     @Test
+    void duplicateCodeReturnsConflict() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of("code", "DUPLICATE"));
+        mockMvc.perform(post("/admin/invites")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/admin/invites")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.error.code").value("invite_code_duplicate"));
+    }
+
+    @Test
+    void revokeNonExistentReturnsNotFound() throws Exception {
+        mockMvc.perform(post("/admin/invites/" + UUID.randomUUID() + "/revoke")
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("invite_not_found"));
+    }
+
+    @Test
     void validateRejectsInvalidCode() throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of("inviteCode", "WRONG"));
         mockMvc.perform(post("/auth/invite/validate")
