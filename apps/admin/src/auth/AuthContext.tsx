@@ -1,0 +1,94 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { devLogin as apiDevLogin, logout as apiLogout, type DevLoginRequest } from "../api/auth";
+
+interface User {
+  userId: string;
+  role: string;
+}
+
+interface AuthContextValue {
+  isAuthenticated: boolean;
+  user: User | null;
+  login: (req: DevLoginRequest) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+function parseJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const base64 = token.split(".")[1];
+    const json = atob(base64);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function loadUser(): User | null {
+  const token = localStorage.getItem("accessToken");
+  if (!token) return null;
+  const payload = parseJwtPayload(token);
+  if (!payload) return null;
+  return {
+    userId: (payload.sub ?? payload.userId) as string,
+    role: (payload.role ?? "USER") as string,
+  };
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(loadUser);
+
+  const login = useCallback(async (req: DevLoginRequest) => {
+    const tokens = await apiDevLogin(req);
+    localStorage.setItem("accessToken", tokens.accessToken);
+    localStorage.setItem("refreshToken", tokens.refreshToken);
+    const parsed = parseJwtPayload(tokens.accessToken);
+    setUser(
+      parsed
+        ? { userId: (parsed.sub ?? parsed.userId) as string, role: (parsed.role ?? "USER") as string }
+        : { userId: req.userId, role: req.role },
+    );
+  }, []);
+
+  const logout = useCallback(async () => {
+    const rt = localStorage.getItem("refreshToken");
+    if (rt) {
+      try {
+        await apiLogout(rt);
+      } catch {
+        // ignore logout errors
+      }
+    }
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    setUser(null);
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      isAuthenticated: user !== null,
+      user,
+      login,
+      logout,
+    }),
+    [user, login, logout],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return ctx;
+}
