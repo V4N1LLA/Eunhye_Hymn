@@ -1,11 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { listHymns, type HymnResponse } from "../api/hymns";
+
+type StatusFilter = "all" | "enabled" | "disabled";
 
 export default function HymnListPage() {
   const [hymns, setHymns] = useState<HymnResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -25,6 +29,20 @@ export default function HymnListPage() {
     };
   }, []);
 
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return hymns.filter((h) => {
+      if (statusFilter === "enabled" && !h.enabled) return false;
+      if (statusFilter === "disabled" && h.enabled) return false;
+      if (query) {
+        const titleMatch = h.title.toLowerCase().includes(query);
+        const numberMatch = h.number !== null && String(h.number).includes(query);
+        if (!titleMatch && !numberMatch) return false;
+      }
+      return true;
+    });
+  }, [hymns, search, statusFilter]);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -35,6 +53,25 @@ export default function HymnListPage() {
         >
           새 찬양 추가
         </Link>
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <input
+          type="text"
+          placeholder="제목 또는 번호 검색..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="all">전체</option>
+          <option value="enabled">활성</option>
+          <option value="disabled">비활성</option>
+        </select>
       </div>
 
       {loading && <p className="text-gray-500">로딩 중...</p>}
@@ -52,14 +89,14 @@ export default function HymnListPage() {
               </tr>
             </thead>
             <tbody>
-              {hymns.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
-                    등록된 찬양이 없습니다.
+                    {hymns.length === 0 ? "등록된 찬양이 없습니다." : "검색 결과가 없습니다."}
                   </td>
                 </tr>
               )}
-              {hymns.map((h) => (
+              {filtered.map((h) => (
                 <tr key={h.id} className="border-b last:border-b-0 hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm">{h.number ?? "-"}</td>
                   <td className="px-4 py-3">
