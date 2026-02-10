@@ -7,6 +7,7 @@ import HymnListPage from "./pages/HymnListPage";
 import HymnCreatePage from "./pages/HymnCreatePage";
 import HymnEditPage from "./pages/HymnEditPage";
 import AdminAssetUploadPage from "./pages/AdminAssetUploadPage";
+import InviteListPage from "./pages/InviteListPage";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
               <Route path="/hymns/new" element={<HymnCreatePage />} />
               <Route path="/hymns/:id/edit" element={<HymnEditPage />} />
               <Route path="/assets/upload" element={<AdminAssetUploadPage />} />
+              <Route path="/invites" element={<InviteListPage />} />
               <Route path="/" element={<Navigate to="/hymns" replace />} />
             </Route>
           </Route>

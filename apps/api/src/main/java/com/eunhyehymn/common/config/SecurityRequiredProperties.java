@@ -76,7 +76,7 @@ public class SecurityRequiredProperties {
     }
 
     public static class Invite {
-        @NotBlank(message = "INVITE_CODE는 필수값입니다.")
+        // DB 기반 초대코드 관리로 전환됨. 환경변수는 선택 사항.
         private String code;
 
         public String getCode() {
