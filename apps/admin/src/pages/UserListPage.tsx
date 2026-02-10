@@ -46,7 +46,7 @@ export default function UserListPage() {
       {error && <p className="text-red-600 mb-4">{error}</p>}
       {loading && <p className="text-gray-500">로딩 중...</p>}
 
-      {!loading && (
+      {!loading && !error && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b">

@@ -100,6 +100,17 @@ class AdminUserApiTest {
     }
 
     @Test
+    void updateNonExistentUserReturnsNotFound() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of("role", "ADMIN"));
+        mockMvc.perform(patch("/admin/users/" + UUID.randomUUID())
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("user_not_found"));
+    }
+
+    @Test
     void nonAdminCannotAccessUserList() throws Exception {
         String userToken = jwtService.issueAccessToken(targetUserId.toString(), Role.USER.name());
         mockMvc.perform(get("/admin/users")

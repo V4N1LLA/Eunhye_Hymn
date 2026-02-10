@@ -4,6 +4,8 @@ import com.eunhyehymn.application.ports.TokenHashService;
 import com.eunhyehymn.application.ports.TokenService;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.domain.model.RefreshToken;
+import com.eunhyehymn.domain.model.User;
+import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.domain.repository.UserRepository;
 import com.eunhyehymn.domain.repository.RefreshTokenRepository;
 import java.time.Instant;
@@ -56,8 +58,11 @@ public class RefreshTokenUseCase {
         RefreshToken next = new RefreshToken(UUID.randomUUID(), existing.userId(), newHash, expiresAt, null, Instant.now());
         refreshTokenRepository.save(next);
 
-        var user = userRepository.findById(existing.userId())
+        User user = userRepository.findById(existing.userId())
             .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "refresh_invalid", "사용자를 찾을 수 없습니다", null));
+        if (user.status() == UserStatus.DISABLED) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "user_disabled", "비활성화된 사용자입니다", null);
+        }
         String accessToken = tokenService.issueAccessToken(existing.userId().toString(), user.role().name());
 
         return new TokenPair(accessToken, newRefresh);
