@@ -11,5 +11,9 @@ public interface AssetJpaRepository extends JpaRepository<AssetEntity, UUID> {
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
+    void deleteByHymnId(UUID hymnId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
     void deleteByHymnIdAndTypeAndPart(UUID hymnId, com.eunhyehymn.domain.model.AssetType type, com.eunhyehymn.domain.model.PartType part);
 }

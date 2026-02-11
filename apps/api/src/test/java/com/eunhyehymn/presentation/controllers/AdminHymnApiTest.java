@@ -1,14 +1,18 @@
 package com.eunhyehymn.presentation.controllers;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.eunhyehymn.domain.model.AssetType;
+import com.eunhyehymn.domain.model.PartType;
 import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.UserStatus;
+import com.eunhyehymn.infrastructure.persistence.AssetEntity;
 import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.AuthIdentityJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
@@ -170,5 +174,56 @@ class AdminHymnApiTest {
             }
         }
         assertThat(hasDisabled).isTrue();
+    }
+
+    @Test
+    void adminCanDeleteHymn() throws Exception {
+        UUID hymnId = UUID.randomUUID();
+        hymnJpaRepository.save(new HymnEntity(hymnId, "삭제 대상", "99", "tag", true, Instant.now()));
+
+        // 관련 에셋도 생성
+        assetJpaRepository.save(new AssetEntity(
+            UUID.randomUUID(), hymnId, AssetType.PNG, PartType.ALL,
+            "https://example.com/test.png", "hymns/" + hymnId + "/PNG/ALL/test.png",
+            null, null, Instant.now()
+        ));
+
+        // 삭제 요청
+        mockMvc.perform(delete("/admin/hymns/" + hymnId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        // 찬양이 삭제되었는지 확인
+        assertThat(hymnJpaRepository.findById(hymnId)).isEmpty();
+
+        // 관련 에셋도 삭제되었는지 확인
+        assertThat(assetJpaRepository.findByHymnId(hymnId)).isEmpty();
+    }
+
+    @Test
+    void deleteNonExistentHymnReturns404() throws Exception {
+        UUID nonExistentId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/admin/hymns/" + nonExistentId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("hymn_not_found"));
+    }
+
+    @Test
+    void deleteHymnRequiresAdminRole() throws Exception {
+        UUID hymnId = UUID.randomUUID();
+        hymnJpaRepository.save(new HymnEntity(hymnId, "권한 테스트", "100", "tag", true, Instant.now()));
+
+        mockMvc.perform(delete("/admin/hymns/" + hymnId)
+                .header("Authorization", "Bearer " + userToken))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("forbidden"));
+
+        // 찬양이 삭제되지 않았는지 확인
+        assertThat(hymnJpaRepository.findById(hymnId)).isPresent();
     }
 }

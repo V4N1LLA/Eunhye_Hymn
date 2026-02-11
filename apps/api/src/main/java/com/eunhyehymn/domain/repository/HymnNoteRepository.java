@@ -10,4 +10,6 @@ public interface HymnNoteRepository {
     Optional<HymnNote> findById(UUID id);
 
     Optional<HymnNote> findByUserIdAndHymnId(UUID userId, UUID hymnId);
+
+    void deleteByHymnId(UUID hymnId);
 }
