@@ -8,6 +8,7 @@ import com.eunhyehymn.domain.repository.HymnRepository;
 import com.eunhyehymn.domain.repository.UserHymnStateRepository;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 
 public class AdminDeleteHymnUseCase {
     private final HymnRepository hymnRepository;
@@ -30,6 +31,7 @@ public class AdminDeleteHymnUseCase {
         this.eventRepository = eventRepository;
     }
 
+    @Transactional
     public void delete(UUID hymnId) {
         hymnRepository.findById(hymnId)
             .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "hymn_not_found", "찬송가를 찾을 수 없습니다", null));
