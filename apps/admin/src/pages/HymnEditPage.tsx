@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { deleteAsset } from "../api/adminAssets";
-import { getHymnDetail, updateHymn, type HymnDetailResponse } from "../api/hymns";
+import { deleteHymn, getHymnDetail, updateHymn, type HymnDetailResponse } from "../api/hymns";
 import AdminAssetUploadPage from "./AdminAssetUploadPage";
 
 export default function HymnEditPage() {
@@ -17,10 +17,14 @@ export default function HymnEditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [deletingAssetId, setDeletingAssetId] = useState<string | null>(null);
 
   const loadHymn = useCallback(() => {
-    if (!id) return;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     getHymnDetail(id)
       .then((data) => {
@@ -72,6 +76,21 @@ export default function HymnEditPage() {
         // silently ignore refresh errors
       });
   }, [id]);
+
+  const handleDeleteHymn = async () => {
+    if (!id || !hymn) return;
+    if (!window.confirm(`"${hymn.title}" 찬양을 삭제하시겠습니까? 관련된 에셋, 메모, 상태, 이벤트가 모두 삭제됩니다.`)) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteHymn(id);
+      navigate("/hymns", { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "삭제에 실패했습니다.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleDeleteAsset = async (assetId: string) => {
     if (!window.confirm("이 에셋을 삭제하시겠습니까?")) return;
@@ -160,6 +179,14 @@ export default function HymnEditPage() {
           >
             취소
           </button>
+          <button
+            type="button"
+            onClick={handleDeleteHymn}
+            disabled={deleting}
+            className="ml-auto bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
+          >
+            {deleting ? "삭제 중..." : "삭제"}
+          </button>
         </div>
       </form>
 
@@ -186,14 +213,18 @@ export default function HymnEditPage() {
                       <td className="py-2">{a.part}</td>
                       <td className="py-2 text-gray-500 truncate max-w-xs">{a.objectKey}</td>
                       <td className="py-2">
-                        <a
-                          href={a.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-indigo-600 hover:underline"
-                        >
-                          열기
-                        </a>
+                        {/^https?:\/\//i.test(a.url) ? (
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:underline"
+                          >
+                            열기
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="py-2">
                         <button
