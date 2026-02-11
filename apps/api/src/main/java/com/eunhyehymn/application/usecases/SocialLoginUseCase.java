@@ -5,7 +5,6 @@ import com.eunhyehymn.application.ports.SocialUserInfo;
 import com.eunhyehymn.application.ports.TokenHashService;
 import com.eunhyehymn.application.ports.TokenService;
 import com.eunhyehymn.domain.model.AuthIdentity;
-import com.eunhyehymn.domain.model.InviteCode;
 import com.eunhyehymn.domain.model.RefreshToken;
 import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.User;
@@ -17,6 +16,7 @@ import com.eunhyehymn.domain.repository.UserRepository;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 public class SocialLoginUseCase {
     private final SocialTokenVerifier socialTokenVerifier;
@@ -48,6 +48,7 @@ public class SocialLoginUseCase {
         this.refreshTokenTtlSeconds = refreshTokenTtlSeconds;
     }
 
+    @Transactional
     public LoginResult login(String provider, String token, String inviteCode) {
         // 1. 소셜 토큰 검증 → 사용자 정보 추출
         String normalizedProvider = provider.toUpperCase();
@@ -81,10 +82,13 @@ public class SocialLoginUseCase {
                 throw new InvalidInviteCodeException("초대코드가 필요합니다");
             }
 
-            InviteCode code = inviteCodeRepository.findByCode(inviteCode)
+            // 초대코드 존재 여부 확인
+            inviteCodeRepository.findByCode(inviteCode)
                 .orElseThrow(() -> new InvalidInviteCodeException("유효하지 않은 초대코드입니다"));
 
-            if (!isValidCode(code)) {
+            // 원자적으로 usedCount 증가 (enabled, maxUses, expiresAt 동시 검증)
+            boolean incremented = inviteCodeRepository.incrementUsedCount(inviteCode);
+            if (!incremented) {
                 throw new InvalidInviteCodeException("유효하지 않은 초대코드입니다");
             }
 
@@ -104,19 +108,6 @@ public class SocialLoginUseCase {
                 now
             );
             authIdentityRepository.save(identity);
-
-            // 초대코드 usedCount 증가
-            InviteCode updatedCode = new InviteCode(
-                code.code(),
-                code.createdBy(),
-                code.description(),
-                code.maxUses(),
-                code.usedCount() + 1,
-                code.enabled(),
-                code.expiresAt(),
-                code.createdAt()
-            );
-            inviteCodeRepository.save(updatedCode);
         }
 
         // 3. JWT 발급
@@ -134,19 +125,6 @@ public class SocialLoginUseCase {
         refreshTokenRepository.save(stored);
 
         return new LoginResult(accessToken, refreshToken, existingIdentity.isEmpty());
-    }
-
-    private boolean isValidCode(InviteCode inviteCode) {
-        if (!inviteCode.enabled()) {
-            return false;
-        }
-        if (inviteCode.expiresAt() != null && inviteCode.expiresAt().isBefore(Instant.now())) {
-            return false;
-        }
-        if (inviteCode.maxUses() != null && inviteCode.usedCount() >= inviteCode.maxUses()) {
-            return false;
-        }
-        return true;
     }
 
     public record LoginResult(String accessToken, String refreshToken, boolean newUser) {

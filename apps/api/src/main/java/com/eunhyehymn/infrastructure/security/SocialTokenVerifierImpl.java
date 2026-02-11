@@ -6,17 +6,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 public class SocialTokenVerifierImpl implements SocialTokenVerifier {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
+    private final String googleClientId;
 
-    public SocialTokenVerifierImpl(ObjectMapper objectMapper) {
+    public SocialTokenVerifierImpl(ObjectMapper objectMapper, String googleClientId) {
         this.objectMapper = objectMapper;
+        this.googleClientId = googleClientId;
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
@@ -33,8 +37,9 @@ public class SocialTokenVerifierImpl implements SocialTokenVerifier {
 
     private SocialUserInfo verifyGoogle(String idToken) {
         try {
+            String encodedToken = URLEncoder.encode(idToken, StandardCharsets.UTF_8);
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken))
+                .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodedToken))
                 .GET()
                 .timeout(Duration.ofSeconds(10))
                 .build();
@@ -46,6 +51,12 @@ public class SocialTokenVerifierImpl implements SocialTokenVerifier {
             }
 
             JsonNode body = objectMapper.readTree(response.body());
+
+            // aud 클레임 검증: 토큰이 우리 앱에 발급된 것인지 확인
+            String aud = body.path("aud").asText(null);
+            if (googleClientId != null && !googleClientId.isBlank() && !googleClientId.equals(aud)) {
+                throw new SocialLoginException("Google 토큰의 audience가 일치하지 않습니다");
+            }
 
             String sub = body.path("sub").asText(null);
             String email = body.path("email").asText(null);

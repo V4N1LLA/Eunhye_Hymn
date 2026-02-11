@@ -10,4 +10,12 @@ public interface InviteCodeRepository {
     Optional<InviteCode> findByCode(String code);
 
     List<InviteCode> findAll();
+
+    /**
+     * 초대코드의 usedCount를 원자적으로 1 증가시킵니다.
+     * maxUses가 null이거나 usedCount < maxUses인 경우에만 증가합니다.
+     *
+     * @return 증가 성공 시 true, 한도 초과 시 false
+     */
+    boolean incrementUsedCount(String code);
 }
