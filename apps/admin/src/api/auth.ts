@@ -11,6 +11,26 @@ export interface DevLoginRequest {
   displayName: string;
 }
 
+export interface SocialLoginRequest {
+  provider: "GOOGLE" | "KAKAO";
+  token: string;
+  inviteCode?: string;
+}
+
+export interface SocialLoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  newUser: boolean;
+}
+
+export function socialLogin(req: SocialLoginRequest): Promise<SocialLoginResponse> {
+  return apiPost<SocialLoginResponse>("/auth/social", req);
+}
+
+export function validateInviteCode(code: string): Promise<{ valid: boolean }> {
+  return apiPost<{ valid: boolean }>("/auth/invite/validate", { code });
+}
+
 export function devLogin(req: DevLoginRequest): Promise<TokenResponse> {
   return apiPost<TokenResponse>("/auth/dev/login", req);
 }

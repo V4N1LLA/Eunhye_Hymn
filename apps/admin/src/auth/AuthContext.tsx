@@ -6,7 +6,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { devLogin as apiDevLogin, logout as apiLogout, type DevLoginRequest } from "../api/auth";
+import {
+  devLogin as apiDevLogin,
+  logout as apiLogout,
+  socialLogin as apiSocialLogin,
+  type DevLoginRequest,
+} from "../api/auth";
 
 interface User {
   userId: string;
@@ -17,6 +22,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   user: User | null;
   login: (req: DevLoginRequest) => Promise<void>;
+  loginWithSocial: (provider: "GOOGLE" | "KAKAO", token: string, inviteCode?: string) => Promise<{ newUser: boolean }>;
   logout: () => Promise<void>;
 }
 
@@ -46,17 +52,27 @@ function loadUser(): User | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(loadUser);
 
-  const login = useCallback(async (req: DevLoginRequest) => {
-    const tokens = await apiDevLogin(req);
-    localStorage.setItem("accessToken", tokens.accessToken);
-    localStorage.setItem("refreshToken", tokens.refreshToken);
-    const parsed = parseJwtPayload(tokens.accessToken);
+  const setTokensAndUser = useCallback((accessToken: string, refreshToken: string, fallbackUser?: User) => {
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+    const parsed = parseJwtPayload(accessToken);
     setUser(
       parsed
         ? { userId: (parsed.sub ?? parsed.userId) as string, role: (parsed.role ?? "USER") as string }
-        : { userId: req.userId, role: req.role },
+        : fallbackUser ?? null,
     );
   }, []);
+
+  const login = useCallback(async (req: DevLoginRequest) => {
+    const tokens = await apiDevLogin(req);
+    setTokensAndUser(tokens.accessToken, tokens.refreshToken, { userId: req.userId, role: req.role });
+  }, [setTokensAndUser]);
+
+  const loginWithSocial = useCallback(async (provider: "GOOGLE" | "KAKAO", token: string, inviteCode?: string) => {
+    const result = await apiSocialLogin({ provider, token, inviteCode });
+    setTokensAndUser(result.accessToken, result.refreshToken);
+    return { newUser: result.newUser };
+  }, [setTokensAndUser]);
 
   const logout = useCallback(async () => {
     const rt = localStorage.getItem("refreshToken");
@@ -77,9 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: user !== null,
       user,
       login,
+      loginWithSocial,
       logout,
     }),
-    [user, login, logout],
+    [user, login, loginWithSocial, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
