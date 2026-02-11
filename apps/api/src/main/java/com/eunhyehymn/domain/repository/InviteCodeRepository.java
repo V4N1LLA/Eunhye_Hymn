@@ -10,6 +10,4 @@ public interface InviteCodeRepository {
     Optional<InviteCode> findByCode(String code);
 
     List<InviteCode> findAll();
-
-    void deleteByCode(String code);
 }

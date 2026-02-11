@@ -13,4 +13,7 @@ public record InviteCode(
     Instant expiresAt,
     Instant createdAt
 ) {
+    public InviteCode withEnabled(boolean enabled) {
+        return new InviteCode(code, createdBy, description, maxUses, usedCount, enabled, expiresAt, createdAt);
+    }
 }

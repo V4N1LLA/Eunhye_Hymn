@@ -21,32 +21,51 @@ export default function InviteCodePage() {
 
   const [revokingCodes, setRevokingCodes] = useState<Set<string>>(new Set());
 
-  const fetchCodes = () => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
+    setLoadError(null);
     listInviteCodes()
-      .then(setCodes)
-      .catch((err) => setLoadError(err instanceof Error ? err.message : "목록을 불러올 수 없습니다."))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!cancelled) setCodes(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : "목록을 불러올 수 없습니다.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const resetForm = () => {
+    setNewCode("");
+    setDescription("");
+    setMaxUses("");
   };
 
-  useEffect(() => {
-    fetchCodes();
-  }, []);
+  const handleToggleForm = () => {
+    if (showForm) {
+      resetForm();
+    }
+    setShowForm(!showForm);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     setMutationError(null);
+    const parsed = maxUses ? parseInt(maxUses, 10) : undefined;
     try {
       const created = await createInviteCode({
         code: newCode.trim(),
         description: description.trim() || undefined,
-        maxUses: maxUses ? parseInt(maxUses, 10) : undefined,
+        maxUses: parsed !== undefined && !Number.isNaN(parsed) ? parsed : undefined,
       });
       setCodes((prev) => [created, ...prev]);
-      setNewCode("");
-      setDescription("");
-      setMaxUses("");
+      resetForm();
       setShowForm(false);
     } catch (err) {
       setMutationError(err instanceof Error ? err.message : "초대코드 생성에 실패했습니다.");
@@ -78,7 +97,7 @@ export default function InviteCodePage() {
         <h1 className="text-2xl font-bold">초대코드 관리</h1>
         <button
           type="button"
-          onClick={() => setShowForm(!showForm)}
+          onClick={handleToggleForm}
           className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
         >
           {showForm ? "취소" : "새 초대코드"}

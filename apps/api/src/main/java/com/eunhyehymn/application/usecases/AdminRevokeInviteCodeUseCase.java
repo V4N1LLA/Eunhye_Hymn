@@ -16,11 +16,6 @@ public class AdminRevokeInviteCodeUseCase {
         InviteCode existing = inviteCodeRepository.findByCode(code)
             .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "invite_code_not_found", "초대코드를 찾을 수 없습니다", null));
 
-        InviteCode disabled = new InviteCode(
-            existing.code(), existing.createdBy(), existing.description(),
-            existing.maxUses(), existing.usedCount(), false,
-            existing.expiresAt(), existing.createdAt()
-        );
-        inviteCodeRepository.save(disabled);
+        inviteCodeRepository.save(existing.withEnabled(false));
     }
 }

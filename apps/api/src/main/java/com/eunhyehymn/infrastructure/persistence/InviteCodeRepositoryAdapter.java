@@ -32,9 +32,4 @@ public class InviteCodeRepositoryAdapter implements InviteCodeRepository {
             .map(InviteCodeMapper::toDomain)
             .toList();
     }
-
-    @Override
-    public void deleteByCode(String code) {
-        jpaRepository.deleteById(code);
-    }
 }

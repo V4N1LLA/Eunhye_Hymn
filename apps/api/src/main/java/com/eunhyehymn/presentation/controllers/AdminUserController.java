@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -43,10 +44,15 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{id}")
-    public ApiResponse<UserResponse> update(@PathVariable UUID id, @RequestBody UpdateUserRequest request) {
+    public ApiResponse<UserResponse> update(
+        @PathVariable UUID id,
+        @RequestBody UpdateUserRequest request,
+        Authentication authentication
+    ) {
+        UUID requesterId = UUID.fromString(authentication.getName());
         Role role = parseEnum(Role.class, request.role(), "role");
         UserStatus status = parseEnum(UserStatus.class, request.status(), "status");
-        User user = adminUpdateUserUseCase.update(id, role, status);
+        User user = adminUpdateUserUseCase.update(requesterId, id, role, status);
         return ApiResponse.success(UserResponse.from(user));
     }
 

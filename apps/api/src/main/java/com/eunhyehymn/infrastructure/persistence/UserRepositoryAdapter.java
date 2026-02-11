@@ -1,6 +1,8 @@
 package com.eunhyehymn.infrastructure.persistence;
 
+import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.User;
+import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.domain.repository.UserRepository;
 import com.eunhyehymn.infrastructure.persistence.mapper.UserMapper;
 import java.util.List;
@@ -32,5 +34,10 @@ public class UserRepositoryAdapter implements UserRepository {
         return userJpaRepository.findAll().stream()
             .map(UserMapper::toDomain)
             .toList();
+    }
+
+    @Override
+    public long countByRoleAndStatus(Role role, UserStatus status) {
+        return userJpaRepository.countByRoleAndStatus(role, status);
     }
 }

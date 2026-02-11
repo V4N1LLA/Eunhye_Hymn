@@ -43,6 +43,7 @@ export default function UserListPage() {
   }, [users, search, roleFilter, statusFilter]);
 
   const handleRoleChange = async (user: UserResponse, newRole: string) => {
+    setMutationError(null);
     setUpdatingIds((prev) => new Set(prev).add(user.id));
     try {
       const updated = await updateUser(user.id, { role: newRole });
@@ -60,6 +61,7 @@ export default function UserListPage() {
 
   const handleStatusToggle = async (user: UserResponse) => {
     const newStatus = user.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
+    setMutationError(null);
     setUpdatingIds((prev) => new Set(prev).add(user.id));
     try {
       const updated = await updateUser(user.id, { status: newStatus });

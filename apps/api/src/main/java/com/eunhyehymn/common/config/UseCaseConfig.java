@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class HymnConfig {
+public class UseCaseConfig {
     @Bean
     ListHymnsUseCase listHymnsUseCase(HymnRepository hymnRepository) {
         return new ListHymnsUseCase(hymnRepository);

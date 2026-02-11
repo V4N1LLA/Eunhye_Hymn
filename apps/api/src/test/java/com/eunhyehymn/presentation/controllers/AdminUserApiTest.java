@@ -48,6 +48,7 @@ class AdminUserApiTest {
     @Autowired private RefreshTokenJpaRepository refreshTokenJpaRepository;
     @Autowired private InviteCodeJpaRepository inviteCodeJpaRepository;
 
+    private UUID adminId;
     private String adminToken;
     private String userToken;
     private UUID userId;
@@ -64,7 +65,7 @@ class AdminUserApiTest {
         hymnJpaRepository.deleteAll();
         userJpaRepository.deleteAll();
 
-        UUID adminId = UUID.randomUUID();
+        adminId = UUID.randomUUID();
         userId = UUID.randomUUID();
         userJpaRepository.save(new UserEntity(adminId, "관리자", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
         userJpaRepository.save(new UserEntity(userId, "일반", Role.USER, UserStatus.ACTIVE, Instant.now(), Instant.now()));
@@ -133,5 +134,43 @@ class AdminUserApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void adminCannotDemoteSelf() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of("role", "USER"));
+
+        mockMvc.perform(patch("/admin/users/" + adminId)
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("self_role_change"));
+    }
+
+    @Test
+    void cannotDemoteLastActiveAdmin() throws Exception {
+        // setUp creates one ADMIN (adminId) and one USER (userId).
+        // adminId is the only active admin, so demoting them via another admin should fail.
+        // Create a second admin to perform the request.
+        UUID secondAdminId = UUID.randomUUID();
+        userJpaRepository.save(new UserEntity(secondAdminId, "두번째관리자", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
+        String secondAdminToken = jwtService.issueAccessToken(secondAdminId.toString(), Role.ADMIN.name());
+
+        // Now there are 2 active admins. Demoting one should succeed.
+        String demotePayload = objectMapper.writeValueAsString(Map.of("role", "USER"));
+        mockMvc.perform(patch("/admin/users/" + adminId)
+                .header("Authorization", "Bearer " + secondAdminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(demotePayload))
+            .andExpect(status().isOk());
+
+        // Now secondAdmin is the only active admin. Use adminToken (demoted but JWT still valid) to try demoting the last admin.
+        mockMvc.perform(patch("/admin/users/" + secondAdminId)
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(demotePayload))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("last_admin"));
     }
 }
