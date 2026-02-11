@@ -143,6 +143,7 @@ com.eunhyehymn/
 | **HymnNote** | `id: UUID, userId, hymnId, content, updatedAt` | UNIQUE(userId, hymnId) |
 | **UserHymnState** | `userId, hymnId (복합 PK), favorite, lastOpenedAt, lastPartPlayed: PartType, lastPlayPositionMs` | |
 | **Event** | `id: UUID, userId, eventType: EventType, hymnId, part: PartType, metadataJson, createdAt` | |
+| **InviteCode** | `code: String (PK), createdBy: UUID, description, maxUses, usedCount, enabled, expiresAt, createdAt` | DB 기반 초대코드 관리 |
 
 ### 6.2 Enums
 
@@ -194,7 +195,22 @@ com.eunhyehymn/
 
 **objectKey 형식**: `hymns/{hymnId}/{type}/{part}/{uuid}-{filename}`
 
-### 7.5 사용자 개인 (`MeController`)
+### 7.5 사용자 - 관리자 (`AdminUserController`)
+
+| Method | Path | 인증 | 설명 |
+|--------|------|------|------|
+| GET | `/admin/users` | ADMIN | 사용자 목록 → `List<UserResponse>` |
+| PATCH | `/admin/users/{id}` | ADMIN | 역할/상태 변경 (role, status) |
+
+### 7.6 초대코드 - 관리자 (`AdminInviteCodeController`)
+
+| Method | Path | 인증 | 설명 |
+|--------|------|------|------|
+| POST | `/admin/invite-codes` | ADMIN | 초대코드 생성 (code, description, maxUses, expiresAt) |
+| GET | `/admin/invite-codes` | ADMIN | 초대코드 목록 |
+| DELETE | `/admin/invite-codes/{code}` | ADMIN | 초대코드 비활성화 |
+
+### 7.7 사용자 개인 (`MeController`)
 
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
@@ -204,13 +220,13 @@ com.eunhyehymn/
 | PUT | `/me/hymns/{hymnId}/note` | 필요 | 메모 저장 (NoteRequest) |
 | GET | `/me/history` | 필요 | 최근 본 찬양 → `List<HistoryItemResponse>` |
 
-### 7.6 이벤트 (`EventController`)
+### 7.8 이벤트 (`EventController`)
 
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
 | POST | `/events` | 필요 | 이벤트 기록 (단건 또는 배열, JsonNode 파싱) |
 
-### 7.7 시스템
+### 7.9 시스템
 
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
@@ -219,7 +235,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (15개)
+## 8. Use Cases (21개)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -238,6 +254,12 @@ com.eunhyehymn/
 | `LogoutUseCase` | `logout(rawRefreshToken)` | revokedAt 설정 |
 | `DevLoginUseCase` | `login(userId, role, displayName)` | 사용자 생성/갱신, 토큰 발급 |
 | `RecordEventsUseCase` | `record(userId, List<EventInput>)` | EventType/PartType 검증 후 저장 |
+| `AdminListUsersUseCase` | `listAll()` | 전체 사용자 목록 조회 |
+| `AdminUpdateUserUseCase` | `update(userId, role, status)` | 사용자 역할/상태 변경 |
+| `AdminCreateInviteCodeUseCase` | `create(code, createdBy, ...)` | 초대코드 생성 (중복 검사) |
+| `AdminListInviteCodesUseCase` | `listAll()` | 전체 초대코드 목록 |
+| `AdminRevokeInviteCodeUseCase` | `revoke(code)` | 초대코드 비활성화 (enabled=false) |
+| `ValidateInviteCodeUseCase` | `validate(code)` | 초대코드 검증 (enabled, 만료, 사용 횟수) |
 
 ---
 
@@ -252,6 +274,7 @@ com.eunhyehymn/
 | `V3__asset_object_key.sql` | assets에 object_key 컬럼 추가 (NOT NULL) |
 | `V4__asset_part_not_null.sql` | assets.part NULL → 'ALL' 변환 후 NOT NULL 제약 |
 | `V5__asset_type_png_midi.sql` | assets.type PDF → PNG, AUDIO → MIDI 변환 |
+| `V6__invite_codes.sql` | invite_codes 테이블 생성 (code PK, created_by FK, max_uses, used_count, enabled, expires_at) |
 
 ### 주요 인덱스
 - `idx_refresh_tokens_user_id` ON refresh_tokens(user_id)
@@ -313,6 +336,8 @@ com.eunhyehymn/
 | `AuthFlowTest` | 인증/토큰 갱신 플로우 |
 | `FlywayRepositoryIntegrationTest` | DB 마이그레이션 통합 |
 | `GetHistoryUseCaseTest` | 히스토리 Use Case 단위 |
+| `AdminUserApiTest` | 사용자 관리 API (목록, 역할/상태 변경, 권한 검사) |
+| `AdminInviteCodeApiTest` | 초대코드 관리 API (생성, 목록, 비활성화, 검증) |
 
 - **테스트 DB**: H2 인메모리 (test 프로필)
 - **전체 테스트 통과** 확인 (2026-02-11 기준)
@@ -336,14 +361,18 @@ com.eunhyehymn/
 | `src/api/auth.ts` | Dev 로그인, 토큰 갱신, 로그아웃 API |
 | `src/api/hymns.ts` | 찬양 목록/생성/수정/상세 API |
 | `src/api/adminAssets.ts` | 에셋 presign/confirm API (공통 클라이언트 사용) |
+| `src/api/adminUsers.ts` | 사용자 목록/역할·상태 변경 API |
+| `src/api/adminInviteCodes.ts` | 초대코드 목록/생성/비활성화 API |
 | `src/auth/AuthContext.tsx` | AuthProvider + `useAuth()` 훅, JWT 파싱, localStorage 토큰 관리 |
 | `src/auth/ProtectedRoute.tsx` | 미인증 시 `/login` redirect |
-| `src/components/Layout.tsx` | 사이드바(찬양 관리, 에셋 업로드) + 로그아웃 |
+| `src/components/Layout.tsx` | 사이드바(찬양 관리, 에셋 업로드, 사용자 관리, 초대코드 관리) + 로그아웃 |
 | `src/pages/LoginPage.tsx` | Dev Login 폼 (ADMIN 역할, UUID 자동생성) |
 | `src/pages/HymnListPage.tsx` | 찬양 목록 테이블 (번호, 제목, 태그, 활성 상태) + 검색/필터 + 활성화 토글 |
 | `src/pages/HymnCreatePage.tsx` | 찬양 생성 폼 (title, number, tags, enabled) |
 | `src/pages/HymnEditPage.tsx` | 찬양 수정 폼 + 에셋 목록(URL 링크) + 임베디드 업로드 + 업로드 후 자동 새로고침 |
 | `src/pages/AdminAssetUploadPage.tsx` | 에셋 업로드 3단계 UI (Tailwind 스타일, hymnId/onConfirmed props 지원) |
+| `src/pages/UserListPage.tsx` | 사용자 목록 테이블 + 역할/상태 변경 + 검색/필터 |
+| `src/pages/InviteCodePage.tsx` | 초대코드 목록 + 생성/비활성화 |
 | `src/App.tsx` | BrowserRouter 라우팅 설정 |
 
 ### 라우팅 구조
@@ -356,11 +385,11 @@ com.eunhyehymn/
 | `/hymns/new` | HymnCreatePage | 필요 |
 | `/hymns/:id/edit` | HymnEditPage | 필요 |
 | `/assets/upload` | AdminAssetUploadPage | 필요 |
+| `/users` | UserListPage | 필요 |
+| `/invite-codes` | InviteCodePage | 필요 |
 
 ### 미구현 기능
 - 소셜 로그인 (현재 Dev Login만 지원)
-- 초대코드 관리
-- 사용자/역할 관리
 
 ---
 
@@ -393,7 +422,7 @@ com.eunhyehymn/
 ## 16. 현재 진행 상태 및 남은 작업
 
 ### 완료
-- Spring Boot API 전체 구현 (15개 UseCase, 8개 Controller)
+- Spring Boot API 전체 구현 (21개 UseCase, 11개 Controller)
 - JWT 인증 + 소셜 로그인 + 초대코드
 - 찬양 CRUD + S3 에셋 관리
 - 사용자 기능 (즐겨찾기, 메모, 히스토리)
@@ -408,14 +437,16 @@ com.eunhyehymn/
 - **API Dockerfile**: Multi-stage build (JDK 17 빌드 → JRE 17 실행)
 - **CI/CD**: API 테스트 + Admin 빌드/타입체크 워크플로우 (path filter 적용)
 - **PostgreSQL JDBC 드라이버**: build.gradle에 runtimeOnly PostgreSQL + Flyway PostgreSQL 모듈 추가
+- **사용자 관리**: 백엔드 API (GET/PATCH /admin/users) + Admin 프론트엔드 (역할/상태 변경, 검색/필터)
+- **초대코드 관리**: DB 기반 초대코드 (V6 마이그레이션), 백엔드 API (CRUD + 검증), Admin 프론트엔드 (생성/비활성화)
+- **초대코드 검증**: POST /auth/invite/validate 공개 엔드포인트 (enabled, 만료, 사용 횟수 확인)
 
 ### 미완료 (우선순위순)
-1. **Admin 추가 기능**: 소셜 로그인 연동, 초대코드 관리, 사용자/역할 관리
+1. **Admin 추가 기능**: 소셜 로그인 연동
 2. **AWS 인프라**: VPC, RDS, S3, ECS/EKS, IAM (전부 placeholder)
 3. **배포 자동화**: Staging/Production 파이프라인
 4. **모니터링/알림**: CloudWatch, 에러 추적
 5. **모바일 앱**: Flutter (코드 없음)
-6. **추가 API**: 초대코드 CRUD, 사용자/역할 관리
 
 ---
 
@@ -428,3 +459,92 @@ com.eunhyehymn/
 - **Gradle**: 시스템 gradle이 아닌 wrapper (`./gradlew`) 사용
 - **Windows**: gradlew.bat에서 JAVA_HOME 공백 경로 처리 수정 적용됨
 - **에셋 교체**: 동일 (hymnId, type, part) 조합 시 기존 레코드 삭제 후 새로 생성
+
+---
+
+## 18. 코드 품질 Skill (개발 시 필수 준수)
+
+개발 과정에서 아래 두 skill의 원칙을 항상 적용한다.
+
+### 18.1 Clean Architecture Skill (`/clean-architecture`)
+
+코드 작성 및 리뷰 시 Robert C. Martin의 Clean Architecture 원칙을 준수한다.
+
+**핵심 규칙**:
+- **의존성 규칙**: 소스코드 의존성은 반드시 안쪽(상위 정책)을 향해야 한다
+  - Entity(Domain) → Use Case(Application) → Interface Adapters(Presentation) → Infrastructure
+  - 내부 레이어는 외부 레이어를 절대 참조하지 않는다
+- **경계 횡단 시 DIP 적용**: Use Case가 외부를 호출해야 할 때 Output Port(인터페이스)를 내부에 정의하고, 외부에서 구현
+- **경계를 넘는 데이터**: Entity나 DB Row를 직접 전달하지 않고, 각 레이어별 DTO로 변환
+- **SOLID 원칙**: 특히 DIP(의존성 역전)는 경계 횡단의 핵심
+
+**실용적 주의점**:
+- 레이어 분리 자체가 목적이 아님 — 실질적 이점이 있을 때 적용
+- 구현체가 하나뿐인 인터페이스의 과잉 추상화 경계
+- 0.001% 확률의 미래 변경을 위한 오버엔지니어링 금지
+
+### 18.2 Kent Beck Style Skill (`/kent-beck-style`)
+
+Kent Beck의 리팩토링 철학과 Simple Design 원칙을 준수한다.
+
+**Simple Design 4규칙** (우선순위순):
+1. 테스트를 통과한다
+2. 의도를 드러낸다 (Reveals Intent)
+3. 중복이 없다 (DRY)
+4. 최소 요소만 가진다 (Fewest Elements)
+
+**핵심 원칙**:
+- **YAGNI**: 지금 필요한 기능만 구현, 미래를 위한 투기적 일반화 금지
+- **KISS**: 영리한 코드보다 단순한 코드, 설명하기 어려우면 너무 복잡한 것
+- **점진적 설계**: 작은 변경 → 테스트 → 커밋 리듬으로 작업
+
+**주요 Code Smell 감지 항목**:
+- Long Method, Large Class, Primitive Obsession, Long Parameter List
+- Feature Envy, Inappropriate Intimacy, Message Chains
+- Duplicate Code, Dead Code, Speculative Generality
+- Switch Statements (다형성 누락 가능성)
+
+**리팩토링 기법 적용**:
+- Extract Method: 의도를 드러내는 이름으로 코드 조각 추출
+- Replace Magic Number with Symbolic Constant
+- Decompose Conditional, Guard Clauses로 중첩 조건 제거
+- Introduce Parameter Object로 긴 파라미터 목록 개선
+- 네이밍: 변수=명사, 함수=동사, 불리언=질문형, 클래스=명사
+
+### 18.3 PR Reviewer (`/review-pr`, `/resolve-reviews`)
+
+GitHub PR을 자동으로 리뷰하고 인라인 코멘트를 게시하는 플러그인.
+
+**사용법**:
+- `/pr-reviewer:review-pr <PR_URL>` — PR 리뷰 실행 (3개 병렬 에이전트: 버그/보안/코드품질)
+- `/pr-reviewer:resolve-reviews [PR_URL 또는 번호]` — PR의 미해결 리뷰 코멘트 분석, 코드 수정, 답글 게시
+
+**리뷰 워크플로우**: PR 정보 수집 → 워크트리 생성 → 기존 리뷰 확인/resolve → 병렬 코드 분석 → 결과 정리 → 사용자 승인 → GitHub 게시
+
+**심각도**: Bug > Warning > Minor > Nit
+
+**리뷰 코멘트 해결 카테고리**: code_change, question, already_done, disagree, unclear
+
+### 18.4 Codex Reviewer (자동 Hook)
+
+파일 수정(Write/Edit) 시 OpenAI Codex가 **자동으로** 코드 리뷰하는 PostToolUse hook.
+
+**동작**: Write/Edit 도구 사용 후 → Codex가 코드 리뷰 → 이슈 발견 시 피드백 / LGTM 시 조용히 통과
+
+**대상 확장자**: ts, tsx, js, jsx, py, go, rs, java, kt, swift 등
+
+**의존성** (설치 완료):
+- jq 1.8.1 (winget)
+- Codex CLI 0.98.0 (`npm install -g @openai/codex`)
+- **OPENAI_API_KEY 설정 필요** — `codex login` 또는 환경변수로 설정
+
+### 18.5 적용 시점
+
+| 시점 | 적용 방법 |
+|------|-----------|
+| **새 코드 작성** | Clean Architecture + Kent Beck 원칙 기본 적용, Codex 자동 리뷰 |
+| **기존 코드 수정** | 수정 범위 내에서 smell 발견 시 함께 개선 (Boy Scout Rule) |
+| **코드 리뷰 요청** | `/clean-architecture` 또는 `/kent-beck-style` skill 실행 |
+| **PR 리뷰** | `/pr-reviewer:review-pr <PR_URL>` 실행 |
+| **PR 리뷰 코멘트 해결** | `/pr-reviewer:resolve-reviews` 실행 |
+| **기능 완료 후** | 자체 점검 — 의존성 방향, 중복, 네이밍, 복잡도 확인 |

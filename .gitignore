@@ -64,6 +64,12 @@ $RECYCLE.BIN/
 logs/
 *.log
 
+# Build output
+dist/
+
+# Claude Code
+.claude/
+
 # Gradle
 .gradle/
 !.env.example
