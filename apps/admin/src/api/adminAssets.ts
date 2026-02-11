@@ -1,4 +1,4 @@
-import { apiPost } from "./client";
+import { apiDelete, apiPost } from "./client";
 
 export type AssetType = "PNG" | "MIDI";
 export type PartType = "S" | "A" | "T" | "B" | "ALL";
@@ -42,4 +42,8 @@ export function presignAsset(request: PresignRequest): Promise<PresignResponse> 
 
 export function confirmAsset(request: ConfirmRequest): Promise<ConfirmResponse> {
   return apiPost<ConfirmResponse>("/admin/assets/confirm", request);
+}
+
+export function deleteAsset(id: string): Promise<void> {
+  return apiDelete<void>(`/admin/assets/${id}`);
 }

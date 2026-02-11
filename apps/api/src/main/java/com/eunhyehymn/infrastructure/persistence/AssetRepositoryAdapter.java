@@ -33,6 +33,16 @@ public class AssetRepositoryAdapter implements AssetRepository {
     }
 
     @Override
+    public void deleteById(UUID id) {
+        assetJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public void deleteByHymnId(UUID hymnId) {
+        assetJpaRepository.deleteByHymnId(hymnId);
+    }
+
+    @Override
     public void deleteByHymnIdAndTypeAndPart(UUID hymnId, com.eunhyehymn.domain.model.AssetType type, com.eunhyehymn.domain.model.PartType part) {
         assetJpaRepository.deleteByHymnIdAndTypeAndPart(hymnId, type, part);
     }

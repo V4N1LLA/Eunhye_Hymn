@@ -3,6 +3,7 @@ package com.eunhyehymn.presentation.controllers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -258,5 +259,58 @@ class AdminAssetApiTest {
         UUID assetId = UUID.fromString(objectMapper.readTree(response).get("data").get("assetId").asText());
         var saved = assetJpaRepository.findById(assetId).orElseThrow();
         assertThat(saved.getPart()).isEqualTo(com.eunhyehymn.domain.model.PartType.ALL);
+    }
+
+    @Test
+    void adminCanDeleteAsset() throws Exception {
+        UUID assetId = UUID.randomUUID();
+        assetJpaRepository.save(new com.eunhyehymn.infrastructure.persistence.AssetEntity(
+            assetId,
+            hymnId,
+            AssetType.PNG,
+            com.eunhyehymn.domain.model.PartType.ALL,
+            "https://public.local/hymns/delete-me.png",
+            "hymns/" + hymnId + "/PNG/ALL/delete-me.png",
+            null,
+            null,
+            Instant.now()
+        ));
+
+        mockMvc.perform(delete("/admin/assets/" + assetId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        assertThat(assetJpaRepository.findById(assetId)).isEmpty();
+    }
+
+    @Test
+    void deleteReturnsNotFoundForNonExistentAsset() throws Exception {
+        UUID nonExistentId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/admin/assets/" + nonExistentId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("asset_not_found"));
+    }
+
+    @Test
+    void deleteRequiresAdminRole() throws Exception {
+        UUID assetId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/admin/assets/" + assetId)
+                .header("Authorization", "Bearer " + userToken))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("forbidden"));
+    }
+
+    @Test
+    void deleteRejectsUnauthenticatedUser() throws Exception {
+        UUID assetId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/admin/assets/" + assetId))
+            .andExpect(status().isUnauthorized());
     }
 }
