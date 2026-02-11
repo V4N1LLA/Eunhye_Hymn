@@ -1,7 +1,7 @@
 # CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-10
+> 마지막 업데이트: 2026-02-11
 
 ---
 
@@ -21,13 +21,13 @@
 Eunhye_Hymn/
 ├── apps/
 │   ├── api/          # Spring Boot 백엔드 (Java 17, Gradle)  ← MVP 완료
-│   ├── admin/        # React + Vite + TypeScript 관리자 웹    ← 에셋 업로드 페이지만 구현
+│   ├── admin/        # React + Vite + TypeScript 관리자 웹    ← CRUD + 검색 + 에셋 업로드 구현
 │   └── mobile/       # Flutter 모바일 (placeholder)
 ├── infra/
-│   ├── docker/       # Docker Compose (placeholder)
+│   ├── docker/       # Docker Compose (PostgreSQL + LocalStack + API)
 │   └── aws/          # AWS IaC (placeholder)
 ├── docs/             # 프로젝트 문서 (요구사항, 아키텍처, API 계약 등)
-├── .github/workflows/  # CI/CD (api-ci.yml)
+├── .github/workflows/  # CI/CD (api-ci.yml, admin-ci.yml)
 ├── CLAUDE.md         # 이 파일
 ├── README.md
 └── LICENSE
@@ -315,7 +315,7 @@ com.eunhyehymn/
 | `GetHistoryUseCaseTest` | 히스토리 Use Case 단위 |
 
 - **테스트 DB**: H2 인메모리 (test 프로필)
-- **전체 테스트 통과** 확인 (2026-02-10 기준)
+- **전체 테스트 통과** 확인 (2026-02-11 기준)
 
 ---
 
@@ -332,7 +332,7 @@ com.eunhyehymn/
 
 | 파일 | 역할 |
 |------|------|
-| `src/api/client.ts` | 공통 fetch wrapper (`apiGet`, `apiPost`, `apiPatch`), Bearer 토큰 자동 추가, 401 시 로그인 redirect |
+| `src/api/client.ts` | 공통 fetch wrapper (`apiGet`, `apiPost`, `apiPatch`, `apiDelete`), Bearer 토큰 자동 추가, 401 시 로그인 redirect |
 | `src/api/auth.ts` | Dev 로그인, 토큰 갱신, 로그아웃 API |
 | `src/api/hymns.ts` | 찬양 목록/생성/수정/상세 API |
 | `src/api/adminAssets.ts` | 에셋 presign/confirm API (공통 클라이언트 사용) |
@@ -340,10 +340,10 @@ com.eunhyehymn/
 | `src/auth/ProtectedRoute.tsx` | 미인증 시 `/login` redirect |
 | `src/components/Layout.tsx` | 사이드바(찬양 관리, 에셋 업로드) + 로그아웃 |
 | `src/pages/LoginPage.tsx` | Dev Login 폼 (ADMIN 역할, UUID 자동생성) |
-| `src/pages/HymnListPage.tsx` | 찬양 목록 테이블 (번호, 제목, 태그, 활성 상태) |
+| `src/pages/HymnListPage.tsx` | 찬양 목록 테이블 (번호, 제목, 태그, 활성 상태) + 검색/필터 + 활성화 토글 |
 | `src/pages/HymnCreatePage.tsx` | 찬양 생성 폼 (title, number, tags, enabled) |
-| `src/pages/HymnEditPage.tsx` | 찬양 수정 폼 + 에셋 목록 + 임베디드 업로드 |
-| `src/pages/AdminAssetUploadPage.tsx` | 에셋 업로드 3단계 UI (Tailwind 스타일, hymnId props 지원) |
+| `src/pages/HymnEditPage.tsx` | 찬양 수정 폼 + 에셋 목록(URL 링크) + 임베디드 업로드 + 업로드 후 자동 새로고침 |
+| `src/pages/AdminAssetUploadPage.tsx` | 에셋 업로드 3단계 UI (Tailwind 스타일, hymnId/onConfirmed props 지원) |
 | `src/App.tsx` | BrowserRouter 라우팅 설정 |
 
 ### 라우팅 구조
@@ -360,19 +360,23 @@ com.eunhyehymn/
 ### 미구현 기능
 - 소셜 로그인 (현재 Dev Login만 지원)
 - 초대코드 관리
-- 찬양 검색/필터
 - 사용자/역할 관리
 
 ---
 
 ## 14. CI/CD
 
-**워크플로우**: `.github/workflows/api-ci.yml`
-
-- **트리거**: PR 및 develop 브랜치 push
+### API CI (`api-ci.yml`)
+- **트리거**: PR 및 develop push (apps/api/** 변경 시)
 - **환경**: ubuntu-latest, Java 17 (temurin)
 - **캐시**: Gradle (gradle/actions/setup-gradle@v3)
-- **실행**: `./gradlew test --no-daemon --stacktrace` (apps/api 디렉토리)
+- **실행**: `./gradlew test --no-daemon --stacktrace`
+
+### Admin CI (`admin-ci.yml`)
+- **트리거**: PR 및 develop push (apps/admin/** 변경 시)
+- **환경**: ubuntu-latest, Node.js 20
+- **캐시**: npm
+- **실행**: `npm ci` → `tsc --noEmit` → `npm run build`
 
 ---
 
@@ -398,16 +402,20 @@ com.eunhyehymn/
 - CI/CD 파이프라인
 - 문서화
 - **Admin 웹 프론트엔드 기반**: 라우팅, Tailwind 스타일링, 인증 컨텍스트, 공통 API 클라이언트, Dev 로그인, 찬양 목록/생성/수정, 에셋 업로드, 사이드바 레이아웃
+- **Admin 프론트엔드 기능 보강**: 찬양 검색/필터, 활성화 토글, 에셋 URL 링크, 업로드 후 자동 새로고침, apiDelete 추가
 - **AssetType 변경 (PDF/AUDIO → PNG/MIDI)**: 백엔드 enum, DB 마이그레이션(V5), 테스트, 프론트엔드 타입/UI 전체 반영. PNG는 항상 PartType.ALL, MIDI는 파트별 구분 가능
+- **Docker Compose**: PostgreSQL 15 + LocalStack(S3) + API 서버, .env.example, init-s3.sh 멱등 초기화
+- **API Dockerfile**: Multi-stage build (JDK 17 빌드 → JRE 17 실행)
+- **CI/CD**: API 테스트 + Admin 빌드/타입체크 워크플로우 (path filter 적용)
+- **PostgreSQL JDBC 드라이버**: build.gradle에 runtimeOnly PostgreSQL + Flyway PostgreSQL 모듈 추가
 
 ### 미완료 (우선순위순)
-1. **Admin 추가 기능**: 소셜 로그인 연동, 초대코드 관리, 찬양 검색/필터, 사용자/역할 관리
-2. **Docker Compose**: 로컬 개발 환경 (PostgreSQL, LocalStack)
-3. **AWS 인프라**: VPC, RDS, S3, ECS/EKS, IAM (전부 placeholder)
-4. **배포 자동화**: Staging/Production 파이프라인
-5. **모니터링/알림**: CloudWatch, 에러 추적
-6. **모바일 앱**: Flutter (코드 없음)
-7. **추가 API**: 초대코드 CRUD, 사용자/역할 관리
+1. **Admin 추가 기능**: 소셜 로그인 연동, 초대코드 관리, 사용자/역할 관리
+2. **AWS 인프라**: VPC, RDS, S3, ECS/EKS, IAM (전부 placeholder)
+3. **배포 자동화**: Staging/Production 파이프라인
+4. **모니터링/알림**: CloudWatch, 에러 추적
+5. **모바일 앱**: Flutter (코드 없음)
+6. **추가 API**: 초대코드 CRUD, 사용자/역할 관리
 
 ---
 
