@@ -1,7 +1,7 @@
 # CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-11
+> 마지막 업데이트: 2026-02-12
 
 ---
 
@@ -20,8 +20,8 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/          # Spring Boot 백엔드 (Java 17, Gradle)  ← MVP 완료
-│   ├── admin/        # React + Vite + TypeScript 관리자 웹    ← CRUD + 검색 + 에셋 업로드 구현
+│   ├── api/          # Spring Boot 백엔드 (Java 17, Gradle)  ← MVP 완료 (24 UseCase)
+│   ├── admin/        # React + Vite + TypeScript 관리자 웹    ← CRUD + 삭제 + 검색 + 에셋 업로드
 │   └── mobile/       # Flutter 모바일 (placeholder)
 ├── infra/
 │   ├── docker/       # Docker Compose (PostgreSQL + LocalStack + API)
@@ -88,6 +88,7 @@ npm run build  # dist/ 출력
 | `JWT_ACCESS_TTL_SECONDS` | Access 토큰 TTL | **필수** | 없음 |
 | `JWT_REFRESH_TTL_SECONDS` | Refresh 토큰 TTL | **필수** | 없음 |
 | `INVITE_CODE` | 초대코드 | **필수 (미설정 시 부팅 실패)** | 없음 |
+| `GOOGLE_CLIENT_ID` | Google OAuth 클라이언트 ID | - | (빈 문자열, 미설정 시 aud 검증 생략) |
 | `S3_BUCKET` | S3 버킷명 | - | `local-bucket` |
 | `S3_REGION` | AWS 리전 | - | `ap-northeast-2` |
 | `S3_ENDPOINT` | S3 엔드포인트 오버라이드 | - | (빈 문자열) |
@@ -116,15 +117,17 @@ com.eunhyehymn/
 │   ├── model/          # Entity records, Enums
 │   └── repository/     # Repository 인터페이스
 ├── application/
-│   └── usecases/       # 비즈니스 로직 Use Cases (15개)
+│   ├── ports/          # 외부 서비스 인터페이스 (SocialTokenVerifier)
+│   └── usecases/       # 비즈니스 로직 Use Cases (24개)
 ├── presentation/
-│   ├── controllers/    # REST 컨트롤러 (8개)
+│   ├── controllers/    # REST 컨트롤러 (10개)
 │   └── dto/            # Request/Response DTOs
 ├── infrastructure/
-│   ├── persistence/    # JPA Repository Adapters (8개)
-│   ├── security/       # JWT, Security Config
+│   ├── persistence/    # JPA Repository Adapters (9개)
+│   ├── security/       # JWT, Social Login, Security Config
 │   └── storage/        # S3 Storage Service
-└── config/             # Spring Bean 설정
+└── common/
+    └── config/         # Spring Bean 설정 (UseCaseConfig, AuthConfig, AssetConfig)
 ```
 
 ---
@@ -182,6 +185,7 @@ com.eunhyehymn/
 |--------|------|------|------|
 | POST | `/admin/hymns` | ADMIN | 찬양 생성 (CreateRequest → HymnResponse) |
 | PATCH | `/admin/hymns/{id}` | ADMIN | 찬양 수정 (UpdateRequest, null이 아닌 필드만 변경) |
+| DELETE | `/admin/hymns/{id}` | ADMIN | 찬양 삭제 (에셋, 메모, 상태, 이벤트 cascade 삭제) |
 | GET | `/admin/hymns` | ADMIN | 전체 목록 (disabled 포함) |
 
 ### 7.4 에셋 - 관리자 (`AdminAssetController`)
@@ -190,6 +194,7 @@ com.eunhyehymn/
 |--------|------|------|------|
 | POST | `/admin/assets/presign` | ADMIN | S3 업로드 URL 발급 (PresignRequest → PresignResponse) |
 | POST | `/admin/assets/confirm` | ADMIN | 업로드 확인 (ConfirmRequest → ConfirmResponse) |
+| DELETE | `/admin/assets/{id}` | ADMIN | 에셋 삭제 (DB 레코드만, S3 객체는 잔존) |
 
 **에셋 업로드 플로우**: presign → 클라이언트가 S3에 직접 PUT → confirm
 
@@ -235,7 +240,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (21개)
+## 8. Use Cases (24개)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -243,13 +248,16 @@ com.eunhyehymn/
 | `GetHymnDetailUseCase` | `getDetail(hymnId, userId)` | 상세+에셋 조회, lastOpenedAt 갱신 |
 | `AdminCreateHymnUseCase` | `create(title, number, tags, enabled)` | 찬양 생성 |
 | `AdminUpdateHymnUseCase` | `update(hymnId, ...)` | non-null 필드만 업데이트 |
+| `AdminDeleteHymnUseCase` | `delete(hymnId)` | **@Transactional** 에셋/메모/상태/이벤트 cascade 삭제 |
 | `AdminListHymnsUseCase` | `listAll()` | disabled 포함 전체 조회 |
 | `AdminPresignAssetUseCase` | `presign(hymnId, type, part, filename, contentType)` | S3 presigned URL 생성 |
 | `AdminConfirmAssetUseCase` | `confirm(hymnId, type, part, publicUrl, objectKey, ...)` | objectKey 검증, 기존 에셋 교체 |
+| `AdminDeleteAssetUseCase` | `delete(assetId)` | 단일 에셋 삭제 |
 | `GetHymnNoteUseCase` | `get(userId, hymnId)` | 메모 조회 |
 | `SaveHymnNoteUseCase` | `save(userId, hymnId, content)` | 메모 upsert |
 | `ToggleFavoriteUseCase` | `toggle(userId, hymnId)` | 즐겨찾기 토글 (없으면 true, 있으면 반전) |
 | `GetHistoryUseCase` | `getHistory(userId)` | lastOpenedAt desc 정렬 |
+| `SocialLoginUseCase` | `login(provider, token, inviteCode?)` | Google/Kakao 토큰 검증, 신규 사용자는 초대코드 필요 |
 | `RefreshTokenUseCase` | `refresh(rawRefreshToken)` | 해시 검증, 만료 확인, 토큰 회전 |
 | `LogoutUseCase` | `logout(rawRefreshToken)` | revokedAt 설정 |
 | `DevLoginUseCase` | `login(userId, role, displayName)` | 사용자 생성/갱신, 토큰 발급 |
@@ -331,16 +339,17 @@ com.eunhyehymn/
 | `ContextLoadTest` | 애플리케이션 컨텍스트 로딩 |
 | `PingControllerTest` | `/ping` 엔드포인트 |
 | `HymnApiTest` | 찬양 목록/상세 API |
-| `AdminHymnApiTest` | 관리자 찬양 CRUD API |
-| `AdminAssetApiTest` | 에셋 presign/confirm API |
+| `AdminHymnApiTest` | 관리자 찬양 CRUD + 삭제 API |
+| `AdminAssetApiTest` | 에셋 presign/confirm/삭제 API |
 | `AuthFlowTest` | 인증/토큰 갱신 플로우 |
+| `SocialLoginApiTest` | 소셜 로그인 API (Google/Kakao, 초대코드 검증, 기존 사용자) |
 | `FlywayRepositoryIntegrationTest` | DB 마이그레이션 통합 |
 | `GetHistoryUseCaseTest` | 히스토리 Use Case 단위 |
 | `AdminUserApiTest` | 사용자 관리 API (목록, 역할/상태 변경, 권한 검사) |
 | `AdminInviteCodeApiTest` | 초대코드 관리 API (생성, 목록, 비활성화, 검증) |
 
 - **테스트 DB**: H2 인메모리 (test 프로필)
-- **전체 테스트 통과** 확인 (2026-02-11 기준)
+- **전체 테스트 통과** 확인 (2026-02-12 기준)
 
 ---
 
@@ -360,7 +369,7 @@ com.eunhyehymn/
 | `src/api/client.ts` | 공통 fetch wrapper (`apiGet`, `apiPost`, `apiPatch`, `apiDelete`), Bearer 토큰 자동 추가, 401 시 로그인 redirect |
 | `src/api/auth.ts` | Dev 로그인, 토큰 갱신, 로그아웃 API |
 | `src/api/hymns.ts` | 찬양 목록/생성/수정/상세 API |
-| `src/api/adminAssets.ts` | 에셋 presign/confirm API (공통 클라이언트 사용) |
+| `src/api/adminAssets.ts` | 에셋 presign/confirm/삭제 API (공통 클라이언트 사용) |
 | `src/api/adminUsers.ts` | 사용자 목록/역할·상태 변경 API |
 | `src/api/adminInviteCodes.ts` | 초대코드 목록/생성/비활성화 API |
 | `src/auth/AuthContext.tsx` | AuthProvider + `useAuth()` 훅, JWT 파싱, localStorage 토큰 관리 |
@@ -369,7 +378,7 @@ com.eunhyehymn/
 | `src/pages/LoginPage.tsx` | Dev Login 폼 (ADMIN 역할, UUID 자동생성) |
 | `src/pages/HymnListPage.tsx` | 찬양 목록 테이블 (번호, 제목, 태그, 활성 상태) + 검색/필터 + 활성화 토글 |
 | `src/pages/HymnCreatePage.tsx` | 찬양 생성 폼 (title, number, tags, enabled) |
-| `src/pages/HymnEditPage.tsx` | 찬양 수정 폼 + 에셋 목록(URL 링크) + 임베디드 업로드 + 업로드 후 자동 새로고침 |
+| `src/pages/HymnEditPage.tsx` | 찬양 수정 폼 + 에셋 목록(URL 링크, 삭제) + 임베디드 업로드 + 업로드 후 자동 새로고침 |
 | `src/pages/AdminAssetUploadPage.tsx` | 에셋 업로드 3단계 UI (Tailwind 스타일, hymnId/onConfirmed props 지원) |
 | `src/pages/UserListPage.tsx` | 사용자 목록 테이블 + 역할/상태 변경 + 검색/필터 |
 | `src/pages/InviteCodePage.tsx` | 초대코드 목록 + 생성/비활성화 |
@@ -389,7 +398,10 @@ com.eunhyehymn/
 | `/invite-codes` | InviteCodePage | 필요 |
 
 ### 미구현 기능
-- 소셜 로그인 (현재 Dev Login만 지원)
+- 소셜 로그인 UI (현재 Dev Login만 지원, 백엔드 POST /auth/social 준비 완료)
+- 찬양 삭제 API 클라이언트 (백엔드 DELETE /admin/hymns/{id} 준비 완료)
+- 초대코드 만료일 설정 (expiresAt 필드 UI 없음)
+- Access Token 자동 갱신 (refresh 인터셉터)
 
 ---
 
@@ -422,31 +434,52 @@ com.eunhyehymn/
 ## 16. 현재 진행 상태 및 남은 작업
 
 ### 완료
-- Spring Boot API 전체 구현 (21개 UseCase, 11개 Controller)
-- JWT 인증 + 소셜 로그인 + 초대코드
-- 찬양 CRUD + S3 에셋 관리
-- 사용자 기능 (즐겨찾기, 메모, 히스토리)
-- DB 스키마 + Flyway 마이그레이션
-- 테스트 전체 통과
-- CI/CD 파이프라인
-- 문서화
-- **Admin 웹 프론트엔드 기반**: 라우팅, Tailwind 스타일링, 인증 컨텍스트, 공통 API 클라이언트, Dev 로그인, 찬양 목록/생성/수정, 에셋 업로드, 사이드바 레이아웃
-- **Admin 프론트엔드 기능 보강**: 찬양 검색/필터, 활성화 토글, 에셋 URL 링크, 업로드 후 자동 새로고침, apiDelete 추가
-- **AssetType 변경 (PDF/AUDIO → PNG/MIDI)**: 백엔드 enum, DB 마이그레이션(V5), 테스트, 프론트엔드 타입/UI 전체 반영. PNG는 항상 PartType.ALL, MIDI는 파트별 구분 가능
-- **Docker Compose**: PostgreSQL 15 + LocalStack(S3) + API 서버, .env.example, init-s3.sh 멱등 초기화
-- **API Dockerfile**: Multi-stage build (JDK 17 빌드 → JRE 17 실행)
-- **CI/CD**: API 테스트 + Admin 빌드/타입체크 워크플로우 (path filter 적용)
-- **PostgreSQL JDBC 드라이버**: build.gradle에 runtimeOnly PostgreSQL + Flyway PostgreSQL 모듈 추가
-- **사용자 관리**: 백엔드 API (GET/PATCH /admin/users) + Admin 프론트엔드 (역할/상태 변경, 검색/필터)
-- **초대코드 관리**: DB 기반 초대코드 (V6 마이그레이션), 백엔드 API (CRUD + 검증), Admin 프론트엔드 (생성/비활성화)
-- **초대코드 검증**: POST /auth/invite/validate 공개 엔드포인트 (enabled, 만료, 사용 횟수 확인)
+
+**백엔드 API (24 UseCase, 10 Controller)**
+- 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
+- S3 에셋 관리 (presign/confirm/삭제)
+- JWT 인증 + 소셜 로그인 (Google/Kakao) + 토큰 회전
+- DB 기반 초대코드 관리 (CRUD + 검증 + 원자적 사용 횟수 증가)
+- 사용자 관리 (역할/상태 변경)
+- 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
+- DB 스키마 Flyway 마이그레이션 (V1~V6)
+- 테스트 11개 파일 전체 통과 (SocialLoginApiTest 포함)
+
+**Admin 프론트엔드 (7페이지)**
+- 찬양 목록/생성/수정 + 검색/필터 + 활성화 토글
+- 에셋 업로드 3단계 (presign/upload/confirm) + 삭제
+- 사용자 관리 (역할/상태 변경, 검색/필터)
+- 초대코드 관리 (생성/비활성화)
+- 인증 컨텍스트, 공통 API 클라이언트, 사이드바 레이아웃
+- Dev Login (개발용)
+
+**인프라/CI**
+- Docker Compose (PostgreSQL + LocalStack + API)
+- API Dockerfile (multi-stage)
+- CI/CD (API 테스트 + Admin 빌드/타입체크)
 
 ### 미완료 (우선순위순)
-1. **Admin 추가 기능**: 소셜 로그인 연동
-2. **AWS 인프라**: VPC, RDS, S3, ECS/EKS, IAM (전부 placeholder)
-3. **배포 자동화**: Staging/Production 파이프라인
-4. **모니터링/알림**: CloudWatch, 에러 추적
-5. **모바일 앱**: Flutter (코드 없음)
+
+**1. Admin 소셜 로그인 UI** — 백엔드 준비 완료, 프론트엔드 미구현
+  - LoginPage에 Google/Kakao 로그인 버튼 추가
+  - 초대코드 입력 플로우 (신규 사용자)
+  - OAuth redirect 처리
+
+**2. Admin 찬양 삭제 UI** — 백엔드 DELETE /admin/hymns/{id} 준비 완료, API 클라이언트 미연결
+  - hymns.ts에 deleteHymn() 추가
+  - HymnListPage 또는 HymnEditPage에 삭제 버튼
+
+**3. Admin UX 개선**
+  - 초대코드 만료일 설정 UI (expiresAt — 백엔드 지원하나 프론트엔드 미구현)
+  - Access Token 자동 갱신 (401 인터셉터에서 refresh 후 재시도)
+
+**4. AWS 인프라**: VPC, RDS, S3, ECS/EKS, IAM (전부 placeholder)
+
+**5. 배포 자동화**: Staging/Production 파이프라인
+
+**6. 모니터링/알림**: CloudWatch, 에러 추적
+
+**7. 모바일 앱**: Flutter (코드 없음)
 
 ---
 
