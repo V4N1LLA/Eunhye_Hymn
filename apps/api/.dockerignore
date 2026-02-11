@@ -1,0 +1,13 @@
+# Ignore build output (we rebuild inside Docker)
+build/
+.gradle/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Environment files
+.env
+.env.*
+!.env.example
