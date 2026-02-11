@@ -8,4 +8,6 @@ public interface AuthIdentityRepository {
     AuthIdentity save(AuthIdentity identity);
 
     Optional<AuthIdentity> findById(UUID id);
+
+    Optional<AuthIdentity> findByProviderAndProviderSubject(String provider, String providerSubject);
 }
