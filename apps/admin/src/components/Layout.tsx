@@ -27,6 +27,12 @@ export default function Layout() {
           <NavLink to="/assets/upload" className={linkClass}>
             에셋 업로드
           </NavLink>
+          <NavLink to="/users" className={linkClass}>
+            사용자 관리
+          </NavLink>
+          <NavLink to="/invite-codes" className={linkClass}>
+            초대코드 관리
+          </NavLink>
         </nav>
         <div className="px-4 py-4 border-t border-indigo-700 text-sm">
           <div className="text-indigo-200 mb-2">{user?.role ?? ""}</div>
