@@ -22,7 +22,7 @@ export interface HymnDetailResponse {
 export interface AssetResponse {
   id: string;
   hymnId: string;
-  type: "PDF" | "AUDIO";
+  type: "PNG" | "MIDI";
   part: "S" | "A" | "T" | "B" | "ALL";
   url: string;
   objectKey: string;
