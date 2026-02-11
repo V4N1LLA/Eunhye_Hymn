@@ -14,9 +14,10 @@ type UploadState = "idle" | "presigned" | "uploaded" | "confirmed";
 
 interface Props {
   hymnId?: string;
+  onConfirmed?: () => void;
 }
 
-export default function AdminAssetUploadPage({ hymnId: hymnIdProp }: Props) {
+export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }: Props) {
   const params = useParams<{ hymnId?: string }>();
   const initialHymnId = hymnIdProp ?? params.hymnId ?? "";
 
@@ -100,6 +101,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp }: Props) {
       });
       setConfirmResult(result);
       setUploadState("confirmed");
+      onConfirmed?.();
     } catch (error) {
       setLastError(error instanceof Error ? error.message : "확인 요청에 실패했습니다.");
       setUploadState("uploaded");

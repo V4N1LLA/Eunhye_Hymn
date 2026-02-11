@@ -61,3 +61,11 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   });
   return handleResponse<T>(response);
 }
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    headers: { ...authHeaders() },
+  });
+  return handleResponse<T>(response);
+}

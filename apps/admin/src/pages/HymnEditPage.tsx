@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getHymnDetail, updateHymn, type HymnDetailResponse } from "../api/hymns";
 import AdminAssetUploadPage from "./AdminAssetUploadPage";
@@ -17,13 +17,11 @@ export default function HymnEditPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const loadHymn = useCallback(() => {
     if (!id) return;
-    let cancelled = false;
     setLoading(true);
     getHymnDetail(id)
       .then((data) => {
-        if (cancelled) return;
         setHymn(data);
         setTitle(data.title);
         setNumber(data.number != null ? String(data.number) : "");
@@ -31,15 +29,16 @@ export default function HymnEditPage() {
         setEnabled(data.enabled);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "찬양을 불러올 수 없습니다.");
+        setError(err instanceof Error ? err.message : "찬양을 불러올 수 없습니다.");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
   }, [id]);
+
+  useEffect(() => {
+    loadHymn();
+  }, [loadHymn]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +59,17 @@ export default function HymnEditPage() {
       setSaving(false);
     }
   };
+
+  const handleAssetUploaded = useCallback(() => {
+    if (!id) return;
+    getHymnDetail(id)
+      .then((data) => {
+        setHymn(data);
+      })
+      .catch(() => {
+        // silently ignore refresh errors
+      });
+  }, [id]);
 
   if (loading) return <p className="text-gray-500">로딩 중...</p>;
   if (!hymn && error) return <p className="text-red-600">{error}</p>;
@@ -150,6 +160,7 @@ export default function HymnEditPage() {
                     <th className="pb-2 font-medium text-gray-600">타입</th>
                     <th className="pb-2 font-medium text-gray-600">파트</th>
                     <th className="pb-2 font-medium text-gray-600">ObjectKey</th>
+                    <th className="pb-2 font-medium text-gray-600">URL</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -158,6 +169,16 @@ export default function HymnEditPage() {
                       <td className="py-2">{a.type}</td>
                       <td className="py-2">{a.part}</td>
                       <td className="py-2 text-gray-500 truncate max-w-xs">{a.objectKey}</td>
+                      <td className="py-2">
+                        <a
+                          href={a.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-600 hover:underline"
+                        >
+                          열기
+                        </a>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -167,7 +188,7 @@ export default function HymnEditPage() {
 
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-3">에셋 업로드</h2>
-            <AdminAssetUploadPage hymnId={id} />
+            <AdminAssetUploadPage hymnId={id} onConfirmed={handleAssetUploaded} />
           </div>
         </>
       )}
