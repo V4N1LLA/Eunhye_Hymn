@@ -12,9 +12,15 @@ import com.eunhyehymn.domain.model.AssetType;
 import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.AuthIdentityJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnEntity;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.HymnNoteJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.InviteCodeJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.RefreshTokenJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserEntity;
+import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserJpaRepository;
 import com.eunhyehymn.infrastructure.security.JwtService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,13 +62,37 @@ class AdminAssetApiTest {
     @MockBean
     private StorageService storageService;
 
+    @Autowired
+    private InviteCodeJpaRepository inviteCodeJpaRepository;
+
+    @Autowired
+    private EventJpaRepository eventJpaRepository;
+
+    @Autowired
+    private UserHymnStateJpaRepository userHymnStateJpaRepository;
+
+    @Autowired
+    private HymnNoteJpaRepository hymnNoteJpaRepository;
+
+    @Autowired
+    private AuthIdentityJpaRepository authIdentityJpaRepository;
+
+    @Autowired
+    private RefreshTokenJpaRepository refreshTokenJpaRepository;
+
     private UUID hymnId;
     private String adminToken;
     private String userToken;
 
     @BeforeEach
     void setUp() {
+        inviteCodeJpaRepository.deleteAll();
+        eventJpaRepository.deleteAll();
+        userHymnStateJpaRepository.deleteAll();
+        hymnNoteJpaRepository.deleteAll();
         assetJpaRepository.deleteAll();
+        authIdentityJpaRepository.deleteAll();
+        refreshTokenJpaRepository.deleteAll();
         hymnJpaRepository.deleteAll();
         userJpaRepository.deleteAll();
 

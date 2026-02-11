@@ -16,6 +16,7 @@ import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnEntity;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnNoteJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.InviteCodeJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.RefreshTokenJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserEntity;
 import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
@@ -73,11 +74,15 @@ class HymnApiTest {
     @Autowired
     private RefreshTokenJpaRepository refreshTokenJpaRepository;
 
+    @Autowired
+    private InviteCodeJpaRepository inviteCodeJpaRepository;
+
     private UUID userId;
     private String accessToken;
 
     @BeforeEach
     void setUp() {
+        inviteCodeJpaRepository.deleteAll();
         eventJpaRepository.deleteAll();
         hymnNoteJpaRepository.deleteAll();
         userHymnStateJpaRepository.deleteAll();
