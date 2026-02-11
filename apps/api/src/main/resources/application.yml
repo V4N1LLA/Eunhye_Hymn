@@ -34,6 +34,9 @@ security:
     refresh-token-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS}
   invite:
     code: ${INVITE_CODE}
+  social:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
 
 storage:
   s3:

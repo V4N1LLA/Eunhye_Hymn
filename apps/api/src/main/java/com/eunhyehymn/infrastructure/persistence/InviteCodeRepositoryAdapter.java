@@ -32,4 +32,9 @@ public class InviteCodeRepositoryAdapter implements InviteCodeRepository {
             .map(InviteCodeMapper::toDomain)
             .toList();
     }
+
+    @Override
+    public boolean incrementUsedCount(String code) {
+        return jpaRepository.incrementUsedCount(code) > 0;
+    }
 }
