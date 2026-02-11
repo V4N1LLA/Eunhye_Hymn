@@ -2,7 +2,9 @@ package com.eunhyehymn.common.config;
 
 import com.eunhyehymn.application.usecases.AdminCreateHymnUseCase;
 import com.eunhyehymn.application.usecases.AdminListHymnsUseCase;
+import com.eunhyehymn.application.usecases.AdminListUsersUseCase;
 import com.eunhyehymn.application.usecases.AdminUpdateHymnUseCase;
+import com.eunhyehymn.application.usecases.AdminUpdateUserUseCase;
 import com.eunhyehymn.application.usecases.GetHistoryUseCase;
 import com.eunhyehymn.application.usecases.GetHymnDetailUseCase;
 import com.eunhyehymn.application.usecases.GetHymnNoteUseCase;
@@ -15,6 +17,7 @@ import com.eunhyehymn.domain.repository.EventRepository;
 import com.eunhyehymn.domain.repository.HymnNoteRepository;
 import com.eunhyehymn.domain.repository.HymnRepository;
 import com.eunhyehymn.domain.repository.UserHymnStateRepository;
+import com.eunhyehymn.domain.repository.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -72,5 +75,15 @@ public class HymnConfig {
     @Bean
     RecordEventsUseCase recordEventsUseCase(EventRepository eventRepository) {
         return new RecordEventsUseCase(eventRepository);
+    }
+
+    @Bean
+    AdminListUsersUseCase adminListUsersUseCase(UserRepository userRepository) {
+        return new AdminListUsersUseCase(userRepository);
+    }
+
+    @Bean
+    AdminUpdateUserUseCase adminUpdateUserUseCase(UserRepository userRepository) {
+        return new AdminUpdateUserUseCase(userRepository);
     }
 }
