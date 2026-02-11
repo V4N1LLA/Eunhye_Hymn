@@ -2,9 +2,13 @@ name: API CI
 
 on:
   pull_request:
+    paths:
+      - "apps/api/**"
   push:
     branches:
       - develop
+    paths:
+      - "apps/api/**"
 
 jobs:
   test:

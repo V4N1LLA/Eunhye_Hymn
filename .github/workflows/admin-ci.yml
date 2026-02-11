@@ -1,0 +1,33 @@
+name: Admin CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/admin/**"
+  push:
+    branches:
+      - develop
+    paths:
+      - "apps/admin/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/admin
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+      - name: Node.js 20 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: 의존성 설치
+        run: npm ci
+      - name: TypeScript 타입 체크
+        run: npx tsc --noEmit
+      - name: 빌드
+        run: npm run build
