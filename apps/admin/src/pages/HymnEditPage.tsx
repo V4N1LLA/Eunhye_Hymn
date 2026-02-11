@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { deleteAsset } from "../api/adminAssets";
 import { getHymnDetail, updateHymn, type HymnDetailResponse } from "../api/hymns";
 import AdminAssetUploadPage from "./AdminAssetUploadPage";
 
@@ -16,6 +17,7 @@ export default function HymnEditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingAssetId, setDeletingAssetId] = useState<string | null>(null);
 
   const loadHymn = useCallback(() => {
     if (!id) return;
@@ -70,6 +72,19 @@ export default function HymnEditPage() {
         // silently ignore refresh errors
       });
   }, [id]);
+
+  const handleDeleteAsset = async (assetId: string) => {
+    if (!window.confirm("이 에셋을 삭제하시겠습니까?")) return;
+    setDeletingAssetId(assetId);
+    try {
+      await deleteAsset(assetId);
+      handleAssetUploaded();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "에셋 삭제에 실패했습니다.");
+    } finally {
+      setDeletingAssetId(null);
+    }
+  };
 
   if (loading) return <p className="text-gray-500">로딩 중...</p>;
   if (!hymn && error) return <p className="text-red-600">{error}</p>;
@@ -161,6 +176,7 @@ export default function HymnEditPage() {
                     <th className="pb-2 font-medium text-gray-600">파트</th>
                     <th className="pb-2 font-medium text-gray-600">ObjectKey</th>
                     <th className="pb-2 font-medium text-gray-600">URL</th>
+                    <th className="pb-2 font-medium text-gray-600"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -178,6 +194,16 @@ export default function HymnEditPage() {
                         >
                           열기
                         </a>
+                      </td>
+                      <td className="py-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAsset(a.id)}
+                          disabled={deletingAssetId === a.id}
+                          className="text-red-600 hover:text-red-800 disabled:opacity-50 text-sm font-medium"
+                        >
+                          {deletingAssetId === a.id ? "삭제 중..." : "삭제"}
+                        </button>
                       </td>
                     </tr>
                   ))}

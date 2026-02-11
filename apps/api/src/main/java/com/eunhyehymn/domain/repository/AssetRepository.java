@@ -12,5 +12,9 @@ public interface AssetRepository {
 
     List<Asset> findByHymnId(UUID hymnId);
 
+    void deleteById(UUID id);
+
+    void deleteByHymnId(UUID hymnId);
+
     void deleteByHymnIdAndTypeAndPart(UUID hymnId, com.eunhyehymn.domain.model.AssetType type, com.eunhyehymn.domain.model.PartType part);
 }

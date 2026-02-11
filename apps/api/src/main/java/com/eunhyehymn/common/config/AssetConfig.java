@@ -2,6 +2,7 @@ package com.eunhyehymn.common.config;
 
 import com.eunhyehymn.application.ports.StorageService;
 import com.eunhyehymn.application.usecases.AdminConfirmAssetUseCase;
+import com.eunhyehymn.application.usecases.AdminDeleteAssetUseCase;
 import com.eunhyehymn.application.usecases.AdminPresignAssetUseCase;
 import com.eunhyehymn.domain.repository.AssetRepository;
 import com.eunhyehymn.domain.repository.HymnRepository;
@@ -45,5 +46,10 @@ public class AssetConfig {
         AssetRepository assetRepository
     ) {
         return new AdminConfirmAssetUseCase(hymnRepository, assetRepository);
+    }
+
+    @Bean
+    AdminDeleteAssetUseCase adminDeleteAssetUseCase(AssetRepository assetRepository) {
+        return new AdminDeleteAssetUseCase(assetRepository);
     }
 }
