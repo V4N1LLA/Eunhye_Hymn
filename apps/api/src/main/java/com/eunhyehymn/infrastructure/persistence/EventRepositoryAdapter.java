@@ -32,4 +32,9 @@ public class EventRepositoryAdapter implements EventRepository {
     public Optional<Event> findById(UUID id) {
         return eventJpaRepository.findById(id).map(EventMapper::toDomain);
     }
+
+    @Override
+    public void deleteByHymnId(UUID hymnId) {
+        eventJpaRepository.deleteByHymnId(hymnId);
+    }
 }

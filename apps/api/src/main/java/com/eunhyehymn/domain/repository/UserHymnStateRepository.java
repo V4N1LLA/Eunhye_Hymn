@@ -11,4 +11,6 @@ public interface UserHymnStateRepository {
     Optional<UserHymnState> findByUserIdAndHymnId(UUID userId, UUID hymnId);
 
     List<UserHymnState> findByUserIdOrderByLastOpenedAtDesc(UUID userId);
+
+    void deleteByHymnId(UUID hymnId);
 }

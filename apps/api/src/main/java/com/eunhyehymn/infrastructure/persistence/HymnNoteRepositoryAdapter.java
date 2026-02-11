@@ -30,4 +30,9 @@ public class HymnNoteRepositoryAdapter implements HymnNoteRepository {
     public Optional<HymnNote> findByUserIdAndHymnId(UUID userId, UUID hymnId) {
         return hymnNoteJpaRepository.findByUserIdAndHymnId(userId, hymnId).map(HymnNoteMapper::toDomain);
     }
+
+    @Override
+    public void deleteByHymnId(UUID hymnId) {
+        hymnNoteJpaRepository.deleteByHymnId(hymnId);
+    }
 }

@@ -11,4 +11,6 @@ public interface EventRepository {
     List<Event> saveAll(List<Event> events);
 
     Optional<Event> findById(UUID id);
+
+    void deleteByHymnId(UUID hymnId);
 }

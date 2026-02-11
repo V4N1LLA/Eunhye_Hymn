@@ -39,6 +39,10 @@ class GetHistoryUseCaseTest {
                     new UserHymnState(userId, hymnA, false, Instant.now().minusSeconds(60), null, null)
                 );
             }
+
+            @Override
+            public void deleteByHymnId(UUID hymnId) {
+            }
         };
 
         AtomicInteger batchCalls = new AtomicInteger();
@@ -70,6 +74,10 @@ class GetHistoryUseCaseTest {
                     new Hymn(hymnA, "A", "1", "tag", true, Instant.now()),
                     new Hymn(hymnB, "B", "2", "tag", true, Instant.now())
                 );
+            }
+
+            @Override
+            public void deleteById(UUID id) {
             }
         };
 
