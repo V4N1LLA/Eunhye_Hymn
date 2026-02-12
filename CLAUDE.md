@@ -41,6 +41,7 @@ Eunhye_Hymn/
 │       ├── monitoring.tf             # SNS 알림 + CloudWatch 알람/로그/대시보드
 │       ├── outputs.tf                # EC2 IP, RDS 엔드포인트, ECR URL, SNS ARN
 │       ├── docker-compose.prod.yml   # 프로덕션 컨테이너 (api + nginx)
+│       ├── docker-compose.prod.awslogs.yml # CloudWatch 로그 오버레이 (옵션)
 │       ├── deploy.sh                 # ECR 로그인 → pull → up -d
 │       ├── .env.example              # 환경변수 템플릿
 │       └── .gitignore                # tfstate, .terraform 제외
@@ -439,7 +440,7 @@ com.eunhyehymn/
 ### Deploy Staging (`deploy-staging.yml`)
 - **트리거**: develop push
 - **Jobs**: `test-api` → `check-admin` → `build-and-push` → `deploy`
-- **단계**: API 테스트 → Admin 타입체크+빌드 → Docker 이미지 빌드 & ECR push (api:latest + admin:latest) → EC2 SSH 배포 (deploy.sh) → 헬스체크
+- **단계**: API 테스트 → Admin 타입체크+빌드 → Docker 이미지 빌드 & ECR push (api:latest + admin:latest) → EC2 SSH 배포 (compose + awslogs 오버레이 + deploy.sh) → 헬스체크
 - **필수 Secrets**:
 
 | Secret | 설명 |
@@ -451,6 +452,7 @@ com.eunhyehymn/
 | `EC2_HOST` | EC2 Elastic IP (`terraform output ec2_public_ip`) |
 | `EC2_SSH_KEY` | EC2 SSH 프라이빗 키 (PEM) |
 | `DEPLOY_ENV_FILE` | `.env` 파일 전체 내용 (DB, JWT, S3 등) |
+| `ENABLE_AWSLOGS` | CloudWatch 로그 전송 활성화 여부 (`true` 시 활성화, 미설정 시 기본 `false`) |
 
 ---
 
@@ -504,7 +506,7 @@ develop push → GitHub Actions
   1. test-api (Gradle test)
   2. check-admin (tsc + vite build)
   3. build-and-push (Docker build → ECR push, :latest + :sha 태그)
-  4. deploy (SCP compose/deploy.sh → SSH deploy.sh 실행)
+  4. deploy (SCP compose + awslogs 오버레이 + deploy.sh → SSH deploy.sh 실행)
      └─ ECR login → docker compose pull → up -d → image prune
 ```
 
@@ -517,6 +519,7 @@ develop push → GitHub Actions
 
 - `api`는 `.env` 파일에서 DB_URL, JWT_SECRET 등 환경변수 로드
 - `nginx`는 `nginx.conf`에서 `/api/v1` → `http://api:8080` 프록시
+- 기본 로깅 드라이버는 `json-file`; `ENABLE_AWSLOGS=true`일 때 `docker-compose.prod.awslogs.yml` 오버레이로 CloudWatch 로그 전송 활성화
 
 ### 15.6 Nginx 설정 (`apps/admin/nginx.conf`)
 
@@ -539,7 +542,7 @@ develop push → GitHub Actions
 | RDS Storage Low | FreeStorage < 5GB | 5분 × 1회 |
 | RDS Connections High | Connections > 30 | 5분 × 2회 |
 
-**CloudWatch 로그**: Docker `awslogs` 드라이버로 API/Nginx 컨테이너 로그 자동 전송 (14일 보관, 멀티라인 패턴 적용)
+**CloudWatch 로그**: `docker-compose.prod.awslogs.yml` 오버레이 + `ENABLE_AWSLOGS=true` 설정 시 API/Nginx 컨테이너 로그를 CloudWatch로 전송 (14일 보관, 멀티라인 패턴 적용)
 
 **CloudWatch 대시보드**: EC2 CPU/네트워크, RDS CPU/연결수/스토리지, API 에러 로그, Nginx 5xx 로그
 
@@ -610,7 +613,7 @@ develop push → GitHub Actions
 **모니터링/알림 (CloudWatch)**
 - SNS 토픽 + 이메일 구독 (alert_email 변수)
 - CloudWatch 알람 5개 (EC2 CPU/StatusCheck, RDS CPU/Storage/Connections)
-- CloudWatch 로그 그룹 2개 (API, Nginx) + Docker awslogs 드라이버 (멀티라인 패턴)
+- CloudWatch 로그 그룹 2개 (API, Nginx) + 선택적 Docker awslogs 오버레이 (기본 json-file)
 - CloudWatch 대시보드 (EC2/RDS 메트릭 + 에러 로그 쿼리)
 - EC2 IAM 정책 (CloudWatch Logs 전송 권한, account ID 스코핑)
 
