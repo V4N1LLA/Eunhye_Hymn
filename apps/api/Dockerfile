@@ -29,6 +29,9 @@ RUN ./gradlew bootJar --no-daemon -x test
 # ============================================================
 FROM eclipse-temurin:17-jre
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy the built JAR from the build stage

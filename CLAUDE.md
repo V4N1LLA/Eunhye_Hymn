@@ -21,7 +21,7 @@
 Eunhye_Hymn/
 ├── apps/
 │   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (24 UseCase)
-│   │   └── Dockerfile    # Multi-stage (JDK build → JRE run)
+│   │   └── Dockerfile    # Multi-stage (JDK build → JRE run + curl for healthcheck)
 │   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 7페이지 완료
 │   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
 │   │   └── nginx.conf    # 정적 파일 serve + /api/v1 프록시 + SPA fallback

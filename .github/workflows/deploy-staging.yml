@@ -103,9 +103,11 @@ jobs:
 
       - name: Write .env file on EC2
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ec2-user@${{ secrets.EC2_HOST }} \
-            "echo '${{ secrets.DEPLOY_ENV_FILE }}' > /home/ec2-user/app/.env"
+          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > /tmp/.env.deploy
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            /tmp/.env.deploy \
+            ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/app/.env
+          rm -f /tmp/.env.deploy
 
       - name: Run deploy script
         env:
