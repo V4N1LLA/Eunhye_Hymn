@@ -5,6 +5,14 @@ services:
     container_name: eunhye-api
     restart: unless-stopped
     env_file: .env
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-northeast-2}
+        awslogs-group: /eunhye-hymn/api
+        awslogs-stream-prefix: api
+        awslogs-create-group: "true"
+        awslogs-multiline-pattern: '^\d{4}-\d{2}-\d{2}'
     networks:
       - app-net
     healthcheck:
@@ -21,6 +29,13 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-northeast-2}
+        awslogs-group: /eunhye-hymn/nginx
+        awslogs-stream-prefix: nginx
+        awslogs-create-group: "true"
     depends_on:
       api:
         condition: service_healthy

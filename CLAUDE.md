@@ -38,7 +38,8 @@ Eunhye_Hymn/
 │       ├── s3.tf                     # S3 버킷 + public read + CORS
 │       ├── ecr.tf                    # ECR 레포 2개 (api, admin) + lifecycle
 │       ├── ec2.tf                    # EC2 t2.micro + EIP + IAM Role + user_data
-│       ├── outputs.tf                # EC2 IP, RDS 엔드포인트, ECR URL
+│       ├── monitoring.tf             # SNS 알림 + CloudWatch 알람/로그/대시보드
+│       ├── outputs.tf                # EC2 IP, RDS 엔드포인트, ECR URL, SNS ARN
 │       ├── docker-compose.prod.yml   # 프로덕션 컨테이너 (api + nginx)
 │       ├── deploy.sh                 # ECR 로그인 → pull → up -d
 │       ├── .env.example              # 환경변수 템플릿
@@ -524,7 +525,25 @@ develop push → GitHub Actions
 - `/` → `try_files $uri $uri/ /index.html` (SPA fallback)
 - 정적 에셋 1년 캐시, gzip 압축
 
-### 15.7 초기 설정 (사용자 작업)
+### 15.7 모니터링/알림 (`monitoring.tf`)
+
+**SNS 알림**: `alert_email` 변수 설정 시 이메일 구독 자동 생성 (구독 확인 필요)
+
+**CloudWatch 알람** (5개):
+
+| 알람 | 조건 | 기간 |
+|------|------|------|
+| EC2 CPU High | CPU > 80% | 5분 × 2회 |
+| EC2 Status Check | StatusCheckFailed > 0 | 5분 × 2회 |
+| RDS CPU High | CPU > 80% | 5분 × 2회 |
+| RDS Storage Low | FreeStorage < 5GB | 5분 × 1회 |
+| RDS Connections High | Connections > 30 | 5분 × 2회 |
+
+**CloudWatch 로그**: Docker `awslogs` 드라이버로 API/Nginx 컨테이너 로그 자동 전송 (14일 보관, 멀티라인 패턴 적용)
+
+**CloudWatch 대시보드**: EC2 CPU/네트워크, RDS CPU/연결수/스토리지, API 에러 로그, Nginx 5xx 로그
+
+### 15.8 초기 설정 (사용자 작업)
 
 1. AWS CLI + Terraform 설치
 2. `aws ec2 create-key-pair --key-name eunhye-staging` → PEM 저장
@@ -588,11 +607,16 @@ develop push → GitHub Actions
 - 프로덕션 Docker Compose + 배포 스크립트
 - GitHub Actions 자동 배포 워크플로우 (develop push → ECR push → EC2 deploy)
 
+**모니터링/알림 (CloudWatch)**
+- SNS 토픽 + 이메일 구독 (alert_email 변수)
+- CloudWatch 알람 5개 (EC2 CPU/StatusCheck, RDS CPU/Storage/Connections)
+- CloudWatch 로그 그룹 2개 (API, Nginx) + Docker awslogs 드라이버 (멀티라인 패턴)
+- CloudWatch 대시보드 (EC2/RDS 메트릭 + 에러 로그 쿼리)
+- EC2 IAM 정책 (CloudWatch Logs 전송 권한, account ID 스코핑)
+
 ### 미완료 (우선순위순)
 
-**1. 모니터링/알림**: CloudWatch, 에러 추적
-
-**2. 모바일 앱**: Flutter (코드 없음)
+**1. 모바일 앱**: Flutter (코드 없음)
 
 ---
 

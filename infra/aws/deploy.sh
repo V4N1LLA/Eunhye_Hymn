@@ -14,6 +14,7 @@ fi
 if [ -z "${AWS_REGION:-}" ]; then
   AWS_REGION="ap-northeast-2"
 fi
+export ECR_REGISTRY AWS_REGION
 
 echo "=== Eunhye Hymn Deploy ==="
 echo "ECR Registry: ${ECR_REGISTRY}"

@@ -93,3 +93,11 @@ variable "allowed_ssh_cidrs" {
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }
+
+# ── Monitoring ───────────────────────────────────────────────
+
+variable "alert_email" {
+  description = "Email address to receive CloudWatch alarm notifications (empty = no email subscription)"
+  type        = string
+  default     = ""
+}
