@@ -1,0 +1,32 @@
+services:
+  # ── Spring Boot API ──────────────────────────────────────────
+  api:
+    image: ${ECR_REGISTRY}/eunhye-hymn/api:latest
+    container_name: eunhye-api
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/v1/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Nginx (Admin + API Proxy) ────────────────────────────────
+  nginx:
+    image: ${ECR_REGISTRY}/eunhye-hymn/admin:latest
+    container_name: eunhye-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge

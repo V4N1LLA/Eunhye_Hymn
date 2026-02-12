@@ -1,7 +1,7 @@
 # CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-13
+> 마지막 업데이트: 2026-02-12
 
 ---
 
@@ -25,9 +25,9 @@ Eunhye_Hymn/
 │   └── mobile/       # Flutter 모바일 (placeholder)
 ├── infra/
 │   ├── docker/       # Docker Compose (PostgreSQL + LocalStack + API)
-│   └── aws/          # AWS IaC (placeholder)
+│   └── aws/          # AWS Terraform IaC (VPC, EC2, RDS, S3, ECR) + 배포 스크립트
 ├── docs/             # 프로젝트 문서 (요구사항, 아키텍처, API 계약 등)
-├── .github/workflows/  # CI/CD (api-ci.yml, admin-ci.yml)
+├── .github/workflows/  # CI/CD (api-ci.yml, admin-ci.yml, deploy-staging.yml)
 ├── CLAUDE.md         # 이 파일
 ├── README.md
 └── LICENSE
@@ -49,6 +49,8 @@ Eunhye_Hymn/
 | Frontend | React + TypeScript | 18.3.1 / 5.6.3 |
 | Frontend Build | Vite | 5.4.10 |
 | CI/CD | GitHub Actions | - |
+| IaC | Terraform | ~> 5.0 (AWS provider) |
+| Container | Docker + Nginx | - |
 
 ---
 
@@ -413,6 +415,11 @@ com.eunhyehymn/
 - **캐시**: npm
 - **실행**: `npm ci` → `tsc --noEmit` → `npm run build`
 
+### Deploy Staging (`deploy-staging.yml`)
+- **트리거**: develop push
+- **단계**: API 테스트 → Admin 빌드 → Docker 이미지 빌드 & ECR push → EC2 SSH 배포
+- **필수 Secrets**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
+
 ---
 
 ## 15. Git 브랜치
@@ -452,17 +459,25 @@ com.eunhyehymn/
 **인프라/CI**
 - Docker Compose (PostgreSQL + LocalStack + API)
 - API Dockerfile (multi-stage)
-- CI/CD (API 테스트 + Admin 빌드/타입체크)
+- Admin Dockerfile (multi-stage: Node build + Nginx serve)
+- Nginx 설정 (Admin 정적 파일 serve + API 리버스 프록시 + SPA fallback)
+- CI/CD (API 테스트 + Admin 빌드/타입체크 + Staging 자동 배포)
+
+**AWS 인프라 (Terraform)**
+- VPC + 퍼블릭 서브넷 2개 + IGW + 라우트 테이블
+- EC2 t2.micro (Free Tier) + Elastic IP + IAM Role (ECR pull + S3 access)
+- RDS PostgreSQL db.t3.micro (Free Tier, EC2 SG에서만 접근)
+- S3 버킷 (에셋 저장, public read + CORS)
+- ECR 레포지토리 2개 (api, admin) + lifecycle policy
+- 보안 그룹 (EC2: 80/22, RDS: 5432 from EC2 only)
+- 프로덕션 Docker Compose + 배포 스크립트
+- GitHub Actions 자동 배포 워크플로우 (develop push → ECR push → EC2 deploy)
 
 ### 미완료 (우선순위순)
 
-**1. AWS 인프라**: VPC, RDS, S3, ECS/EKS, IAM (전부 placeholder)
+**1. 모니터링/알림**: CloudWatch, 에러 추적
 
-**2. 배포 자동화**: Staging/Production 파이프라인
-
-**3. 모니터링/알림**: CloudWatch, 에러 추적
-
-**4. 모바일 앱**: Flutter (코드 없음)
+**2. 모바일 앱**: Flutter (코드 없음)
 
 ---
 
