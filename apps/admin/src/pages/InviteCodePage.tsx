@@ -17,6 +17,7 @@ export default function InviteCodePage() {
   const [newCode, setNewCode] = useState("");
   const [description, setDescription] = useState("");
   const [maxUses, setMaxUses] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
   const [creating, setCreating] = useState(false);
 
   const [revokingCodes, setRevokingCodes] = useState<Set<string>>(new Set());
@@ -44,6 +45,7 @@ export default function InviteCodePage() {
     setNewCode("");
     setDescription("");
     setMaxUses("");
+    setExpiresAt("");
   };
 
   const handleToggleForm = () => {
@@ -63,6 +65,7 @@ export default function InviteCodePage() {
         code: newCode.trim(),
         description: description.trim() || undefined,
         maxUses: parsed !== undefined && !Number.isNaN(parsed) ? parsed : undefined,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
       });
       setCodes((prev) => [created, ...prev]);
       resetForm();
@@ -140,6 +143,15 @@ export default function InviteCodePage() {
               placeholder="비워두면 무제한"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">만료일 (선택)</label>
+            <input
+              type="datetime-local"
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
           <button
             type="submit"
             disabled={creating || !newCode.trim()}
@@ -162,6 +174,7 @@ export default function InviteCodePage() {
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">설명</th>
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">사용</th>
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">상태</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600">만료일</th>
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">생성일</th>
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">작업</th>
               </tr>
@@ -169,7 +182,7 @@ export default function InviteCodePage() {
             <tbody>
               {codes.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                     등록된 초대코드가 없습니다.
                   </td>
                 </tr>
@@ -191,6 +204,16 @@ export default function InviteCodePage() {
                     >
                       {c.enabled ? "활성" : "비활성"}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {c.expiresAt ? (
+                      <span className={new Date(c.expiresAt) < new Date() ? "text-red-500" : "text-gray-500"}>
+                        {new Date(c.expiresAt).toLocaleDateString("ko-KR")}
+                        {new Date(c.expiresAt) < new Date() && " (만료)"}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {new Date(c.createdAt).toLocaleDateString("ko-KR")}
