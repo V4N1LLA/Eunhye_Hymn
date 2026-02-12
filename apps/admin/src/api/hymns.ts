@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiPost } from "./client";
+import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
 
 export interface HymnResponse {
   id: string;
@@ -56,4 +56,8 @@ export function updateHymn(id: string, req: UpdateHymnRequest): Promise<HymnResp
 
 export function getHymnDetail(id: string): Promise<HymnDetailResponse> {
   return apiGet<HymnDetailResponse>(`/hymns/${id}`);
+}
+
+export function deleteHymn(id: string): Promise<void> {
+  return apiDelete<void>(`/admin/hymns/${id}`);
 }

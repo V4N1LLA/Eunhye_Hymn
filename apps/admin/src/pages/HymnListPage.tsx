@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { listHymns, updateHymn, type HymnResponse } from "../api/hymns";
+import { deleteHymn, listHymns, updateHymn, type HymnResponse } from "../api/hymns";
 
 type EnabledFilter = "all" | "enabled" | "disabled";
 
@@ -11,6 +11,8 @@ export default function HymnListPage() {
   const [search, setSearch] = useState("");
   const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>("all");
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,13 +53,32 @@ export default function HymnListPage() {
 
   const handleToggleEnabled = async (hymn: HymnResponse) => {
     setTogglingIds((prev) => new Set(prev).add(hymn.id));
+    setActionError(null);
     try {
       const updated = await updateHymn(hymn.id, { enabled: !hymn.enabled });
       setHymns((prev) => prev.map((h) => (h.id === hymn.id ? { ...h, enabled: updated.enabled } : h)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "상태 변경에 실패했습니다.");
+      setActionError(err instanceof Error ? err.message : "상태 변경에 실패했습니다.");
     } finally {
       setTogglingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(hymn.id);
+        return next;
+      });
+    }
+  };
+
+  const handleDelete = async (hymn: HymnResponse) => {
+    if (!window.confirm(`"${hymn.title}" 찬양을 삭제하시겠습니까? 관련된 에셋, 메모, 상태, 이벤트가 모두 삭제됩니다.`)) return;
+    setDeletingIds((prev) => new Set(prev).add(hymn.id));
+    setActionError(null);
+    try {
+      await deleteHymn(hymn.id);
+      setHymns((prev) => prev.filter((h) => h.id !== hymn.id));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "삭제에 실패했습니다.");
+    } finally {
+      setDeletingIds((prev) => {
         const next = new Set(prev);
         next.delete(hymn.id);
         return next;
@@ -99,6 +120,7 @@ export default function HymnListPage() {
 
       {loading && <p className="text-gray-500">로딩 중...</p>}
       {error && <p className="text-red-600 mb-4">{error}</p>}
+      {actionError && <p className="text-red-600 mb-4">{actionError}</p>}
 
       {!loading && !error && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -109,12 +131,13 @@ export default function HymnListPage() {
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">제목</th>
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">태그</th>
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">상태</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600">작업</th>
               </tr>
             </thead>
             <tbody>
               {filteredHymns.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
                     {search || enabledFilter !== "all"
                       ? "검색 결과가 없습니다."
                       : "등록된 찬양이 없습니다."}
@@ -142,6 +165,16 @@ export default function HymnListPage() {
                       }`}
                     >
                       {togglingIds.has(h.id) ? "..." : h.enabled ? "활성" : "비활성"}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(h)}
+                      disabled={deletingIds.has(h.id)}
+                      className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
+                    >
+                      {deletingIds.has(h.id) ? "삭제 중..." : "삭제"}
                     </button>
                   </td>
                 </tr>
