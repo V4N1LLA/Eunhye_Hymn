@@ -37,6 +37,12 @@ docs/       프로젝트 문서
 - Google/Kakao 소셜 로그인 + Dev 로그인 (개발용)
 - Access Token 만료 시 자동 갱신
 
+## 문서
+
+- 현재 사용 가능 범위: [docs/current-usable-scope.md](./docs/current-usable-scope.md)
+- 운영 런북(스테이징): [docs/runbook.md](./docs/runbook.md)
+- 작업 기준 문서: [CLAUDE.md](./CLAUDE.md)
+
 ## 시작하기
 
 ### 필수 조건
