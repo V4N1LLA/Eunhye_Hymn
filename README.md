@@ -1,47 +1,156 @@
-# Eunhye Hymn 모노레포
+# Eunhye Hymn
 
-교회 내부 전용 찬송가/악보/파트 연습 음원 관리 앱을 위한 모노레포입니다.
-웹 관리자, 모바일 클라이언트, 단일 API, 인프라, 문서를 한곳에서 관리하여 유지보수성과
-AI 보조 개발 효율을 높이는 것을 목표로 합니다.
+교회 찬양팀을 위한 악보(PNG) 및 파트 연습 음원(MIDI) 관리 시스템입니다.
 
-## 저장소 구조
-- `apps/`
-  - `apps/api`: 백엔드 API 서비스 (Spring Boot)
-  - `apps/admin`: 관리자 웹 앱 (에셋 업로드 관련 코드 포함)
-  - `apps/mobile`: 모바일 앱 (Flutter, 현재 미포함)
-- `infra/`
-  - `infra/docker`: 로컬 개발/컨테이너 오케스트레이션
-  - `infra/aws`: AWS 인프라 정의
-- `docs/`
-  - `docs/requirements.md`: MVP 요구사항
-  - `docs/architecture.md`: 아키텍처 및 Clean Architecture 경계 규칙
-  - `docs/api-contract.md`: API 계약 정의
-  - `docs/data-model.md`: DB 스키마와 인덱스
-  - `docs/events.md`: 이벤트 정의 및 메타데이터 스키마
-  - `docs/dev-guide.md`: 로컬 개발 가이드
-  - `docs/runbook.md`: 스테이징 운영/배포 런북
-  - `docs/prompts`: AI 프롬프트 템플릿
-  - `docs/usecases`: 유스케이스 문서
-  - `docs/admin`: 관리자 문서
-  - `docs/mobile`: 모바일 문서
-- `.github/workflows`: CI/CD 워크플로
+관리자는 웹에서 찬양과 에셋을 등록하고, 멤버는 모바일 앱으로 악보를 보고 파트별 음원을 연습할 수 있습니다. 초대코드 기반으로 교회 내부 인원만 접근할 수 있습니다.
 
-## 참고
-- 교회 내부 전용 서비스입니다.
-- 인증: 초대 코드 + Google/Kakao 로그인, JWT 액세스/리프레시 토큰 사용.
-- 미디어: PDF 악보 및 MP3 파트 음원은 S3에서 제공.
-- 빌드/테스트는 Gradle 8.7 설치 후 `gradle ...` 명령으로 실행합니다.
+## 구조
 
-## API 로컬 실행
-1. 환경 변수 파일 생성: `cp apps/api/.env.example apps/api/.env`
-2. `apps/api/.env` 값을 로컬 환경에 맞게 수정
-3. PostgreSQL 실행
-4. API 실행: `cd apps/api && gradle bootRun`
-5. 테스트 실행: `cd apps/api && gradle test --no-daemon --stacktrace`
+```
+apps/
+  api/      Spring Boot 백엔드 (Java 17, Gradle)
+  admin/    React 관리자 웹 (TypeScript, Vite, Tailwind CSS)
+  mobile/   Flutter 모바일 앱 (미구현)
+infra/
+  docker/   Docker Compose (PostgreSQL + LocalStack + API)
+  aws/      AWS 인프라 (미구현)
+docs/       프로젝트 문서
+```
 
-상세 절차는 `docs/dev-guide.md`를 참고합니다.
+## 주요 기능
 
-## Admin 로컬 실행
-1. `cd apps/admin`
-2. `npm install`
-3. `npm run dev` (개발 서버) / `npm run build` (빌드)
+### 백엔드 API
+
+- 찬양 CRUD + 삭제 (에셋/메모/히스토리 cascade 삭제)
+- S3 에셋 관리 (presigned URL로 클라이언트 직접 업로드)
+- 소셜 로그인 (Google, Kakao) + JWT 인증 + 토큰 자동 회전
+- 초대코드 관리 (생성, 검증, 만료, 사용 횟수 제한)
+- 사용자 관리 (역할/상태 변경)
+- 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
+
+### 관리자 웹
+
+- 찬양 목록/생성/수정/삭제 + 검색/필터 + 활성화 토글
+- 에셋 업로드 (presign -> S3 업로드 -> confirm 3단계)
+- 사용자 관리 (역할/상태 변경)
+- 초대코드 관리 (생성/비활성화/만료일 설정)
+- Google/Kakao 소셜 로그인 + Dev 로그인 (개발용)
+- Access Token 만료 시 자동 갱신
+
+## 시작하기
+
+### 필수 조건
+
+- Java 17
+- Node.js 20+
+- PostgreSQL 15 (또는 Docker)
+
+### 백엔드 실행
+
+```bash
+cd apps/api
+
+# 환경변수 설정
+cp .env.example .env
+# .env 파일을 열어 아래 값을 수정
+#   DB_URL, DB_USER, DB_PASS  - PostgreSQL 접속 정보
+#   JWT_SECRET                - JWT 서명 키 (필수)
+#   JWT_ACCESS_TTL_SECONDS    - Access Token 유효시간 (필수)
+#   JWT_REFRESH_TTL_SECONDS   - Refresh Token 유효시간 (필수)
+#   INVITE_CODE               - 기본 초대코드 (필수)
+
+# 테스트 (외부 의존성 없이 H2 인메모리 DB 사용)
+./gradlew test --no-daemon --stacktrace
+
+# 서버 실행 (PostgreSQL 필요)
+./gradlew bootRun
+```
+
+서버가 `http://localhost:8080/api/v1` 에서 실행됩니다.
+
+### 관리자 웹 실행
+
+```bash
+cd apps/admin
+npm install
+npm run dev
+```
+
+`http://localhost:5173` 에서 실행됩니다. API 요청은 Vite 프록시를 통해 `localhost:8080`으로 전달됩니다.
+
+### Docker로 한 번에 실행
+
+```bash
+cd infra/docker
+cp .env.example .env   # 환경변수 수정
+docker compose up -d
+```
+
+PostgreSQL, LocalStack(S3), API 서버가 함께 실행됩니다.
+
+## 기술 스택
+
+| 계층 | 기술 |
+|------|------|
+| Backend | Spring Boot 3.3, Java 17, Gradle 8.7 |
+| Database | PostgreSQL + Flyway 마이그레이션 |
+| Storage | AWS S3 (presigned URL) |
+| Auth | Spring Security + JWT + Google/Kakao OAuth |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS v4 |
+| CI/CD | GitHub Actions (API 테스트 + Admin 빌드/타입체크) |
+
+## API 엔드포인트
+
+모든 엔드포인트는 `/api/v1` 아래에 있습니다.
+
+| 영역 | 주요 경로 | 설명 |
+|------|-----------|------|
+| 인증 | `POST /auth/social` | Google/Kakao 소셜 로그인 |
+| | `POST /auth/invite/validate` | 초대코드 검증 |
+| | `POST /auth/refresh` | 토큰 갱신 |
+| 찬양 (공개) | `GET /hymns` | 활성 찬양 목록 |
+| | `GET /hymns/{id}` | 찬양 상세 + 에셋 |
+| 찬양 (관리자) | `POST /admin/hymns` | 찬양 생성 |
+| | `PATCH /admin/hymns/{id}` | 찬양 수정 |
+| | `DELETE /admin/hymns/{id}` | 찬양 삭제 |
+| 에셋 (관리자) | `POST /admin/assets/presign` | 업로드 URL 발급 |
+| | `POST /admin/assets/confirm` | 업로드 확인 |
+| 사용자 (관리자) | `GET /admin/users` | 사용자 목록 |
+| | `PATCH /admin/users/{id}` | 역할/상태 변경 |
+| 초대코드 (관리자) | `POST /admin/invite-codes` | 초대코드 생성 |
+| | `DELETE /admin/invite-codes/{code}` | 비활성화 |
+| 멤버 | `POST /me/favorites/{hymnId}` | 즐겨찾기 토글 |
+| | `PUT /me/hymns/{hymnId}/note` | 메모 저장 |
+| | `GET /me/history` | 히스토리 |
+| 헬스체크 | `GET /ping` | `{ "ok": true }` |
+
+전체 API 명세는 [CLAUDE.md](./CLAUDE.md) 7장을 참고하세요.
+
+## 아키텍처
+
+Clean Architecture 기반으로 레이어를 분리합니다.
+
+```
+Domain (Entity, Repository 인터페이스)
+  ^
+Application (Use Cases)
+  ^
+Presentation (Controllers, DTOs)
+  ^
+Infrastructure (JPA, S3, JWT, Security)
+```
+
+의존성은 항상 안쪽(Domain)을 향합니다. 외부 서비스 호출이 필요한 경우 Application 레이어에 인터페이스(Port)를 정의하고 Infrastructure에서 구현합니다.
+
+## Git 브랜치
+
+| 브랜치 | 용도 |
+|--------|------|
+| `main` | 프로덕션 릴리스 |
+| `develop` | 개발 통합 |
+| `staging` | 스테이징 배포 |
+| `feat/*` | 기능 개발 (develop으로 PR) |
+
+## 라이선스
+
+[LICENSE](./LICENSE) 파일을 참고하세요.

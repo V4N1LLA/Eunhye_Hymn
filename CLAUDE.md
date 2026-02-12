@@ -1,7 +1,7 @@
 # CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-12
+> 마지막 업데이트: 2026-02-13
 
 ---
 
@@ -366,29 +366,29 @@ com.eunhyehymn/
 
 | 파일 | 역할 |
 |------|------|
-| `src/api/client.ts` | 공통 fetch wrapper (`apiGet`, `apiPost`, `apiPatch`, `apiDelete`), Bearer 토큰 자동 추가, 401 시 로그인 redirect |
-| `src/api/auth.ts` | Dev 로그인, 토큰 갱신, 로그아웃 API |
-| `src/api/hymns.ts` | 찬양 목록/생성/수정/상세 API |
+| `src/api/client.ts` | 공통 fetch wrapper (`apiGet`, `apiPost`, `apiPatch`, `apiDelete`), Bearer 토큰 자동 추가, **401 시 자동 토큰 갱신 후 재시도** (mutex 패턴), `unauthorized` 모드 (`"redirect"` / `"throw"`), `includeAuth` 옵션 |
+| `src/api/auth.ts` | **소셜 로그인** (Google/Kakao), 초대코드 검증, Dev 로그인, 토큰 갱신, 로그아웃 API (`PUBLIC_AUTH_OPTIONS`로 인증 없는 요청 구분) |
+| `src/api/hymns.ts` | 찬양 목록/생성/수정/**삭제**/상세 API |
 | `src/api/adminAssets.ts` | 에셋 presign/confirm/삭제 API (공통 클라이언트 사용) |
 | `src/api/adminUsers.ts` | 사용자 목록/역할·상태 변경 API |
 | `src/api/adminInviteCodes.ts` | 초대코드 목록/생성/비활성화 API |
-| `src/auth/AuthContext.tsx` | AuthProvider + `useAuth()` 훅, JWT 파싱, localStorage 토큰 관리 |
+| `src/auth/AuthContext.tsx` | AuthProvider + `useAuth()` 훅, JWT 파싱, localStorage 토큰 관리, **`loginWithSocial`** + `setTokensAndUser` 공통 헬퍼 |
 | `src/auth/ProtectedRoute.tsx` | 미인증 시 `/login` redirect |
 | `src/components/Layout.tsx` | 사이드바(찬양 관리, 에셋 업로드, 사용자 관리, 초대코드 관리) + 로그아웃 |
-| `src/pages/LoginPage.tsx` | Dev Login 폼 (ADMIN 역할, UUID 자동생성) |
-| `src/pages/HymnListPage.tsx` | 찬양 목록 테이블 (번호, 제목, 태그, 활성 상태) + 검색/필터 + 활성화 토글 |
+| `src/pages/LoginPage.tsx` | **Google/Kakao 소셜 로그인** + 초대코드 입력 + 접이식 Dev Login |
+| `src/pages/HymnListPage.tsx` | 찬양 목록 테이블 (번호, 제목, 태그, 활성 상태) + 검색/필터 + 활성화 토글 + **삭제** |
 | `src/pages/HymnCreatePage.tsx` | 찬양 생성 폼 (title, number, tags, enabled) |
-| `src/pages/HymnEditPage.tsx` | 찬양 수정 폼 + 에셋 목록(URL 링크, 삭제) + 임베디드 업로드 + 업로드 후 자동 새로고침 |
+| `src/pages/HymnEditPage.tsx` | 찬양 수정 폼 + 에셋 목록(URL 링크, 삭제) + 임베디드 업로드 + 업로드 후 자동 새로고침 + **찬양 삭제 버튼** |
 | `src/pages/AdminAssetUploadPage.tsx` | 에셋 업로드 3단계 UI (Tailwind 스타일, hymnId/onConfirmed props 지원) |
 | `src/pages/UserListPage.tsx` | 사용자 목록 테이블 + 역할/상태 변경 + 검색/필터 |
-| `src/pages/InviteCodePage.tsx` | 초대코드 목록 + 생성/비활성화 |
+| `src/pages/InviteCodePage.tsx` | 초대코드 목록 + 생성/비활성화 + **만료일 설정 및 표시** |
 | `src/App.tsx` | BrowserRouter 라우팅 설정 |
 
 ### 라우팅 구조
 
 | 경로 | 페이지 | 인증 |
 |------|--------|------|
-| `/login` | LoginPage | 공개 |
+| `/login` | LoginPage (소셜 + Dev) | 공개 |
 | `/` | → `/hymns` redirect | 필요 |
 | `/hymns` | HymnListPage | 필요 |
 | `/hymns/new` | HymnCreatePage | 필요 |
@@ -396,12 +396,6 @@ com.eunhyehymn/
 | `/assets/upload` | AdminAssetUploadPage | 필요 |
 | `/users` | UserListPage | 필요 |
 | `/invite-codes` | InviteCodePage | 필요 |
-
-### 미구현 기능
-- 소셜 로그인 UI (현재 Dev Login만 지원, 백엔드 POST /auth/social 준비 완료)
-- 찬양 삭제 API 클라이언트 (백엔드 DELETE /admin/hymns/{id} 준비 완료)
-- 초대코드 만료일 설정 (expiresAt 필드 UI 없음)
-- Access Token 자동 갱신 (refresh 인터셉터)
 
 ---
 
@@ -446,12 +440,14 @@ com.eunhyehymn/
 - 테스트 11개 파일 전체 통과 (SocialLoginApiTest 포함)
 
 **Admin 프론트엔드 (7페이지)**
-- 찬양 목록/생성/수정 + 검색/필터 + 활성화 토글
+- 찬양 목록/생성/수정/삭제 + 검색/필터 + 활성화 토글
 - 에셋 업로드 3단계 (presign/upload/confirm) + 삭제
 - 사용자 관리 (역할/상태 변경, 검색/필터)
-- 초대코드 관리 (생성/비활성화)
-- 인증 컨텍스트, 공통 API 클라이언트, 사이드바 레이아웃
-- Dev Login (개발용)
+- 초대코드 관리 (생성/비활성화/만료일 설정)
+- 소셜 로그인 UI (Google/Kakao) + 초대코드 입력 플로우
+- Access Token 자동 갱신 (401 → refresh → 재시도, mutex 패턴)
+- 인증 컨텍스트 (`loginWithSocial`, `setTokensAndUser`), 공통 API 클라이언트, 사이드바 레이아웃
+- Dev Login (개발용, 접이식)
 
 **인프라/CI**
 - Docker Compose (PostgreSQL + LocalStack + API)
@@ -460,26 +456,13 @@ com.eunhyehymn/
 
 ### 미완료 (우선순위순)
 
-**1. Admin 소셜 로그인 UI** — 백엔드 준비 완료, 프론트엔드 미구현
-  - LoginPage에 Google/Kakao 로그인 버튼 추가
-  - 초대코드 입력 플로우 (신규 사용자)
-  - OAuth redirect 처리
+**1. AWS 인프라**: VPC, RDS, S3, ECS/EKS, IAM (전부 placeholder)
 
-**2. Admin 찬양 삭제 UI** — 백엔드 DELETE /admin/hymns/{id} 준비 완료, API 클라이언트 미연결
-  - hymns.ts에 deleteHymn() 추가
-  - HymnListPage 또는 HymnEditPage에 삭제 버튼
+**2. 배포 자동화**: Staging/Production 파이프라인
 
-**3. Admin UX 개선**
-  - 초대코드 만료일 설정 UI (expiresAt — 백엔드 지원하나 프론트엔드 미구현)
-  - Access Token 자동 갱신 (401 인터셉터에서 refresh 후 재시도)
+**3. 모니터링/알림**: CloudWatch, 에러 추적
 
-**4. AWS 인프라**: VPC, RDS, S3, ECS/EKS, IAM (전부 placeholder)
-
-**5. 배포 자동화**: Staging/Production 파이프라인
-
-**6. 모니터링/알림**: CloudWatch, 에러 추적
-
-**7. 모바일 앱**: Flutter (코드 없음)
+**4. 모바일 앱**: Flutter (코드 없음)
 
 ---
 
