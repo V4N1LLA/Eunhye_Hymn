@@ -1,7 +1,7 @@
 # CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-12
+> 마지막 업데이트: 2026-02-13
 
 ---
 
@@ -20,15 +20,35 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/          # Spring Boot 백엔드 (Java 17, Gradle)  ← MVP 완료 (24 UseCase)
-│   ├── admin/        # React + Vite + TypeScript 관리자 웹    ← CRUD + 삭제 + 검색 + 에셋 업로드
-│   └── mobile/       # Flutter 모바일 (placeholder)
+│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (24 UseCase)
+│   │   └── Dockerfile    # Multi-stage (JDK build → JRE run)
+│   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 7페이지 완료
+│   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
+│   │   └── nginx.conf    # 정적 파일 serve + /api/v1 프록시 + SPA fallback
+│   └── mobile/           # Flutter 모바일 (placeholder)
 ├── infra/
-│   ├── docker/       # Docker Compose (PostgreSQL + LocalStack + API)
-│   └── aws/          # AWS Terraform IaC (VPC, EC2, RDS, S3, ECR) + 배포 스크립트
-├── docs/             # 프로젝트 문서 (요구사항, 아키텍처, API 계약 등)
-├── .github/workflows/  # CI/CD (api-ci.yml, admin-ci.yml, deploy-staging.yml)
-├── CLAUDE.md         # 이 파일
+│   ├── docker/           # 로컬 Docker Compose (PostgreSQL + LocalStack + API)
+│   └── aws/              # AWS Staging 인프라 (아래 상세)
+│       ├── main.tf                   # Provider (AWS ~>5.0), local backend
+│       ├── variables.tf              # 입력 변수 정의
+│       ├── terraform.tfvars.example  # 사용자용 변수 템플릿
+│       ├── vpc.tf                    # VPC, 퍼블릭 서브넷 2개, IGW, 라우트 테이블
+│       ├── security.tf               # EC2 SG (80/22), RDS SG (5432 from EC2)
+│       ├── rds.tf                    # RDS PostgreSQL db.t3.micro (Free Tier)
+│       ├── s3.tf                     # S3 버킷 + public read + CORS
+│       ├── ecr.tf                    # ECR 레포 2개 (api, admin) + lifecycle
+│       ├── ec2.tf                    # EC2 t2.micro + EIP + IAM Role + user_data
+│       ├── outputs.tf                # EC2 IP, RDS 엔드포인트, ECR URL
+│       ├── docker-compose.prod.yml   # 프로덕션 컨테이너 (api + nginx)
+│       ├── deploy.sh                 # ECR 로그인 → pull → up -d
+│       ├── .env.example              # 환경변수 템플릿
+│       └── .gitignore                # tfstate, .terraform 제외
+├── docs/                 # 프로젝트 문서 (요구사항, 아키텍처, API 계약 등)
+├── .github/workflows/
+│   ├── api-ci.yml        # API 테스트 (PR + develop push)
+│   ├── admin-ci.yml      # Admin 타입체크 + 빌드 (PR + develop push)
+│   └── deploy-staging.yml # Staging 자동 배포 (develop push)
+├── CLAUDE.md             # 이 파일
 ├── README.md
 └── LICENSE
 ```
@@ -417,12 +437,107 @@ com.eunhyehymn/
 
 ### Deploy Staging (`deploy-staging.yml`)
 - **트리거**: develop push
-- **단계**: API 테스트 → Admin 빌드 → Docker 이미지 빌드 & ECR push → EC2 SSH 배포
-- **필수 Secrets**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
+- **Jobs**: `test-api` → `check-admin` → `build-and-push` → `deploy`
+- **단계**: API 테스트 → Admin 타입체크+빌드 → Docker 이미지 빌드 & ECR push (api:latest + admin:latest) → EC2 SSH 배포 (deploy.sh) → 헬스체크
+- **필수 Secrets**:
+
+| Secret | 설명 |
+|--------|------|
+| `AWS_ACCESS_KEY_ID` | AWS IAM Access Key |
+| `AWS_SECRET_ACCESS_KEY` | AWS IAM Secret Key |
+| `AWS_REGION` | AWS 리전 (ap-northeast-2) |
+| `ECR_REGISTRY` | ECR 레지스트리 URL (`terraform output ecr_registry`) |
+| `EC2_HOST` | EC2 Elastic IP (`terraform output ec2_public_ip`) |
+| `EC2_SSH_KEY` | EC2 SSH 프라이빗 키 (PEM) |
+| `DEPLOY_ENV_FILE` | `.env` 파일 전체 내용 (DB, JWT, S3 등) |
 
 ---
 
-## 15. Git 브랜치
+## 15. AWS Staging 인프라
+
+### 15.1 아키텍처
+
+```
+[사용자] → http://<EC2-IP>
+                │
+         ┌──────┴──────┐
+         │   Nginx     │  ← Admin 정적 파일 serve + API 리버스 프록시
+         │  (port 80)  │
+         └──────┬──────┘
+                │ /api/v1 → proxy_pass http://api:8080
+         ┌──────┴──────┐
+         │  Spring Boot│  ← ECR 이미지, 환경변수로 RDS/S3 연결
+         │  (port 8080)│
+         └──────┬──────┘
+                │
+         ┌──────┴──────┐
+         │ RDS Postgres│  ← db.t3.micro, EC2 SG에서만 접근
+         │  (port 5432)│
+         └─────────────┘
+
+S3 버킷 ← 에셋(PNG/MIDI), public read + CORS
+ECR     ← Docker 이미지 (api, admin), lifecycle 최근 5개 유지
+```
+
+### 15.2 Terraform 리소스
+
+| 리소스 | 스펙 | Free Tier |
+|--------|------|-----------|
+| VPC | 10.0.0.0/16 + 퍼블릭 서브넷 2개 + IGW | 무료 |
+| EC2 | t2.micro (1 vCPU, 1GB), Amazon Linux 2023, 20GB gp3 | 750시간/월 (12개월) |
+| Elastic IP | 1개, EC2에 연결 | 실행 중 무료 |
+| RDS | db.t3.micro, PostgreSQL 15.8, 20GB gp2, 단일 AZ | 750시간/월 (12개월) |
+| S3 | 표준, public read, CORS 허용 | 5GB |
+| ECR | 프라이빗 레포 2개 (api, admin) | 500MB |
+
+### 15.3 EC2 구성
+
+- **IAM Role**: ECR pull (`ecr:GetAuthorizationToken`, `ecr:BatchGetImage` 등) + S3 access (`s3:PutObject/GetObject/DeleteObject/ListBucket`)
+- **user_data**: Docker + Docker Compose 자동 설치, `/home/ec2-user/app` 디렉토리 생성
+- **보안 그룹**: HTTP(80) 전체 허용, SSH(22) `allowed_ssh_cidrs` 변수로 제한 가능
+
+### 15.4 배포 플로우
+
+```
+develop push → GitHub Actions
+  1. test-api (Gradle test)
+  2. check-admin (tsc + vite build)
+  3. build-and-push (Docker build → ECR push, :latest + :sha 태그)
+  4. deploy (SCP compose/deploy.sh → SSH deploy.sh 실행)
+     └─ ECR login → docker compose pull → up -d → image prune
+```
+
+### 15.5 프로덕션 Docker Compose (`docker-compose.prod.yml`)
+
+| 서비스 | 이미지 | 포트 | 의존성 |
+|--------|--------|------|--------|
+| `api` | `${ECR_REGISTRY}/eunhye-hymn/api:latest` | 8080 (internal) | - |
+| `nginx` | `${ECR_REGISTRY}/eunhye-hymn/admin:latest` | 80 → 80 | api (healthy) |
+
+- `api`는 `.env` 파일에서 DB_URL, JWT_SECRET 등 환경변수 로드
+- `nginx`는 `nginx.conf`에서 `/api/v1` → `http://api:8080` 프록시
+
+### 15.6 Nginx 설정 (`apps/admin/nginx.conf`)
+
+- `/api/v1/` → `proxy_pass http://api:8080` (리버스 프록시)
+- `/actuator/` → `proxy_pass http://api:8080` (헬스체크 프록시)
+- `/` → `try_files $uri $uri/ /index.html` (SPA fallback)
+- 정적 에셋 1년 캐시, gzip 압축
+
+### 15.7 초기 설정 (사용자 작업)
+
+1. AWS CLI + Terraform 설치
+2. `aws ec2 create-key-pair --key-name eunhye-staging` → PEM 저장
+3. `cp terraform.tfvars.example terraform.tfvars` → 값 편집
+4. `terraform init && terraform plan && terraform apply`
+5. GitHub Secrets 등록 (terraform output 값 사용)
+6. develop push → 자동 배포
+
+상세 가이드: `infra/aws/README.md`
+
+---
+
+## 16. Git 브랜치
 
 | 브랜치 | 용도 |
 |--------|------|
@@ -432,7 +547,7 @@ com.eunhyehymn/
 
 ---
 
-## 16. 현재 진행 상태 및 남은 작업
+## 17. 현재 진행 상태 및 남은 작업
 
 ### 완료
 
@@ -481,7 +596,7 @@ com.eunhyehymn/
 
 ---
 
-## 17. 작업 시 주의사항
+## 18. 작업 시 주의사항
 
 - **Clean Architecture 준수**: 의존성 방향은 반드시 외부→내부 (infrastructure → application → domain)
 - **API 베이스 경로**: 항상 `/api/v1` 접두사 사용
@@ -494,7 +609,7 @@ com.eunhyehymn/
 - **작업 브랜치**: `develop`에서 `feat/*` 브랜치를 생성하여 작업하고, PR은 `develop`으로 보낸다. `main` merge는 사용자가 명시적으로 요청할 때만 수행
 - **자동화 작업 사이클**: 사용자가 작업을 요청하면 아래 전체 사이클을 자동으로 수행한다. 사용자 개입을 최소화하는 것이 목표다
 
-### 17.1 작업 사이클 (한 기능 = 한 사이클)
+### 18.1 작업 사이클 (한 기능 = 한 사이클)
 
 사용자가 기능/수정을 요청하면 다음 단계를 **자동으로 끝까지** 수행한다:
 
@@ -504,17 +619,17 @@ com.eunhyehymn/
 4. **커밋 & Push**: 의미 있는 커밋 메시지, `origin`에 push
 5. **PR 생성**: `develop` 대상 PR 생성 (제목 + 요약 + 테스트 계획)
 6. **코드 리뷰 & 리팩토링**: `/pr-reviewer:review-pr` 실행 → 이슈 발견 시 수정 후 재push
-7. **다음 작업 추천**: CLAUDE.md 16장 미완료 목록 기반으로 다음 우선순위 작업을 제안
+7. **다음 작업 추천**: CLAUDE.md 17장 미완료 목록 기반으로 다음 우선순위 작업을 제안
 
 사용자는 최종 결과만 확인하면 된다. 중간에 판단이 필요한 경우에만 질문한다.
 
 ---
 
-## 18. 코드 품질 Skill (개발 시 필수 준수)
+## 19. 코드 품질 Skill (개발 시 필수 준수)
 
 개발 과정에서 아래 두 skill의 원칙을 항상 적용한다.
 
-### 18.1 Clean Architecture Skill (`/clean-architecture`)
+### 19.1 Clean Architecture Skill (`/clean-architecture`)
 
 코드 작성 및 리뷰 시 Robert C. Martin의 Clean Architecture 원칙을 준수한다.
 
@@ -531,7 +646,7 @@ com.eunhyehymn/
 - 구현체가 하나뿐인 인터페이스의 과잉 추상화 경계
 - 0.001% 확률의 미래 변경을 위한 오버엔지니어링 금지
 
-### 18.2 Kent Beck Style Skill (`/kent-beck-style`)
+### 19.2 Kent Beck Style Skill (`/kent-beck-style`)
 
 Kent Beck의 리팩토링 철학과 Simple Design 원칙을 준수한다.
 
@@ -559,7 +674,7 @@ Kent Beck의 리팩토링 철학과 Simple Design 원칙을 준수한다.
 - Introduce Parameter Object로 긴 파라미터 목록 개선
 - 네이밍: 변수=명사, 함수=동사, 불리언=질문형, 클래스=명사
 
-### 18.3 PR Reviewer (`/review-pr`, `/resolve-reviews`)
+### 19.3 PR Reviewer (`/review-pr`, `/resolve-reviews`)
 
 GitHub PR을 자동으로 리뷰하고 인라인 코멘트를 게시하는 플러그인.
 
@@ -573,7 +688,7 @@ GitHub PR을 자동으로 리뷰하고 인라인 코멘트를 게시하는 플�
 
 **리뷰 코멘트 해결 카테고리**: code_change, question, already_done, disagree, unclear
 
-### 18.4 Codex Reviewer (자동 Hook)
+### 19.4 Codex Reviewer (자동 Hook)
 
 파일 수정(Write/Edit) 시 OpenAI Codex가 **자동으로** 코드 리뷰하는 PostToolUse hook.
 
@@ -586,7 +701,7 @@ GitHub PR을 자동으로 리뷰하고 인라인 코멘트를 게시하는 플�
 - Codex CLI 0.98.0 (`npm install -g @openai/codex`)
 - **OPENAI_API_KEY 설정 필요** — `codex login` 또는 환경변수로 설정
 
-### 18.5 적용 시점
+### 19.5 적용 시점
 
 | 시점 | 적용 방법 |
 |------|-----------|
