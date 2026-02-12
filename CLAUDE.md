@@ -475,6 +475,8 @@ com.eunhyehymn/
 - **Gradle**: 시스템 gradle이 아닌 wrapper (`./gradlew`) 사용
 - **Windows**: gradlew.bat에서 JAVA_HOME 공백 경로 처리 수정 적용됨
 - **에셋 교체**: 동일 (hymnId, type, part) 조합 시 기존 레코드 삭제 후 새로 생성
+- **CLAUDE.md 동기화 (필수)**: 모든 PR에 CLAUDE.md 업데이트를 포함할 것. 변경된 기능, 파일, 진행 상태(완료/미완료)를 반영하여 어떤 환경·세션에서든 이 파일만 읽으면 바로 작업을 이어갈 수 있도록 유지한다
+- **작업 브랜치**: `develop`에서 `feat/*` 브랜치를 생성하여 작업하고, PR은 `develop`으로 보낸다. `main` merge는 사용자가 명시적으로 요청할 때만 수행
 
 ---
 
