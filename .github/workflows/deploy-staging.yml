@@ -1,0 +1,128 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - develop
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  # ── 1. API Tests ─────────────────────────────────────────────
+  test-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v3
+      - run: chmod +x gradlew
+      - run: ./gradlew test --no-daemon --stacktrace
+
+  # ── 2. Admin Build Check ─────────────────────────────────────
+  check-admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+  # ── 3. Build & Push Docker Images ────────────────────────────
+  build-and-push:
+    needs: [test-api, check-admin]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push API image
+        working-directory: apps/api
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t ${ECR_REGISTRY}/eunhye-hymn/api:${IMAGE_TAG} -t ${ECR_REGISTRY}/eunhye-hymn/api:latest .
+          docker push ${ECR_REGISTRY}/eunhye-hymn/api:${IMAGE_TAG}
+          docker push ${ECR_REGISTRY}/eunhye-hymn/api:latest
+
+      - name: Build and push Admin image
+        working-directory: apps/admin
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t ${ECR_REGISTRY}/eunhye-hymn/admin:${IMAGE_TAG} -t ${ECR_REGISTRY}/eunhye-hymn/admin:latest .
+          docker push ${ECR_REGISTRY}/eunhye-hymn/admin:${IMAGE_TAG}
+          docker push ${ECR_REGISTRY}/eunhye-hymn/admin:latest
+
+  # ── 4. Deploy to EC2 ─────────────────────────────────────────
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Copy compose file and deploy script to EC2
+        run: |
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            infra/aws/docker-compose.prod.yml \
+            infra/aws/deploy.sh \
+            ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/app/
+
+      - name: Write .env file on EC2
+        run: |
+          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > /tmp/.env.deploy
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            /tmp/.env.deploy \
+            ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/app/.env
+          rm -f /tmp/.env.deploy
+
+      - name: Run deploy script
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ec2-user@${{ secrets.EC2_HOST }} \
+            "cd /home/ec2-user/app && \
+             export ECR_REGISTRY=${ECR_REGISTRY} && \
+             export AWS_REGION=${{ env.AWS_REGION }} && \
+             chmod +x deploy.sh && \
+             ./deploy.sh"
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for services to start..."
+          sleep 30
+          curl -sf http://${{ secrets.EC2_HOST }}/api/v1/ping || echo "WARNING: Health check failed (services may still be starting)"
