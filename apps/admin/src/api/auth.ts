@@ -23,22 +23,27 @@ export interface SocialLoginResponse {
   newUser: boolean;
 }
 
+const PUBLIC_AUTH_OPTIONS = {
+  includeAuth: false,
+  unauthorized: "throw",
+} as const;
+
 export function socialLogin(req: SocialLoginRequest): Promise<SocialLoginResponse> {
-  return apiPost<SocialLoginResponse>("/auth/social", req);
+  return apiPost<SocialLoginResponse>("/auth/social", req, PUBLIC_AUTH_OPTIONS);
 }
 
 export function validateInviteCode(code: string): Promise<{ valid: boolean }> {
-  return apiPost<{ valid: boolean }>("/auth/invite/validate", { code });
+  return apiPost<{ valid: boolean }>("/auth/invite/validate", { code }, PUBLIC_AUTH_OPTIONS);
 }
 
 export function devLogin(req: DevLoginRequest): Promise<TokenResponse> {
-  return apiPost<TokenResponse>("/auth/dev/login", req);
+  return apiPost<TokenResponse>("/auth/dev/login", req, PUBLIC_AUTH_OPTIONS);
 }
 
 export function refreshToken(token: string): Promise<TokenResponse> {
-  return apiPost<TokenResponse>("/auth/refresh", { refreshToken: token });
+  return apiPost<TokenResponse>("/auth/refresh", { refreshToken: token }, PUBLIC_AUTH_OPTIONS);
 }
 
 export function logout(token: string): Promise<void> {
-  return apiPost<void>("/auth/logout", { refreshToken: token });
+  return apiPost<void>("/auth/logout", { refreshToken: token }, PUBLIC_AUTH_OPTIONS);
 }
