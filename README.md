@@ -58,69 +58,20 @@ docs/       프로젝트 문서
 
 ## 시작하기
 
-### 필수 조건
+로컬 실행/테스트/트러블슈팅 가이드는 아래 문서를 기준으로 사용하세요.
 
-- Java 17
-- Node.js 20+
-- PostgreSQL 15 (또는 Docker)
-- Git (로컬 Flutter SDK 자동 설치용)
-- Flutter 3.24+ (이미 설치되어 있다면 사용 가능)
+- 로컬 셋업 가이드: [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
 
-### 백엔드 실행
+빠른 시작(권장: Docker Compose 전체 실행):
 
 ```bash
-cd apps/api
+docker compose -f infra/docker/docker-compose.yml up -d
+curl http://localhost:8080/api/v1/ping
 
-# 환경변수 설정
-cp .env.example .env
-# .env 파일을 열어 아래 값을 수정
-#   DB_URL, DB_USER, DB_PASS  - PostgreSQL 접속 정보
-#   JWT_SECRET                - JWT 서명 키 (필수)
-#   JWT_ACCESS_TTL_SECONDS    - Access Token 유효시간 (필수)
-#   JWT_REFRESH_TTL_SECONDS   - Refresh Token 유효시간 (필수)
-#   INVITE_CODE               - 기본 초대코드 (필수)
-
-# 테스트 (외부 의존성 없이 H2 인메모리 DB 사용)
-./gradlew test --no-daemon --stacktrace
-
-# 서버 실행 (PostgreSQL 필요)
-./gradlew bootRun
-```
-
-서버가 `http://localhost:8080/api/v1` 에서 실행됩니다.
-
-### 관리자 웹 실행
-
-```bash
 cd apps/admin
 npm install
 npm run dev
 ```
-
-`http://localhost:5173` 에서 실행됩니다. API 요청은 Vite 프록시를 통해 `localhost:8080`으로 전달됩니다.
-
-### 모바일 앱 실행
-
-```powershell
-# 저장소 루트에서 최초 1회 (Flutter SDK 자동 설치 + 버전 확인)
-.\scripts\flutterw.ps1 --version
-
-cd apps/mobile
-..\..\scripts\flutterw.ps1 pub get
-..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
-```
-
-실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용하세요.
-
-### Docker로 한 번에 실행
-
-```bash
-cd infra/docker
-cp .env.example .env   # 환경변수 수정
-docker compose up -d
-```
-
-PostgreSQL, LocalStack(S3), API 서버가 함께 실행됩니다.
 
 ## 기술 스택
 
