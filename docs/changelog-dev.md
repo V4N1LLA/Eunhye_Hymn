@@ -1,17 +1,17 @@
-﻿## 날짜
-- 2026-02-13
-
-## 변경 내역
-1. 감사 로그 summary/집계가 목록 필터(userId, eventType, hymnId, rom, 	o)와 동일한 범위를 사용하도록 백엔드 UseCase/Repository를 리팩토링하고 테스트를 추가했습니다.
-2. Admin CSV 내보내기가 공통 API 클라이언트(auth/refresh) 경로를 재사용하도록 수정해 액세스 토큰 만료 시에도 자동으로 재시도/리다이렉트됩니다.
-
-## 검증 결과
-- ./gradlew test --tests "*AdminEventApiTest*"
 # 개발 변경 이력
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
 ## 2026-02-13
+
+### 시크릿 관리 가이드 정리
+- `.env.example` 템플릿(루트/API/AWS) 주석과 기본값을 정리해 오해 가능성을 줄임
+- 시크릿 관리 기준 문서 추가
+  - `docs/SECRETS_MANAGEMENT.md`
+- 사이클 기준서에 시크릿 노출 점검 항목 추가
+  - `docs/WORK_CYCLE.md`
+- `.gitignore`에 민감 파일 패턴 추가
+  - `.envrc`, `.secrets/`, `*.pem`, `*.key`, `*.p12`, `*.pfx`
 
 ### Admin 토큰 저장 하드닝(작업중)
 - Admin 웹 토큰 저장소를 `localStorage`에서 `sessionStorage` 기반으로 전환
@@ -68,4 +68,3 @@
 - 로컬 API 실행 보조 스크립트
   - `scripts/start-wsl-postgres.ps1`
   - `scripts/run-api-local-wsl-db.ps1`
-
