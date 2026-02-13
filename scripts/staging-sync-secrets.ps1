@@ -29,20 +29,45 @@ if ([string]::IsNullOrWhiteSpace($awsRegion)) {
 $account = (aws sts get-caller-identity --query Account --output text).Trim()
 $ecrRegistry = "$account.dkr.ecr.$awsRegion.amazonaws.com"
 
-$rdsEndpoint = terraform -chdir=$TerraformDir output -raw rds_endpoint
-$s3Bucket = terraform -chdir=$TerraformDir output -raw s3_bucket_name
-$s3PublicUrl = terraform -chdir=$TerraformDir output -raw s3_bucket_url
+function Get-TerraformOutputRaw {
+  param(
+    [string]$Dir,
+    [string]$Name
+  )
+  $value = terraform "-chdir=$Dir" output -raw $Name
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($value)) {
+    throw "Failed to read terraform output: $Name"
+  }
+  return $value.Trim()
+}
+
+function Escape-ComposeEnvValue {
+  param(
+    [string]$Value
+  )
+  if ($null -eq $Value) { return "" }
+  return $Value.Replace('$', '$$')
+}
+
+$rdsAddress = Get-TerraformOutputRaw -Dir $TerraformDir -Name "rds_address"
+$s3Bucket = Get-TerraformOutputRaw -Dir $TerraformDir -Name "s3_bucket_name"
+$s3PublicUrl = Get-TerraformOutputRaw -Dir $TerraformDir -Name "s3_bucket_url"
+
+$dbPasswordEscaped = Escape-ComposeEnvValue -Value $DbPassword
+$jwtSecretEscaped = Escape-ComposeEnvValue -Value $JwtSecret
+$inviteCodeEscaped = Escape-ComposeEnvValue -Value $InviteCode
+$googleClientIdEscaped = Escape-ComposeEnvValue -Value $GoogleClientId
 
 $deployEnvFile = @"
 ECR_REGISTRY=$ecrRegistry
-DB_URL=jdbc:postgresql://$rdsEndpoint:5432/eunhye_hymn
+DB_URL=jdbc:postgresql://${rdsAddress}:5432/eunhye_hymn
 DB_USER=postgres
-DB_PASS=$DbPassword
-JWT_SECRET=$JwtSecret
+DB_PASS=$dbPasswordEscaped
+JWT_SECRET=$jwtSecretEscaped
 JWT_ACCESS_TTL_SECONDS=3600
 JWT_REFRESH_TTL_SECONDS=604800
-INVITE_CODE=$InviteCode
-GOOGLE_CLIENT_ID=$GoogleClientId
+INVITE_CODE=$inviteCodeEscaped
+GOOGLE_CLIENT_ID=$googleClientIdEscaped
 S3_BUCKET=$s3Bucket
 S3_REGION=$awsRegion
 S3_ENDPOINT=

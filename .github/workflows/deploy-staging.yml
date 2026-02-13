@@ -133,7 +133,9 @@ jobs:
 
       - name: Write .env file on EC2
         run: |
-          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > /tmp/.env.deploy
+          cat <<'EOF' > /tmp/.env.deploy
+          ${{ secrets.DEPLOY_ENV_FILE }}
+          EOF
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             /tmp/.env.deploy \
             ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/app/.env

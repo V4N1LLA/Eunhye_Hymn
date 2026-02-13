@@ -97,7 +97,7 @@ gh auth status 1>$null 2>$null
 Add-Check "gh auth status" ($LASTEXITCODE -eq 0) "github auth"
 
 Test-AwsPermission "aws ec2 describe-availability-zones" "aws ec2 describe-availability-zones --output json"
-Test-AwsPermission "aws ec2 describe-images" "aws ec2 describe-images --owners amazon --max-results 1 --output json"
+Test-AwsPermission "aws ec2 describe-images" "aws ec2 describe-images --owners amazon --query ""Images[0].ImageId"" --output text"
 Test-AwsPermission "aws ec2 describe-key-pairs" "aws ec2 describe-key-pairs --output json"
 
 $init = Run-CommandCapture "terraform -chdir=$TerraformDir init -backend=false -input=false"
