@@ -1,0 +1,218 @@
+# 로컬 개발 환경 설정 가이드
+
+> Eunhye Hymn 프로젝트를 로컬에서 실행하기 위한 단계별 가이드입니다.
+
+---
+
+## 1. 사전 요구사항
+
+| 도구 | 버전 | 확인 명령 |
+|------|------|-----------|
+| **Docker Desktop** | 28+ | `docker --version` |
+| **Java** | 17 (JDK) | `java -version` |
+| **Node.js** | 20+ | `node --version` |
+| **npm** | 10+ | `npm --version` |
+| **Git Bash** | - | Windows 기본 터미널 |
+
+### Git Bash PATH 설정 (Windows)
+
+Docker와 npm이 Git Bash에서 인식되지 않는 경우 `~/.bashrc`에 추가:
+
+```bash
+# ~/.bashrc
+export PATH="$PATH:/c/Users/<사용자명>/AppData/Roaming/npm"
+export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin"
+```
+
+변경 후 `source ~/.bashrc` 또는 새 터미널 열기.
+
+---
+
+## 2. 환경변수 설정
+
+프로젝트 루트에서 `.env` 파일 생성:
+
+```bash
+cd Eunhye_Hymn
+cp .env.example .env
+```
+
+`.env` 파일은 기본 개발값이 채워져 있어 수정 없이 사용 가능합니다.
+
+주요 변수:
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `JWT_SECRET` | `dev-secret-key-...` | JWT 서명 키 (**필수**) |
+| `INVITE_CODE` | `dev-invite-code` | 초대코드 (**필수**) |
+| `DB_USER` / `DB_PASS` | `postgres` / `postgres` | DB 인증 |
+| `S3_BUCKET` | `local-bucket` | LocalStack S3 버킷 |
+
+---
+
+## 3. 실행 방법
+
+### 방법 A: Docker Compose로 전체 실행 (권장)
+
+모든 서비스를 컨테이너에서 실행합니다. 코드 변경 없이 전체 시스템을 확인할 때 적합합니다.
+
+```bash
+# 1. Docker Desktop 실행 (시스템 트레이에서 확인)
+
+# 2. 전체 서비스 시작 (PostgreSQL + LocalStack + API)
+docker compose -f infra/docker/docker-compose.yml up -d
+
+# 3. 시작 확인 (모두 healthy/running 될 때까지 대기)
+docker compose -f infra/docker/docker-compose.yml ps
+
+# 4. API 헬스 체크
+curl http://localhost:8080/api/v1/ping
+# → {"ok":true}
+
+# 5. Admin 프론트엔드 시작
+cd apps/admin
+npm install
+npm run dev
+# → http://localhost:5173 (API는 localhost:8080으로 프록시)
+```
+
+**접속 정보:**
+
+| 서비스 | URL |
+|--------|-----|
+| API | http://localhost:8080/api/v1 |
+| Admin | http://localhost:5173 |
+| PostgreSQL | localhost:5432 (eunhye_hymn / postgres / postgres) |
+| LocalStack S3 | http://localhost:4566 |
+
+### 방법 B: DB만 Docker, API는 로컬 실행 (개발용)
+
+API 코드를 수정하면서 핫 리로드로 개발할 때 적합합니다.
+
+```bash
+# 1. DB + S3만 시작
+docker compose -f infra/docker/docker-compose.yml up -d postgres localstack init-s3
+
+# 2. API 로컬 실행 (환경변수 직접 전달)
+cd apps/api
+DB_URL=jdbc:postgresql://localhost:5432/eunhye_hymn \
+JWT_SECRET=dev-secret-key-change-in-production-min-32-chars!! \
+JWT_ACCESS_TTL_SECONDS=3600 \
+JWT_REFRESH_TTL_SECONDS=604800 \
+INVITE_CODE=dev-invite-code \
+S3_ENDPOINT=http://localhost:4566 \
+S3_PUBLIC_BASE_URL=http://localhost:4566/local-bucket \
+./gradlew bootRun
+
+# 3. Admin 프론트엔드 (별도 터미널)
+cd apps/admin
+npm install
+npm run dev
+```
+
+### 방법 C: 테스트만 실행 (Docker 불필요)
+
+외부 의존성 없이 H2 인메모리 DB로 테스트만 돌립니다.
+
+```bash
+# 백엔드 테스트
+cd apps/api
+./gradlew test --no-daemon --stacktrace
+
+# 프론트엔드 타입체크 + 빌드
+cd apps/admin
+npm install
+npx tsc --noEmit
+npm run build
+```
+
+---
+
+## 4. Admin 로그인 방법
+
+로컬에서는 **Dev Login**을 사용합니다.
+
+1. http://localhost:5173 접속
+2. 로그인 페이지 하단의 **Dev Login** 섹션 펼치기
+3. 기본값 그대로 (ADMIN 역할) **Login** 클릭
+4. 대시보드 진입
+
+초대코드가 필요한 경우: `.env`의 `INVITE_CODE` 값 사용 (기본: `dev-invite-code`)
+
+---
+
+## 5. 서비스 종료
+
+```bash
+# 컨테이너 중지 (데이터 유지)
+docker compose -f infra/docker/docker-compose.yml down
+
+# 컨테이너 + 데이터 볼륨 완전 삭제
+docker compose -f infra/docker/docker-compose.yml down -v
+```
+
+---
+
+## 6. 트러블슈팅
+
+### Docker Desktop이 Git Bash에서 인식되지 않음
+
+```bash
+export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin"
+```
+
+### API가 부팅에 실패함
+
+`JWT_SECRET`과 `INVITE_CODE`가 설정되었는지 확인:
+```bash
+# .env 파일 확인
+cat .env | grep -E "(JWT_SECRET|INVITE_CODE)"
+```
+
+### 포트 충돌 (5432, 8080, 5173)
+
+기존에 실행 중인 PostgreSQL/Tomcat/Node 서버가 있으면 먼저 종료:
+```bash
+# Windows: 포트 사용 중인 프로세스 확인
+netstat -ano | findstr :5432
+netstat -ano | findstr :8080
+```
+
+### Gradle 빌드 실패 (JAVA_HOME 경로에 공백)
+
+`gradlew.bat`에 이미 수정이 적용되어 있습니다. 여전히 문제가 있으면:
+```bash
+# JAVA_HOME 확인
+echo $JAVA_HOME
+# 공백이 포함된 경로인 경우 따옴표로 감싸기
+export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-17.0.x-hotspot"
+```
+
+### LocalStack S3 버킷 생성 실패
+
+`init-s3` 컨테이너 로그 확인:
+```bash
+docker compose -f infra/docker/docker-compose.yml logs init-s3
+```
+
+---
+
+## 7. 유용한 명령어
+
+```bash
+# 전체 로그 실시간 확인
+docker compose -f infra/docker/docker-compose.yml logs -f
+
+# API 로그만 확인
+docker compose -f infra/docker/docker-compose.yml logs -f api
+
+# 컨테이너 재시작
+docker compose -f infra/docker/docker-compose.yml restart api
+
+# DB 직접 접속
+docker exec -it eunhye-postgres psql -U postgres -d eunhye_hymn
+
+# S3 버킷 내용 확인
+AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test \
+  aws --endpoint-url=http://localhost:4566 s3 ls s3://local-bucket/
+```

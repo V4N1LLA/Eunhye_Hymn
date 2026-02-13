@@ -1,4 +1,4 @@
-# Eunhye Hymn
+﻿# Eunhye Hymn
 
 교회 찬양팀을 위한 악보(PNG) 및 파트 연습 음원(MIDI) 관리 시스템입니다.
 
@@ -52,6 +52,7 @@ docs/       프로젝트 문서
 - 현재 사용 가능 범위: [docs/current-usable-scope.md](./docs/current-usable-scope.md)
 - 운영 런북(스테이징): [docs/runbook.md](./docs/runbook.md)
 - 모바일 문서: [docs/mobile/README.md](./docs/mobile/README.md)
+- 로컬 셋업 가이드: [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
 - 모바일 앱 README: [apps/mobile/README.md](./apps/mobile/README.md)
 - 작업 기준 문서: [CLAUDE.md](./CLAUDE.md)
 
@@ -188,3 +189,4 @@ Infrastructure (JPA, S3, JWT, Security)
 ## 라이선스
 
 [LICENSE](./LICENSE) 파일을 참고하세요.
+
