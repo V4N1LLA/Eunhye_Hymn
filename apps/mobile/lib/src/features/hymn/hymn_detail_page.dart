@@ -340,6 +340,8 @@ class _MidiAssetPlayerState extends State<_MidiAssetPlayer> {
     try {
       if (_state == PlayerState.playing) {
         await _player.pause();
+      } else if (_state == PlayerState.paused) {
+        await _player.resume();
       } else {
         await _player.setPlaybackRate(_speed);
         await _player.play(UrlSource(widget.url));
