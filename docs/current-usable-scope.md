@@ -2,9 +2,9 @@
 
 - 작성일: 2026-02-13
 - 기준 브랜치: `develop` (통합/배포 기준)
-- 기준 커밋: `08bc04c` (로컬 확인 시점 HEAD)
+- 기준 커밋: `22011b7` (2026-02-13 로컬 확인 시점 `develop` HEAD)
 - 근거 문서: `README.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
-- 근거 PR: #38, #37, #36, #31, #30, #29, #28, #27
+- 근거 PR: #42, #41, #40, #38, #37, #36, #31
 
 ## 1. 요약
 
@@ -14,6 +14,7 @@
 - 배포 기능: AWS 스테이징 자동 배포 파이프라인 코드 구성 완료
 - CI 기능: API/Admin/Mobile 검증 워크플로우 구성 완료
 - 현재 우선 과제: 스테이징 실배포 전환(Terraform 적용, Secrets 설정, EC2 권한/접근 확인)
+- 모바일 배포 상태: 현재 저장소 기준 웹 실행(`-d chrome`) 중심이며, 앱스토어 배포(Android/iOS)는 별도 준비가 필요
 
 ## 2. 지금 바로 검증 가능한 범위 (로컬)
 
@@ -97,6 +98,7 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - [ ] AWS 리소스 생성(Terraform)
 - [ ] GitHub Secrets 설정(`AWS_*`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`, 선택: `ENABLE_AWSLOGS`)
 - [ ] EC2 접근 가능 상태 및 배포 계정 권한 확인
+- [ ] 배포 서버 `.env` 준비 (`infra/aws/docker-compose.prod.yml`의 `env_file: .env` 요구)
 - [ ] 첫 `develop` 배포 후 `GET /api/v1/ping` + 관리자 로그인 + 핵심 API 스모크 테스트
 
 ## 4. 최근 PR 기준 변경 포인트
@@ -152,4 +154,19 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 
 - `JWT_SECRET`, `JWT_ACCESS_TTL_SECONDS`, `JWT_REFRESH_TTL_SECONDS`, `INVITE_CODE` 미설정 시 API 부팅 실패
 - 소셜 로그인 실사용 검증 시 provider 토큰/클라이언트 설정 필요
+- 모바일은 현재 문서/실행 가이드 기준으로 `flutter run -d chrome` 경로를 우선 지원
+
+## 7. 2026-02-13 실검증 로그 (명령 기반)
+
+- API 테스트: `./gradlew.bat test --no-daemon --stacktrace` 성공 (58 tests, failed 0, skipped 0)
+- Admin 빌드: `npm run build` 성공
+- Mobile 검증:
+  - `..\..\scripts\flutterw.ps1 analyze` 성공 (`No issues found`)
+  - `..\..\scripts\flutterw.ps1 test --reporter expanded` 성공
+- Terraform: `terraform -chdir=infra/aws validate` 성공
+- Compose:
+  - 로컬(`infra/docker/docker-compose.yml`) config 파싱 성공
+  - 스테이징(`infra/aws/docker-compose.prod.yml`)은 `.env` 파일 준비 전 실행 불가
+
+상세 결과와 Go/No-Go 판단은 `docs/deployment-readiness-audit.md`를 기준으로 한다.
 

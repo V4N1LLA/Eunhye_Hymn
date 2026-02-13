@@ -52,6 +52,7 @@ docs/       프로젝트 문서
 ## 문서
 
 - 현재 사용 가능 범위: [docs/current-usable-scope.md](./docs/current-usable-scope.md)
+- 배포 준비도 점검 리포트: [docs/deployment-readiness-audit.md](./docs/deployment-readiness-audit.md)
 - 운영 런북(스테이징): [docs/runbook.md](./docs/runbook.md)
 - 모바일 문서: [docs/mobile/README.md](./docs/mobile/README.md)
 - 로컬 셋업 가이드: [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
