@@ -1,18 +1,18 @@
 # 현재 사용 가능 범위 정리
 
-- 작성일: 2026-02-12
+- 작성일: 2026-02-13
 - 기준 브랜치: `develop`
-- 기준 커밋: `9b8ebd0` (Merge pull request #31)
+- 기준 커밋: `6b3d8cc` (Merge pull request #32)
 - 근거 문서: `CLAUDE.md` (마지막 업데이트: 2026-02-13)
-- 근거 PR: #31, #30, #29, #28, #27
+- 근거 PR: #32, #31, #30, #29, #28, #27
 
 ## 1. 요약
 
 현재 시점에서 이 프로젝트는 다음 범위까지 사용 가능하다.
 
-- 로컬 기준: 관리자 웹(Admin) + 백엔드 API의 주요 기능 사용 가능
+- 로컬 기준: 관리자 웹(Admin) + 백엔드 API + 모바일 앱 MVP 사용 가능
 - 배포 기준: AWS 스테이징 자동 배포 파이프라인 구성 완료(인프라/시크릿 준비 필요)
-- 미완료: 모바일 앱(Flutter), 모니터링/알림(CloudWatch/에러 추적)
+- 미완료: 모바일 고도화 항목(소셜 SDK 직접 연동, MIDI 재생 UX, 오프라인 캐시)
 
 ## 2. 지금 바로 써볼 수 있는 범위 (로컬)
 
@@ -47,6 +47,24 @@
 - 멤버 기능: 즐겨찾기, 메모, 히스토리, 이벤트 기록
 
 엔드포인트 기준은 `CLAUDE.md`의 API 섹션(7장)과 현재 컨트롤러/유즈케이스 구현 상태를 따른다.
+
+### 2.3 모바일 앱 (Flutter MVP)
+
+다음 기능을 앱에서 바로 검증할 수 있다.
+
+- 로그인: 소셜 토큰 입력 방식(Google/Kakao), Dev 로그인
+- 찬양: 목록 조회/검색, 상세 조회
+- 개인화: 즐겨찾기 토글, 메모 조회/저장, 최근 열람 히스토리
+- 인증: 토큰 저장, 401 시 자동 refresh 후 재시도
+
+관련 파일:
+
+- `apps/mobile/lib/src/app.dart`
+- `apps/mobile/lib/src/features/auth/login_page.dart`
+- `apps/mobile/lib/src/features/hymn/hymn_list_page.dart`
+- `apps/mobile/lib/src/features/hymn/hymn_detail_page.dart`
+- `apps/mobile/lib/src/features/history/history_page.dart`
+- `apps/mobile/lib/src/core/network/api_client.dart`
 
 ## 3. 조건부로 써볼 수 있는 범위 (스테이징)
 
@@ -100,8 +118,10 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 
 ## 5. 미완료 범위
 
-- 모니터링/알림: CloudWatch, 에러 추적 미구현
-- 모바일 앱: Flutter 코드 미구현(placeholder)
+- 모바일 고도화:
+  - 소셜 SDK 직접 연동 (현재는 토큰 입력 방식)
+  - MIDI 재생 UX
+  - 오프라인 캐시/동기화
 
 ## 6. 빠른 사용 체크리스트
 
@@ -114,7 +134,11 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
    - `cd apps/admin`
    - `npm install`
    - `npm run dev`
-3. 접속
+3. Mobile 실행
+   - `cd apps/mobile`
+   - `flutter pub get`
+   - `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1`
+4. 접속
    - Admin: `http://localhost:5173`
    - API Base: `http://localhost:8080/api/v1`
 
