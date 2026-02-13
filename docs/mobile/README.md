@@ -63,7 +63,16 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
 
 실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.
 
-## 6. 다음 고도화 항목
+## 6. CI
+
+- 워크플로우: `.github/workflows/mobile-ci.yml`
+- 트리거: PR 및 `develop` push (경로: `apps/mobile/**`)
+- 실행 단계:
+  - `flutter pub get`
+  - `flutter analyze`
+  - `flutter test`
+
+## 7. 다음 고도화 항목
 
 - 소셜 SDK 직접 연동 (현재는 토큰 입력 방식)
 - MIDI 재생 UX (앱 내 플레이어)

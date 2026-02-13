@@ -126,7 +126,7 @@ PostgreSQL, LocalStack(S3), API 서버가 함께 실행됩니다.
 | Storage | AWS S3 (presigned URL) |
 | Auth | Spring Security + JWT + Google/Kakao OAuth |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS v4 |
-| CI/CD | GitHub Actions (API 테스트 + Admin 빌드/타입체크) |
+| CI/CD | GitHub Actions (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test) |
 
 ## API 엔드포인트
 

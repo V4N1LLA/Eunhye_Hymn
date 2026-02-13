@@ -12,6 +12,7 @@
 
 - 로컬 기준: 관리자 웹(Admin) + 백엔드 API + 모바일 앱 MVP 사용 가능
 - 배포 기준: AWS 스테이징 자동 배포 파이프라인 구성 완료(인프라/시크릿 준비 필요)
+- CI 기준: API/Admin/Mobile 검증 워크플로우 구성 완료
 - 미완료: 모바일 고도화 항목(소셜 SDK 직접 연동, MIDI 재생 UX, 오프라인 캐시)
 
 ## 2. 지금 바로 써볼 수 있는 범위 (로컬)
@@ -71,13 +72,14 @@
 AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성 완료 상태다.
 
 - `develop` push 트리거
-- API 테스트 + Admin 타입체크/빌드
+- API 테스트 + Admin 타입체크/빌드 + Mobile analyze/test
 - API/Admin Docker 이미지 ECR push
 - EC2 SSH 배포 및 헬스체크
 
 관련 파일:
 
 - `.github/workflows/deploy-staging.yml`
+- `.github/workflows/mobile-ci.yml`
 - `infra/aws/*`
 - `apps/admin/Dockerfile`
 - `apps/admin/nginx.conf`

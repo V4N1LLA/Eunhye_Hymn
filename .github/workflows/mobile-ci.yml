@@ -1,0 +1,39 @@
+name: Mobile CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/mobile-ci.yml"
+  push:
+    branches:
+      - develop
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/mobile-ci.yml"
+
+jobs:
+  mobile-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Flutter analyze
+        run: flutter analyze
+
+      - name: Flutter test
+        run: flutter test --reporter expanded
