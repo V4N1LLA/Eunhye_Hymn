@@ -145,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<SocialProvider>(
-                    value: _provider,
+                    initialValue: _provider,
                     decoration: const InputDecoration(
                       labelText: 'Provider',
                       border: OutlineInputBorder(),
@@ -213,7 +213,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<UserRole>(
-                      value: _devRole,
+                      initialValue: _devRole,
                       decoration: const InputDecoration(
                         labelText: '역할',
                         border: OutlineInputBorder(),

@@ -55,10 +55,13 @@
 
 ## 5. 실행
 
-```bash
+```powershell
+# 저장소 루트에서 최초 1회 (Flutter SDK 자동 설치 + 버전 확인)
+.\scripts\flutterw.ps1 --version
+
 cd apps/mobile
-flutter pub get
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+..\..\scripts\flutterw.ps1 pub get
+..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
 ```
 
 실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.

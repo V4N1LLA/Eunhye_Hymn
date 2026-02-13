@@ -62,7 +62,8 @@ docs/       프로젝트 문서
 - Java 17
 - Node.js 20+
 - PostgreSQL 15 (또는 Docker)
-- Flutter 3.24+
+- Git (로컬 Flutter SDK 자동 설치용)
+- Flutter 3.24+ (이미 설치되어 있다면 사용 가능)
 
 ### 백엔드 실행
 
@@ -99,10 +100,13 @@ npm run dev
 
 ### 모바일 앱 실행
 
-```bash
+```powershell
+# 저장소 루트에서 최초 1회 (Flutter SDK 자동 설치 + 버전 확인)
+.\scripts\flutterw.ps1 --version
+
 cd apps/mobile
-flutter pub get
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+..\..\scripts\flutterw.ps1 pub get
+..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
 ```
 
 실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용하세요.

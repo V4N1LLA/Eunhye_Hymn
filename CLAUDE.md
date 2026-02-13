@@ -103,7 +103,20 @@ npm run dev    # http://localhost:5173
 npm run build  # dist/ 출력
 ```
 
-### 4.3 필수 환경변수 (.env.example 참조)
+### 4.3 Mobile 앱 (로컬)
+
+```powershell
+# 저장소 루트에서 최초 1회 (Flutter SDK 자동 설치 + 버전 확인)
+.\scripts\flutterw.ps1 --version
+
+cd apps/mobile
+..\..\scripts\flutterw.ps1 pub get
+..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+```
+
+실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.
+
+### 4.4 필수 환경변수 (.env.example 참조)
 
 | 변수 | 설명 | 필수 | 기본값 |
 |------|------|------|--------|
