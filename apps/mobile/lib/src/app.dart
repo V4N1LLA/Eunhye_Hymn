@@ -56,6 +56,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
     try {
       final hasSession = await _authRepository.hasSession();
       if (!hasSession) {
+        _hymnRepository.bindSessionUser(null);
         setState(() {
           _profile = null;
         });
@@ -65,12 +66,14 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       final profile = await _authRepository.fetchProfile();
       if (profile == null) {
         await _authRepository.clearSession();
+        _hymnRepository.bindSessionUser(null);
         setState(() {
           _profile = null;
         });
         return;
       }
 
+      _hymnRepository.bindSessionUser(profile.userId);
       setState(() {
         _profile = profile;
       });
@@ -89,6 +92,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
   }
 
   Future<void> _onLoggedIn(SessionProfile profile) async {
+    _hymnRepository.bindSessionUser(profile.userId);
     setState(() {
       _profile = profile;
     });
@@ -98,6 +102,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
   Future<void> _onLogout() async {
     await _authRepository.logout();
     await _socialSdkService.signOutGoogle();
+    _hymnRepository.bindSessionUser(null);
     if (!mounted) {
       return;
     }

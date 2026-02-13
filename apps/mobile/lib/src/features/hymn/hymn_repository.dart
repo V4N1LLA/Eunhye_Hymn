@@ -170,12 +170,17 @@ class HistoryItem {
 
 class HymnRepository {
   final ApiClient apiClient;
+  String? _sessionUserId;
 
   HymnRepository({required this.apiClient});
 
   static const _hymnListCacheKey = 'mobile.cache.hymn.list';
   static const _historyCacheKey = 'mobile.cache.history';
   static const _pendingActionsKey = 'mobile.cache.pending.actions';
+
+  void bindSessionUser(String? userId) {
+    _sessionUserId = userId;
+  }
 
   Future<List<HymnSummary>> listHymns() async {
     try {
@@ -303,12 +308,12 @@ class HymnRepository {
           .map(HistoryItem.fromJson)
           .toList();
       await _writeJsonList(
-        _historyCacheKey,
+        _userScopedKey(_historyCacheKey),
         items.map((item) => item.toJson()).toList(),
       );
       return items;
     } catch (_) {
-      final cached = await _readJsonList(_historyCacheKey);
+      final cached = await _readJsonList(_userScopedKey(_historyCacheKey));
       if (cached != null) {
         return cached.whereType<Map<String, dynamic>>().map(HistoryItem.fromJson).toList();
       }
@@ -348,14 +353,15 @@ class HymnRepository {
     }
 
     await _writeJsonList(
-      _pendingActionsKey,
+      _userScopedKey(_pendingActionsKey),
       remain.map((item) => item.toJson()).toList(),
     );
   }
 
   String _detailCacheKey(String hymnId) => 'mobile.cache.hymn.detail.$hymnId';
-  String _favoriteCacheKey(String hymnId) => 'mobile.cache.hymn.favorite.$hymnId';
-  String _noteCacheKey(String hymnId) => 'mobile.cache.hymn.note.$hymnId';
+  String _favoriteCacheKey(String hymnId) =>
+      _userScopedKey('mobile.cache.hymn.favorite.$hymnId');
+  String _noteCacheKey(String hymnId) => _userScopedKey('mobile.cache.hymn.note.$hymnId');
 
   Future<void> _writeFavoriteCache(String hymnId, bool favorite) async {
     await _writeJsonObject(_favoriteCacheKey(hymnId), {'favorite': favorite});
@@ -382,13 +388,13 @@ class HymnRepository {
     final queued = await _readPendingActions();
     queued.add(action);
     await _writeJsonList(
-      _pendingActionsKey,
+      _userScopedKey(_pendingActionsKey),
       queued.map((item) => item.toJson()).toList(),
     );
   }
 
   Future<List<_PendingAction>> _readPendingActions() async {
-    final raw = await _readJsonList(_pendingActionsKey);
+    final raw = await _readJsonList(_userScopedKey(_pendingActionsKey));
     if (raw == null) {
       return const [];
     }
@@ -404,6 +410,14 @@ class HymnRepository {
         })
         .whereType<_PendingAction>()
         .toList();
+  }
+
+  String _userScopedKey(String base) {
+    final userId = _sessionUserId;
+    if (userId == null || userId.isEmpty) {
+      throw ApiException('로그인 세션이 없습니다.');
+    }
+    return '$base.$userId';
   }
 
   Future<void> _writeJsonObject(String key, Map<String, dynamic> value) async {
