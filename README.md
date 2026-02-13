@@ -54,6 +54,7 @@ docs/       프로젝트 문서
 - 운영 런북(스테이징): [docs/runbook.md](./docs/runbook.md)
 - 모바일 문서: [docs/mobile/README.md](./docs/mobile/README.md)
 - 로컬 셋업 가이드: [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
+- 작업 사이클 기준서: [docs/WORK_CYCLE.md](./docs/WORK_CYCLE.md)
 - 모바일 앱 README: [apps/mobile/README.md](./apps/mobile/README.md)
 - 작업 기준 문서: [CLAUDE.md](./CLAUDE.md)
 
