@@ -5,6 +5,7 @@ import 'core/network/api_client.dart';
 import 'core/storage/token_storage.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/login_page.dart';
+import 'features/auth/social_sdk_service.dart';
 import 'features/history/history_page.dart';
 import 'features/hymn/hymn_detail_page.dart';
 import 'features/hymn/hymn_list_page.dart';
@@ -21,6 +22,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
   late final TokenStorage _tokenStorage;
   late final ApiClient _apiClient;
   late final AuthRepository _authRepository;
+  late final SocialSdkService _socialSdkService;
   late final HymnRepository _hymnRepository;
 
   bool _initializing = true;
@@ -39,6 +41,8 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       apiClient: _apiClient,
       tokenStorage: _tokenStorage,
     );
+    _socialSdkService = SocialSdkService();
+    _socialSdkService.initialize();
     _hymnRepository = HymnRepository(apiClient: _apiClient);
     _bootstrap();
   }
@@ -91,6 +95,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
 
   Future<void> _onLogout() async {
     await _authRepository.logout();
+    await _socialSdkService.signOutGoogle();
     if (!mounted) {
       return;
     }
@@ -142,6 +147,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
     if (_profile == null) {
       return LoginPage(
         authRepository: _authRepository,
+        socialSdkService: _socialSdkService,
         onLoggedIn: _onLoggedIn,
       );
     }

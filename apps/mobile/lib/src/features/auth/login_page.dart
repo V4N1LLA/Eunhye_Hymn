@@ -3,14 +3,17 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/network/api_exception.dart';
 import 'auth_repository.dart';
+import 'social_sdk_service.dart';
 
 class LoginPage extends StatefulWidget {
   final AuthRepository authRepository;
+  final SocialSdkService socialSdkService;
   final void Function(SessionProfile profile) onLoggedIn;
 
   const LoginPage({
     super.key,
     required this.authRepository,
+    required this.socialSdkService,
     required this.onLoggedIn,
   });
 
@@ -38,22 +41,16 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleSocialLogin() async {
-    if (_socialTokenController.text.trim().isEmpty) {
-      setState(() {
-        _error = '소셜 토큰을 입력하세요.';
-      });
-      return;
-    }
-
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
+      final token = await _resolveSocialToken();
       final profile = await widget.authRepository.loginWithSocial(
         provider: _provider,
-        token: _socialTokenController.text.trim(),
+        token: token,
         inviteCode: _inviteCodeController.text.trim().isEmpty
             ? null
             : _inviteCodeController.text.trim(),
@@ -74,6 +71,50 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     }
+  }
+
+  Future<void> _fetchTokenFromSdk() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final token = await widget.socialSdkService.fetchToken(_provider);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _socialTokenController.text = token;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_provider.name.toUpperCase()} 토큰을 가져왔습니다.')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = e.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<String> _resolveSocialToken() async {
+    final manualToken = _socialTokenController.text.trim();
+    if (manualToken.isNotEmpty) {
+      return manualToken;
+    }
+
+    final token = await widget.socialSdkService.fetchToken(_provider);
+    _socialTokenController.text = token;
+    return token;
   }
 
   Future<void> _handleDevLogin() async {
@@ -169,11 +210,19 @@ class _LoginPageState extends State<LoginPage> {
                           },
                   ),
                   const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: _loading ? null : _fetchTokenFromSdk,
+                    icon: const Icon(Icons.login),
+                    label: Text(_loading
+                        ? '처리 중...'
+                        : '${_provider == SocialProvider.google ? "Google" : "Kakao"} SDK로 로그인 토큰 가져오기'),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _socialTokenController,
                     enabled: !_loading,
                     decoration: const InputDecoration(
-                      labelText: 'ID Token',
+                      labelText: '소셜 토큰 (SDK 자동 입력, 필요 시 수동 입력)',
                       border: OutlineInputBorder(),
                     ),
                   ),
