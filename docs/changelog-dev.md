@@ -4,6 +4,18 @@
 
 ## 2026-02-13
 
+### 스테이징 실가동 전환 준비(진행중)
+- GitHub Actions 시크릿 일부 등록
+  - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `ENABLE_AWSLOGS=false`
+- 스테이징 사전 점검 스크립트 추가
+  - `scripts/staging-preflight.ps1`
+- Terraform 출력 기반 시크릿 동기화 스크립트 추가
+  - `scripts/staging-sync-secrets.ps1`
+- Terraform 배포 IAM 정책 샘플 추가
+  - `infra/aws/terraform-deployer-iam-policy.json`
+- 현재 차단 이슈 문서화
+  - `terraform-deployer` IAM의 `ec2:DescribeAvailabilityZones`, `ec2:DescribeImages`, `ec2:DescribeKeyPairs` 권한 부족
+
 ### 시크릿 관리 가이드 정리
 - `.env.example` 템플릿(루트/API/AWS) 주석과 기본값을 정리해 오해 가능성을 줄임
 - 시크릿 관리 기준 문서 추가

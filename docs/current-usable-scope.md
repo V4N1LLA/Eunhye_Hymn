@@ -101,6 +101,12 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - [ ] 배포 서버 `.env` 준비 (`infra/aws/docker-compose.prod.yml`의 `env_file: .env` 요구)
 - [ ] 첫 `develop` 배포 후 `GET /api/v1/ping` + 관리자 로그인 + 핵심 API 스모크 테스트
 
+2026-02-13 기준 진행 현황:
+- 완료: GitHub Secrets 일부 등록 (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `ENABLE_AWSLOGS`)
+- 미완료: `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
+- 차단: `terraform-deployer` IAM 권한 부족 (`ec2:DescribeAvailabilityZones`, `ec2:DescribeImages`, `ec2:DescribeKeyPairs`)
+- 대응: `scripts/staging-preflight.ps1`, `scripts/staging-sync-secrets.ps1`, `infra/aws/terraform-deployer-iam-policy.json` 추가
+
 ## 4. 최근 PR 기준 변경 포인트
 
 ### PR #38 (mobile-offline-cache-sync)
