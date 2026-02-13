@@ -15,6 +15,8 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
 # ── IAM Role for EC2 (ECR pull + S3 access) ─────────────────
 
 resource "aws_iam_role" "ec2" {
@@ -72,6 +74,26 @@ resource "aws_iam_role_policy" "ec2_s3" {
           aws_s3_bucket.assets.arn,
           "${aws_s3_bucket.assets.arn}/*"
         ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "ec2_cloudwatch" {
+  name = "cloudwatch-logs"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/${var.project_name}/*"
       }
     ]
   })

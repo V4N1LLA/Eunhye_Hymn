@@ -105,6 +105,7 @@ GitHub 리포지토리 → Settings → Secrets and variables → Actions에 등
 | `EC2_HOST` | `terraform output ec2_public_ip` | Terraform |
 | `EC2_SSH_KEY` | `eunhye-staging.pem` 파일 내용 | 키페어 생성 시 |
 | `DEPLOY_ENV_FILE` | `.env` 파일 전체 내용 (아래 참조) | 직접 작성 |
+| `ENABLE_AWSLOGS` | `true` 또는 빈값(기본) | 선택 (Terraform 적용 후만 `true`) |
 
 ### DEPLOY_ENV_FILE 내용
 
@@ -151,13 +152,16 @@ docker push ${ECR_REGISTRY}/eunhye-hymn/admin:latest
 # 4. EC2에 파일 복사
 EC2_IP=$(terraform output -raw ec2_public_ip)
 scp -i eunhye-staging.pem infra/aws/docker-compose.prod.yml ec2-user@${EC2_IP}:/home/ec2-user/app/
+scp -i eunhye-staging.pem infra/aws/docker-compose.prod.awslogs.yml ec2-user@${EC2_IP}:/home/ec2-user/app/
 scp -i eunhye-staging.pem infra/aws/deploy.sh ec2-user@${EC2_IP}:/home/ec2-user/app/
 # .env 파일도 복사 (infra/aws/.env.example 기반으로 작성)
 
 # 5. EC2에서 배포 실행
 ssh -i eunhye-staging.pem ec2-user@${EC2_IP} \
-  "cd /home/ec2-user/app && export ECR_REGISTRY=${ECR_REGISTRY} && chmod +x deploy.sh && ./deploy.sh"
+  "cd /home/ec2-user/app && export ECR_REGISTRY=${ECR_REGISTRY} && export ENABLE_AWSLOGS=false && chmod +x deploy.sh && ./deploy.sh"
 ```
+
+`ENABLE_AWSLOGS`는 기본값 `false`입니다. 기존 스테이징 인스턴스에서 Terraform(IAM/Log Group) 적용 전에 `true`로 배포하면 컨테이너 시작이 실패할 수 있으므로, 인프라 적용 이후에만 활성화하세요.
 
 ## 검증
 
@@ -209,6 +213,7 @@ infra/aws/
 ├── ec2.tf                     # EC2 t2.micro + Elastic IP + IAM
 ├── outputs.tf                 # 출력값 (IP, 엔드포인트, URL)
 ├── docker-compose.prod.yml    # 프로덕션 컨테이너 구성
+├── docker-compose.prod.awslogs.yml # CloudWatch 로그 오버레이(옵션)
 ├── deploy.sh                  # EC2 배포 스크립트
 ├── .env.example               # 환경변수 예시
 ├── .gitignore                 # tfstate, .terraform 제외

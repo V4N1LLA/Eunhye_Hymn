@@ -98,6 +98,7 @@ jobs:
         run: |
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             infra/aws/docker-compose.prod.yml \
+            infra/aws/docker-compose.prod.awslogs.yml \
             infra/aws/deploy.sh \
             ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/app/
 
@@ -112,12 +113,14 @@ jobs:
       - name: Run deploy script
         env:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          ENABLE_AWSLOGS: ${{ secrets.ENABLE_AWSLOGS }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ec2-user@${{ secrets.EC2_HOST }} \
             "cd /home/ec2-user/app && \
              export ECR_REGISTRY=${ECR_REGISTRY} && \
              export AWS_REGION=${{ env.AWS_REGION }} && \
+             export ENABLE_AWSLOGS=${ENABLE_AWSLOGS} && \
              chmod +x deploy.sh && \
              ./deploy.sh"
 

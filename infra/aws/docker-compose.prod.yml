@@ -1,3 +1,9 @@
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   # ── Spring Boot API ──────────────────────────────────────────
   api:
@@ -5,6 +11,7 @@ services:
     container_name: eunhye-api
     restart: unless-stopped
     env_file: .env
+    logging: *default-logging
     networks:
       - app-net
     healthcheck:
@@ -21,6 +28,7 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+    logging: *default-logging
     depends_on:
       api:
         condition: service_healthy
