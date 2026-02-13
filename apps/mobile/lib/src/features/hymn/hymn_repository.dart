@@ -33,6 +33,7 @@ class HymnAsset {
   });
 
   bool get isImage => type.toUpperCase() == 'PNG';
+  bool get isMidi => type.toUpperCase() == 'MIDI';
 }
 
 class HymnDetail {

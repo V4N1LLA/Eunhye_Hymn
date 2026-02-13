@@ -1,4 +1,4 @@
-# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
+﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
 > 마지막 업데이트: 2026-02-13
@@ -649,7 +649,7 @@ develop push → GitHub Actions
 **Mobile 앱 (Flutter MVP)**
 - 소셜 SDK 직접 로그인 (Google/Kakao 모바일, Kakao 웹은 토큰 입력 fallback) + Dev 로그인
 - 찬양 목록/검색 + 상세 조회
-- PNG 에셋 표시 + 메모 조회/저장
+- PNG 에셋 표시 + 메모 조회/저장 + MIDI 에셋 앱 내 재생 UX
 - 즐겨찾기 토글 + 최근 열람 히스토리
 - Access Token 자동 갱신 (401 → refresh → 재시도)
 - 토큰 로컬 저장(shared_preferences) + 세션 복구
@@ -681,7 +681,6 @@ develop push → GitHub Actions
 ### 미완료 (우선순위순)
 
 **1. 모바일 고도화**
-- MIDI 재생 UX (앱 내 플레이어)
 - 오프라인 캐시/동기화
 
 ---
@@ -801,3 +800,4 @@ GitHub PR을 자동으로 리뷰하고 인라인 코멘트를 게시하는 플�
 | **PR 리뷰** | `/pr-reviewer:review-pr <PR_URL>` 실행 |
 | **PR 리뷰 코멘트 해결** | `/pr-reviewer:resolve-reviews` 실행 |
 | **기능 완료 후** | 자체 점검 — 의존성 방향, 중복, 네이밍, 복잡도 확인 |
+

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import '../../core/network/api_exception.dart';
 import 'hymn_repository.dart';
@@ -289,11 +290,149 @@ class _AssetCard extends StatelessWidget {
                   ),
                 ),
               )
+            else if (asset.isMidi && asset.url.startsWith('http'))
+              _MidiAssetPlayer(url: asset.url)
             else
               SelectableText(asset.url),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MidiAssetPlayer extends StatefulWidget {
+  final String url;
+
+  const _MidiAssetPlayer({required this.url});
+
+  @override
+  State<_MidiAssetPlayer> createState() => _MidiAssetPlayerState();
+}
+
+class _MidiAssetPlayerState extends State<_MidiAssetPlayer> {
+  late final AudioPlayer _player;
+  PlayerState _state = PlayerState.stopped;
+  double _speed = 1.0;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+    _player.onPlayerStateChanged.listen((state) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _state = state;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _playOrPause() async {
+    try {
+      if (_state == PlayerState.playing) {
+        await _player.pause();
+      } else if (_state == PlayerState.paused) {
+        await _player.resume();
+      } else {
+        await _player.setPlaybackRate(_speed);
+        await _player.play(UrlSource(widget.url));
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = null;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = 'MIDI 재생에 실패했습니다. 기기/브라우저 코덱 지원을 확인하세요.';
+      });
+    }
+  }
+
+  Future<void> _stop() async {
+    try {
+      await _player.stop();
+    } catch (_) {
+      // stop 실패 시에도 UI는 계속 사용 가능하게 둔다.
+    }
+  }
+
+  Future<void> _changeSpeed(double nextSpeed) async {
+    setState(() {
+      _speed = nextSpeed;
+    });
+    try {
+      await _player.setPlaybackRate(nextSpeed);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = '재생 속도 변경에 실패했습니다.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final playing = _state == PlayerState.playing;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            FilledButton.icon(
+              onPressed: _playOrPause,
+              icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+              label: Text(playing ? '일시정지' : '재생'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _stop,
+              icon: const Icon(Icons.stop),
+              label: const Text('정지'),
+            ),
+            DropdownButton<double>(
+              value: _speed,
+              items: const [
+                DropdownMenuItem(value: 0.75, child: Text('0.75x')),
+                DropdownMenuItem(value: 1.0, child: Text('1.0x')),
+                DropdownMenuItem(value: 1.25, child: Text('1.25x')),
+                DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  _changeSpeed(value);
+                }
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SelectableText(widget.url),
+        if (_error != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _error!,
+            style: const TextStyle(color: Colors.red),
+          ),
+        ],
+      ],
     );
   }
 }
