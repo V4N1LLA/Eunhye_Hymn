@@ -56,6 +56,7 @@ docs/       프로젝트 문서
 - 운영 런북(스테이징): [docs/runbook.md](./docs/runbook.md)
 - 모바일 문서: [docs/mobile/README.md](./docs/mobile/README.md)
 - 로컬 셋업 가이드: [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
+- 시크릿 관리 가이드: [docs/SECRETS_MANAGEMENT.md](./docs/SECRETS_MANAGEMENT.md)
 - 작업 사이클 기준서: [docs/WORK_CYCLE.md](./docs/WORK_CYCLE.md)
 - AWS 무료 티어 온보딩: [docs/admin/aws-free-tier-onboarding.md](./docs/admin/aws-free-tier-onboarding.md)
 - 모바일 앱 README: [apps/mobile/README.md](./apps/mobile/README.md)

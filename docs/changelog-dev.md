@@ -4,6 +4,15 @@
 
 ## 2026-02-13
 
+### 시크릿 관리 가이드 정리
+- `.env.example` 템플릿(루트/API/AWS) 주석과 기본값을 정리해 오해 가능성을 줄임
+- 시크릿 관리 기준 문서 추가
+  - `docs/SECRETS_MANAGEMENT.md`
+- 사이클 기준서에 시크릿 노출 점검 항목 추가
+  - `docs/WORK_CYCLE.md`
+- `.gitignore`에 민감 파일 패턴 추가
+  - `.envrc`, `.secrets/`, `*.pem`, `*.key`, `*.p12`, `*.pfx`
+
 ### 문서/배포 준비도 검수
 - 배포 준비도 점검 리포트 추가
   - `docs/deployment-readiness-audit.md`

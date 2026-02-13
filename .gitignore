@@ -59,6 +59,12 @@ $RECYCLE.BIN/
 # Environment
 .env
 .env.*
+.envrc
+.secrets/
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Logs
 logs/
