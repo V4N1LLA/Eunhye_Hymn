@@ -74,6 +74,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       setState(() {
         _profile = profile;
       });
+      await _hymnRepository.syncPendingActions();
     } catch (e) {
       setState(() {
         _initError = e.toString();
@@ -87,10 +88,11 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
     }
   }
 
-  void _onLoggedIn(SessionProfile profile) {
+  Future<void> _onLoggedIn(SessionProfile profile) async {
     setState(() {
       _profile = profile;
     });
+    await _hymnRepository.syncPendingActions();
   }
 
   Future<void> _onLogout() async {

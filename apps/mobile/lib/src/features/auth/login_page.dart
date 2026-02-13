@@ -8,7 +8,7 @@ import 'social_sdk_service.dart';
 class LoginPage extends StatefulWidget {
   final AuthRepository authRepository;
   final SocialSdkService socialSdkService;
-  final void Function(SessionProfile profile) onLoggedIn;
+  final Future<void> Function(SessionProfile profile) onLoggedIn;
 
   const LoginPage({
     super.key,
@@ -55,7 +55,7 @@ class _LoginPageState extends State<LoginPage> {
             ? null
             : _inviteCodeController.text.trim(),
       );
-      widget.onLoggedIn(profile);
+      await widget.onLoggedIn(profile);
     } on ApiException catch (e) {
       setState(() {
         _error = e.message;
@@ -136,7 +136,7 @@ class _LoginPageState extends State<LoginPage> {
         userId: const Uuid().v4(),
         role: _devRole,
       );
-      widget.onLoggedIn(profile);
+      await widget.onLoggedIn(profile);
     } on ApiException catch (e) {
       setState(() {
         _error = e.message;

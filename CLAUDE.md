@@ -651,6 +651,7 @@ develop push → GitHub Actions
 - 찬양 목록/검색 + 상세 조회
 - PNG 에셋 표시 + 메모 조회/저장 + MIDI 에셋 앱 내 재생 UX
 - 즐겨찾기 토글 + 최근 열람 히스토리
+- 오프라인 캐시 fallback + 오프라인 변경(메모/즐겨찾기) 동기화 큐
 - Access Token 자동 갱신 (401 → refresh → 재시도)
 - 토큰 로컬 저장(shared_preferences) + 세션 복구
 
@@ -680,8 +681,7 @@ develop push → GitHub Actions
 
 ### 미완료 (우선순위순)
 
-**1. 모바일 고도화**
-- 오프라인 캐시/동기화
+**1. 모바일 고도화**`r`n- 현재 계획된 모바일 고도화 3개 항목 완료
 
 ---
 
@@ -800,4 +800,5 @@ GitHub PR을 자동으로 리뷰하고 인라인 코멘트를 게시하는 플�
 | **PR 리뷰** | `/pr-reviewer:review-pr <PR_URL>` 실행 |
 | **PR 리뷰 코멘트 해결** | `/pr-reviewer:resolve-reviews` 실행 |
 | **기능 완료 후** | 자체 점검 — 의존성 방향, 중복, 네이밍, 복잡도 확인 |
+
 
