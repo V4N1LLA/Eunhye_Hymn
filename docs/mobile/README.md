@@ -80,5 +80,7 @@ cd apps/mobile
   - `flutter analyze`
   - `flutter test`
 
-## 7. 다음 고도화 항목`r`n`r`n- 현재 계획된 모바일 고도화 3개 항목 완료
+## 7. 다음 고도화 항목
+
+- 현재 계획된 모바일 고도화 3개 항목 완료
 
