@@ -647,7 +647,7 @@ develop push → GitHub Actions
 - Dev Login (개발용, 접이식)
 
 **Mobile 앱 (Flutter MVP)**
-- 소셜 토큰 입력 로그인 + Dev 로그인
+- 소셜 SDK 직접 로그인 (Google/Kakao 모바일, Kakao 웹은 토큰 입력 fallback) + Dev 로그인
 - 찬양 목록/검색 + 상세 조회
 - PNG 에셋 표시 + 메모 조회/저장
 - 즐겨찾기 토글 + 최근 열람 히스토리
@@ -681,7 +681,6 @@ develop push → GitHub Actions
 ### 미완료 (우선순위순)
 
 **1. 모바일 고도화**
-- 소셜 SDK 직접 연동 (현재는 토큰 입력 방식)
 - MIDI 재생 UX (앱 내 플레이어)
 - 오프라인 캐시/동기화
 

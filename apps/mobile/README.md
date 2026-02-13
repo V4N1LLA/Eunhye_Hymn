@@ -5,7 +5,8 @@
 ## 구현 범위
 
 - 로그인
-  - 소셜 로그인 API 토큰 입력 방식 (Google/Kakao)
+  - 소셜 SDK 직접 로그인 (Google, Kakao 모바일)
+  - 웹/미지원 플랫폼 Kakao는 토큰 수동 입력 fallback
   - Dev 로그인 (개발 환경)
 - 찬양
   - 목록 조회 및 검색
@@ -29,6 +30,16 @@
 cd apps/mobile
 ..\..\scripts\flutterw.ps1 pub get
 ..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+```
+
+Google/Kakao SDK 연동 시 추가 환경변수:
+
+```powershell
+..\..\scripts\flutterw.ps1 run -d chrome `
+  --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1 `
+  --dart-define=GOOGLE_CLIENT_ID=<web_client_id> `
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=<server_client_id> `
+  --dart-define=KAKAO_NATIVE_APP_KEY=<kakao_native_app_key>
 ```
 
 기본 `API_BASE_URL`:
