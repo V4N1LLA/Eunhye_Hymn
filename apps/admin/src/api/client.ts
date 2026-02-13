@@ -1,3 +1,11 @@
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  migrateLegacyLocalStorageTokens,
+  setTokens,
+} from "../auth/tokenStore";
+
 const API_BASE = "/api/v1";
 
 type UnauthorizedMode = "redirect" | "throw";
@@ -15,16 +23,14 @@ interface ApiEnvelope<T = unknown> {
   };
 }
 
-function getToken(): string | null {
-  return localStorage.getItem("accessToken");
-}
+migrateLegacyLocalStorageTokens();
 
 function authHeaders(includeAuth: boolean): Record<string, string> {
   if (!includeAuth) {
     return {};
   }
 
-  const token = getToken();
+  const token = getAccessToken();
   if (token) {
     return { Authorization: `Bearer ${token}` };
   }
@@ -33,15 +39,10 @@ function authHeaders(includeAuth: boolean): Record<string, string> {
 
 let refreshPromise: Promise<boolean> | null = null;
 
-function clearTokens(): void {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-}
-
 async function tryRefreshToken(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
-  const rt = localStorage.getItem("refreshToken");
+  const rt = getRefreshToken();
   if (!rt) return false;
 
   refreshPromise = (async () => {
@@ -61,8 +62,7 @@ async function tryRefreshToken(): Promise<boolean> {
       const tokens = payload.data;
       if (!tokens?.accessToken || !tokens?.refreshToken) return false;
 
-      localStorage.setItem("accessToken", tokens.accessToken);
-      localStorage.setItem("refreshToken", tokens.refreshToken);
+      setTokens(tokens.accessToken, tokens.refreshToken);
       return true;
     } catch {
       return false;
@@ -155,3 +155,4 @@ export async function apiPatch<T>(path: string, body: unknown, options?: ApiRequ
 export async function apiDelete<T>(path: string, options?: ApiRequestOptions): Promise<T> {
   return apiFetch<T>({ method: "DELETE", path, ...options });
 }
+

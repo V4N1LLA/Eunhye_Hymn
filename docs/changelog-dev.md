@@ -1,8 +1,17 @@
-# 개발 변경 이력
+﻿# 개발 변경 이력
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
 ## 2026-02-13
+
+### Admin 토큰 저장 하드닝(작업중)
+- Admin 웹 토큰 저장소를 `localStorage`에서 `sessionStorage` 기반으로 전환
+- 구버전 `localStorage` 토큰은 최초 로드시 `sessionStorage`로 마이그레이션 후 삭제
+- 적용 파일:
+  - `apps/admin/src/auth/tokenStore.ts`
+  - `apps/admin/src/auth/AuthContext.tsx`
+  - `apps/admin/src/api/client.ts`
+  - `apps/admin/src/api/adminEvents.ts`
 
 ### 이벤트 조회 성능 인덱스(작업중)
 - 관리자 이벤트 조회/CSV 패턴 최적화 인덱스 추가
