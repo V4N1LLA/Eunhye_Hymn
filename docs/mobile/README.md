@@ -71,6 +71,11 @@ cd apps/mobile
 
 실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.
 
+## 5.1 배포 범위 주의
+
+- 현재 저장소 기준 실행/검증 경로는 `flutter run -d chrome` 중심이다.
+- 앱스토어 배포(Android/iOS)는 본 저장소에 네이티브 프로젝트 디렉토리(`android/`, `ios/`)가 포함되도록 별도 준비 후 진행해야 한다.
+
 ## 6. CI
 
 - 워크플로우: `.github/workflows/mobile-ci.yml`
