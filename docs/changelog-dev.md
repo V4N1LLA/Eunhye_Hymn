@@ -13,6 +13,13 @@
   - `docs/mobile/README.md`
   - `CLAUDE.md`
 
+### PR 본문 포맷 가드레일 추가
+- PR 본문 작성 시 `--body-file` 우선 사용 규칙을 문서화
+- 반영 후 `gh pr view`로 줄바꿈/포맷 렌더링을 확인하는 검증 절차 추가
+- 반영 문서:
+  - `docs/WORK_CYCLE.md`
+  - `CLAUDE.md`
+
 ### Admin 토큰 저장 하드닝(완료)
 - Admin 웹 토큰 저장소를 `localStorage`에서 `sessionStorage` 기반으로 전환
 - 구버전 `localStorage` 토큰은 최초 로드시 `sessionStorage`로 마이그레이션 후 삭제

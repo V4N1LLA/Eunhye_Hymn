@@ -740,6 +740,7 @@ develop push → GitHub Actions
 - **자동화 작업 사이클**: 사용자가 작업을 요청하면 아래 전체 사이클을 자동으로 수행한다. 사용자 개입을 최소화하는 것이 목표다
 - **사이클 기준 문서**: 반복 설명을 줄이기 위해 `docs/WORK_CYCLE.md`를 단일 기준으로 최신 상태 유지한다
 - **기본 완료 기준**: 작업 요청은 기본적으로 `구현 → 검증 → 커밋 → PR 생성`까지 완료한다 (사용자 명시 예외 제외)
+- **PR 본문 작성 규칙**: `gh pr create/edit --body` 인라인 문자열보다 `--body-file` 사용을 기본으로 하고, 반영 후 `gh pr view`로 줄바꿈/포맷을 확인한다
 
 ### 18.1 작업 사이클 (한 기능 = 한 사이클)
 
@@ -749,7 +750,7 @@ develop push → GitHub Actions
 2. **자체 검수**: 코드 리뷰 (Clean Architecture + Kent Beck 원칙), 버그/보안/품질 점검
 3. **CLAUDE.md 업데이트**: 변경된 기능·파일·진행 상태 반영
 4. **커밋 & Push**: 의미 있는 커밋 메시지, `origin`에 push
-5. **PR 생성**: `develop` 대상 PR 생성 (제목 + 요약 + 테스트 계획)
+5. **PR 생성**: `develop` 대상 PR 생성 (제목 + 요약 + 테스트 계획, 본문은 `--body-file` 사용 후 `gh pr view`로 렌더링 확인)
 6. **코드 리뷰 & 리팩토링**: `/pr-reviewer:review-pr` 실행 → 이슈 발견 시 수정 후 재push
 7. **다음 작업 추천**: CLAUDE.md 17장 미완료 목록 기반으로 다음 우선순위 작업을 제안
 
