@@ -4,6 +4,15 @@
 
 ## 2026-02-13
 
+### Admin 토큰 저장 하드닝(작업중)
+- Admin 웹 토큰 저장소를 `localStorage`에서 `sessionStorage` 기반으로 전환
+- 구버전 `localStorage` 토큰은 최초 로드시 `sessionStorage`로 마이그레이션 후 삭제
+- 적용 파일:
+  - `apps/admin/src/auth/tokenStore.ts`
+  - `apps/admin/src/auth/AuthContext.tsx`
+  - `apps/admin/src/api/client.ts`
+  - `apps/admin/src/api/adminEvents.ts`
+
 ### 모바일 기능 3건 머지
 - PR #36 `feat/mobile-social-sdk`
   - Google/Kakao 소셜 SDK 로그인 추가

@@ -12,6 +12,13 @@ import {
   socialLogin as apiSocialLogin,
   type DevLoginRequest,
 } from "../api/auth";
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  migrateLegacyLocalStorageTokens,
+  setTokens,
+} from "./tokenStore";
 
 interface User {
   userId: string;
@@ -39,7 +46,7 @@ function parseJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 function loadUser(): User | null {
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
   if (!token) return null;
   const payload = parseJwtPayload(token);
   if (!payload) return null;
@@ -49,12 +56,13 @@ function loadUser(): User | null {
   };
 }
 
+migrateLegacyLocalStorageTokens();
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(loadUser);
 
   const setTokensAndUser = useCallback((accessToken: string, refreshToken: string, fallbackUser?: User) => {
-    localStorage.setItem("accessToken", accessToken);
-    localStorage.setItem("refreshToken", refreshToken);
+    setTokens(accessToken, refreshToken);
     const parsed = parseJwtPayload(accessToken);
     setUser(
       parsed
@@ -75,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setTokensAndUser]);
 
   const logout = useCallback(async () => {
-    const rt = localStorage.getItem("refreshToken");
+    const rt = getRefreshToken();
     if (rt) {
       try {
         await apiLogout(rt);
@@ -83,8 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // ignore logout errors
       }
     }
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    clearTokens();
     setUser(null);
   }, []);
 
@@ -109,3 +116,4 @@ export function useAuth(): AuthContextValue {
   }
   return ctx;
 }
+

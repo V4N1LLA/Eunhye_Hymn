@@ -423,7 +423,8 @@ com.eunhyehymn/
 | `src/api/adminUsers.ts` | 사용자 목록/역할·상태 변경 API |
 | `src/api/adminEvents.ts` | 관리자 이벤트 로그/집계 조회 API |
 | `src/api/adminInviteCodes.ts` | 초대코드 목록/생성/비활성화 API |
-| `src/auth/AuthContext.tsx` | AuthProvider + `useAuth()` 훅, JWT 파싱, localStorage 토큰 관리, **`loginWithSocial`** + `setTokensAndUser` 공통 헬퍼 |
+| `src/auth/AuthContext.tsx` | AuthProvider + `useAuth()` 훅, JWT 파싱, sessionStorage 기반 토큰 관리, **`loginWithSocial`** + `setTokensAndUser` 공통 헬퍼 |
+| `src/auth/tokenStore.ts` | Admin 토큰 저장소(sessionStorage), 구 localStorage 토큰 마이그레이션/정리 |
 | `src/auth/ProtectedRoute.tsx` | 미인증 시 `/login` redirect |
 | `src/components/Layout.tsx` | 사이드바(찬양 관리, 에셋 업로드, 사용자 관리, 초대코드 관리, 감사 로그/분석) + 로그아웃 |
 | `src/pages/LoginPage.tsx` | **Google/Kakao 소셜 로그인** + 초대코드 입력 + 접이식 Dev Login |

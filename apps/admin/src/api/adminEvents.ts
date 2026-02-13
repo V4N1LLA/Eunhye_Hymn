@@ -1,4 +1,5 @@
 import { apiGet } from "./client";
+import { getAccessToken } from "../auth/tokenStore";
 
 export type EventType = "HYMN_OPENED" | "PART_PLAYED" | "NOTE_SAVED" | "FAVORITE_TOGGLED";
 
@@ -84,7 +85,7 @@ export interface ExportAdminEventsCsvResult {
 export async function exportAdminEventsCsv(
   params: ExportAdminEventsCsvParams = {},
 ): Promise<ExportAdminEventsCsvResult> {
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
   if (!token) {
     throw new Error("인증 토큰이 없습니다. 다시 로그인해 주세요.");
   }
