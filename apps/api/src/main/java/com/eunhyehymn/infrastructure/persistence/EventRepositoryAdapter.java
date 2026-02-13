@@ -62,8 +62,14 @@ public class EventRepositoryAdapter implements EventRepository {
     }
 
     @Override
-    public List<EventTypeCount> countByEventType(Instant fromInclusive, Instant toExclusive) {
-        return eventJpaRepository.countByEventType(fromInclusive, toExclusive).stream()
+    public List<EventTypeCount> countByEventType(
+        Instant fromInclusive,
+        Instant toExclusive,
+        EventType eventType,
+        UUID userId,
+        UUID hymnId
+    ) {
+        return eventJpaRepository.countByEventType(fromInclusive, toExclusive, eventType, userId, hymnId).stream()
             .map(row -> new EventTypeCount(row.getEventType(), row.getTotal()))
             .toList();
     }

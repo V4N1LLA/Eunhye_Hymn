@@ -26,7 +26,13 @@ public interface EventRepository {
 
     long countRecent(Instant fromInclusive, Instant toExclusive, EventType eventType, UUID userId, UUID hymnId);
 
-    List<EventTypeCount> countByEventType(Instant fromInclusive, Instant toExclusive);
+    List<EventTypeCount> countByEventType(
+        Instant fromInclusive,
+        Instant toExclusive,
+        EventType eventType,
+        UUID userId,
+        UUID hymnId
+    );
 
     void deleteByHymnId(UUID hymnId);
 

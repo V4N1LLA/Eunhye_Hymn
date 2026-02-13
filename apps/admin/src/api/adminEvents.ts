@@ -1,5 +1,4 @@
-import { apiGet } from "./client";
-import { getAccessToken } from "../auth/tokenStore";
+import { apiFetchRaw, apiGet } from "./client";
 
 export type EventType = "HYMN_OPENED" | "PART_PLAYED" | "NOTE_SAVED" | "FAVORITE_TOGGLED";
 
@@ -85,11 +84,6 @@ export interface ExportAdminEventsCsvResult {
 export async function exportAdminEventsCsv(
   params: ExportAdminEventsCsvParams = {},
 ): Promise<ExportAdminEventsCsvResult> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error("인증 토큰이 없습니다. 다시 로그인해 주세요.");
-  }
-
   const query = new URLSearchParams();
   if (params.eventType) query.set("eventType", params.eventType);
   if (params.userId) query.set("userId", params.userId);
@@ -99,14 +93,8 @@ export async function exportAdminEventsCsv(
   if (params.limit != null) query.set("limit", String(params.limit));
 
   const suffix = query.toString();
-  const path = suffix ? `/api/v1/admin/events/export?${suffix}` : "/api/v1/admin/events/export";
-
-  const response = await fetch(path, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const path = suffix ? `/admin/events/export?${suffix}` : "/admin/events/export";
+  const response = await apiFetchRaw({ method: "GET", path });
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as

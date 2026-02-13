@@ -160,6 +160,33 @@ class AdminEventApiTest {
     }
 
     @Test
+    void summaryUsesSameFiltersAndWindow() throws Exception {
+        Instant now = Instant.now();
+        saveEvent(UUID.randomUUID(), userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, now.minus(10, ChronoUnit.DAYS));
+        saveEvent(UUID.randomUUID(), userBId, EventType.NOTE_SAVED, hymnBId, null, now.minus(1, ChronoUnit.HOURS));
+
+        String response = mockMvc.perform(get("/admin/events")
+                .header("Authorization", "Bearer " + adminToken)
+                .param("userId", userBId.toString())
+                .param("summaryDays", "7"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        JsonNode summary = objectMapper.readTree(response).get("data").get("summary");
+        assertThat(summary.get("total").asLong()).isEqualTo(1L);
+
+        Map<String, Long> counts = new HashMap<>();
+        for (JsonNode node : summary.get("byType")) {
+            counts.put(node.get("eventType").asText(), node.get("count").asLong());
+        }
+
+        assertThat(counts.get("NOTE_SAVED")).isEqualTo(1L);
+        assertThat(counts.get("HYMN_OPENED")).isEqualTo(0L);
+    }
+
+    @Test
     void adminCanNavigateWithPagination() throws Exception {
         Instant now = Instant.now();
         saveEvent(UUID.randomUUID(), userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, now.minus(3, ChronoUnit.MINUTES));
