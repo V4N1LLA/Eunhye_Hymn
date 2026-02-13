@@ -49,6 +49,7 @@ Eunhye_Hymn/
 ├── .github/workflows/
 │   ├── api-ci.yml        # API 테스트 (PR + develop push)
 │   ├── admin-ci.yml      # Admin 타입체크 + 빌드 (PR + develop push)
+│   ├── mobile-ci.yml     # Mobile lint/test (PR + develop push)
 │   └── deploy-staging.yml # Staging 자동 배포 (develop push)
 ├── CLAUDE.md             # 이 파일
 ├── README.md
@@ -102,7 +103,20 @@ npm run dev    # http://localhost:5173
 npm run build  # dist/ 출력
 ```
 
-### 4.3 필수 환경변수 (.env.example 참조)
+### 4.3 Mobile 앱 (로컬)
+
+```powershell
+# 저장소 루트에서 최초 1회 (Flutter SDK 자동 설치 + 버전 확인)
+.\scripts\flutterw.ps1 --version
+
+cd apps/mobile
+..\..\scripts\flutterw.ps1 pub get
+..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+```
+
+실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.
+
+### 4.4 필수 환경변수 (.env.example 참조)
 
 | 변수 | 설명 | 필수 | 기본값 |
 |------|------|------|--------|
@@ -470,6 +484,12 @@ com.eunhyehymn/
 - **캐시**: npm
 - **실행**: `npm ci` → `tsc --noEmit` → `npm run build`
 
+### Mobile CI (`mobile-ci.yml`)
+- **트리거**: PR 및 develop push (apps/mobile/** 변경 시)
+- **환경**: ubuntu-latest, Flutter stable
+- **캐시**: Flutter SDK + Pub cache
+- **실행**: `flutter pub get` → `flutter analyze` → `flutter test`
+
 ### Deploy Staging (`deploy-staging.yml`)
 - **트리거**: develop push
 - **Jobs**: `test-api` → `check-admin` → `build-and-push` → `deploy`
@@ -639,7 +659,7 @@ develop push → GitHub Actions
 - API Dockerfile (multi-stage)
 - Admin Dockerfile (multi-stage: Node build + Nginx serve)
 - Nginx 설정 (Admin 정적 파일 serve + API 리버스 프록시 + SPA fallback)
-- CI/CD (API 테스트 + Admin 빌드/타입체크 + Staging 자동 배포)
+- CI/CD (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test + Staging 자동 배포)
 
 **AWS 인프라 (Terraform)**
 - VPC + 퍼블릭 서브넷 2개 + IGW + 라우트 테이블
@@ -664,9 +684,6 @@ develop push → GitHub Actions
 - 소셜 SDK 직접 연동 (현재는 토큰 입력 방식)
 - MIDI 재생 UX (앱 내 플레이어)
 - 오프라인 캐시/동기화
-
-**2. 모바일 CI**
-- mobile lint/test 워크플로우 추가
 
 ---
 

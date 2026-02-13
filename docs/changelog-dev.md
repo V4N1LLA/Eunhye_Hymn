@@ -10,10 +10,12 @@
 4. 리뷰 반영 리팩토링:
    - `fetchProfile()`는 401일 때만 세션 만료로 처리하고, 5xx/429 등은 오류로 노출하도록 수정했다.
    - `GET /me/favorites/{hymnId}` 조회 API를 추가해 상세 화면 즐겨찾기 상태를 초기 hydrate하도록 수정했다.
-5. `README.md`, `docs/mobile/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`를 모바일 현황 기준으로 동기화했다.
+5. 모바일 CI 워크플로우(`.github/workflows/mobile-ci.yml`)를 추가했다.
+6. `README.md`, `docs/mobile/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`를 모바일/CI 현황 기준으로 동기화했다.
 
 ## 검증 결과
 - Flutter SDK가 현재 실행 환경에 없어 `flutter pub get`/`flutter test`/`flutter run`은 실행하지 못했다.
+- Flutter SDK가 현재 실행 환경에 없어 `flutter analyze`/`flutter test`는 로컬 미실행(워크플로우로 검증)이다.
 - 코드 정합성은 API 계약 및 파일 단위 자체 검수로 확인했다.
 
 ## 날짜
