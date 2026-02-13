@@ -34,6 +34,7 @@ docs/       프로젝트 문서
 - 에셋 업로드 (presign -> S3 업로드 -> confirm 3단계)
 - 사용자 관리 (역할/상태 변경)
 - 초대코드 관리 (생성/비활성화/만료일 설정)
+- 감사 로그/분석 (필터/페이지네이션 조회, 최근 N일 이벤트 타입 집계, CSV 내보내기)
 - Google/Kakao 소셜 로그인 + Dev 로그인 (개발용)
 - Access Token 만료 시 자동 갱신
 
@@ -55,6 +56,7 @@ docs/       프로젝트 문서
 - 모바일 문서: [docs/mobile/README.md](./docs/mobile/README.md)
 - 로컬 셋업 가이드: [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
 - 작업 사이클 기준서: [docs/WORK_CYCLE.md](./docs/WORK_CYCLE.md)
+- AWS 무료 티어 온보딩: [docs/admin/aws-free-tier-onboarding.md](./docs/admin/aws-free-tier-onboarding.md)
 - 모바일 앱 README: [apps/mobile/README.md](./apps/mobile/README.md)
 - 작업 기준 문서: [CLAUDE.md](./CLAUDE.md)
 
@@ -106,6 +108,8 @@ npm run dev
 | | `PATCH /admin/users/{id}` | 역할/상태 변경 |
 | 초대코드 (관리자) | `POST /admin/invite-codes` | 초대코드 생성 |
 | | `DELETE /admin/invite-codes/{code}` | 비활성화 |
+| 감사 로그 (관리자) | `GET /admin/events` | 이벤트 로그 조회 + 최근 N일 집계 |
+| | `GET /admin/events/export` | 이벤트 로그 CSV 내보내기 |
 | 멤버 | `GET /me/favorites/{hymnId}` | 즐겨찾기 상태 조회 |
 | | `POST /me/favorites/{hymnId}` | 즐겨찾기 토글 |
 | | `PUT /me/hymns/{hymnId}/note` | 메모 저장 |

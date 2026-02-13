@@ -33,6 +33,9 @@ export default function Layout() {
           <NavLink to="/invite-codes" className={linkClass}>
             초대코드 관리
           </NavLink>
+          <NavLink to="/events" className={linkClass}>
+            감사 로그/분석
+          </NavLink>
         </nav>
         <div className="px-4 py-4 border-t border-indigo-700 text-sm">
           <div className="text-indigo-200 mb-2">{user?.role ?? ""}</div>

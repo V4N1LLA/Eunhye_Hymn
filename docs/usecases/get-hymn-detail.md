@@ -8,7 +8,7 @@
 
 ## 처리 흐름
 1. 찬송가를 조회한다.
-2. 연결된 자산(PDF/오디오)을 조회한다.
+2. 연결된 자산(PNG/MIDI)을 조회한다.
 3. `user_hymn_state.last_opened_at`을 현재 시간으로 갱신한다.
 
 ## 응답 예시
@@ -21,7 +21,7 @@
   "enabled": true,
   "lastOpenedAt": "2025-01-01T00:00:00Z",
   "assets": [
-    { "id": "asset_001", "type": "PDF", "part": null, "url": "https://..." }
+    { "id": "asset_001", "type": "PNG", "part": "ALL", "url": "https://..." }
   ]
 }
 ```

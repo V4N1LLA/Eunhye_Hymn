@@ -1,21 +1,21 @@
 # 현재 사용 가능 범위 정리
 
 - 작성일: 2026-02-13
-- 기준 브랜치: `develop`
-- 기준 커밋: `6b3d8cc` (Merge pull request #32)
-- 근거 문서: `CLAUDE.md` (마지막 업데이트: 2026-02-13)
-- 근거 PR: #32, #31, #30, #29, #28, #27
+- 기준 브랜치: `develop` (통합/배포 기준)
+- 기준 커밋: `08bc04c` (로컬 확인 시점 HEAD)
+- 근거 문서: `README.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
+- 근거 PR: #38, #37, #36, #31, #30, #29, #28, #27
 
 ## 1. 요약
 
-현재 시점에서 이 프로젝트는 다음 범위까지 사용 가능하다.
+현재 시점 기준으로 프로젝트 상태는 다음과 같다.
 
-- 로컬 기준: 관리자 웹(Admin) + 백엔드 API + 모바일 앱 MVP 사용 가능
-- 배포 기준: AWS 스테이징 자동 배포 파이프라인 구성 완료(인프라/시크릿 준비 필요)
-- CI 기준: API/Admin/Mobile 검증 워크플로우 구성 완료
-- 미완료: 모바일 고도화 항목(소셜 SDK 직접 연동, MIDI 재생 UX, 오프라인 캐시)
+- 로컬 기능: 관리자 웹(Admin) + 백엔드 API + 모바일 앱(MVP + 모바일 고도화 3건) 사용 가능
+- 배포 기능: AWS 스테이징 자동 배포 파이프라인 코드 구성 완료
+- CI 기능: API/Admin/Mobile 검증 워크플로우 구성 완료
+- 현재 우선 과제: 스테이징 실배포 전환(Terraform 적용, Secrets 설정, EC2 권한/접근 확인)
 
-## 2. 지금 바로 써볼 수 있는 범위 (로컬)
+## 2. 지금 바로 검증 가능한 범위 (로컬)
 
 ### 2.1 관리자 웹(Admin)
 
@@ -25,6 +25,7 @@
 - 에셋 관리: Presign -> 업로드 -> Confirm 3단계, 에셋 삭제
 - 사용자 관리: 사용자 목록, 역할/상태 변경
 - 초대코드 관리: 생성/비활성화/만료일 설정 및 표시
+- 감사 로그/분석: 이벤트 로그 필터/페이지네이션 조회, 이벤트 타입별 집계(최근 N일), CSV 내보내기
 - 인증: Google/Kakao 소셜 로그인 UI, Dev 로그인
 - 토큰: 401 발생 시 Access Token 자동 갱신 후 재시도
 
@@ -34,8 +35,10 @@
 - `apps/admin/src/pages/HymnListPage.tsx`
 - `apps/admin/src/pages/HymnEditPage.tsx`
 - `apps/admin/src/pages/InviteCodePage.tsx`
+- `apps/admin/src/pages/AdminEventPage.tsx`
 - `apps/admin/src/pages/LoginPage.tsx`
 - `apps/admin/src/api/client.ts`
+- `apps/admin/src/api/adminEvents.ts`
 
 ### 2.2 백엔드 API
 
@@ -43,31 +46,35 @@
 
 - 인증/인가: JWT, Refresh Token 회전, 소셜 로그인(Google/Kakao), Dev 로그인
 - 찬양: 공개 조회 + 관리자 CRUD + 삭제(cascade)
-- 에셋: 관리자 Presign/Confirm/Delete
+- 에셋: 관리자 Presign/Confirm/Delete (AssetType: `PNG`, `MIDI`)
 - 사용자/초대코드 관리자 기능
+- 관리자 감사 로그: `GET /admin/events` 조회/필터/페이지네이션 + 최근 N일 이벤트 타입 집계
+- 관리자 감사 로그 내보내기: `GET /admin/events/export` CSV 다운로드
 - 멤버 기능: 즐겨찾기, 메모, 히스토리, 이벤트 기록
 
-엔드포인트 기준은 `CLAUDE.md`의 API 섹션(7장)과 현재 컨트롤러/유즈케이스 구현 상태를 따른다.
+엔드포인트 기준은 `CLAUDE.md` 7장과 현재 컨트롤러/유즈케이스 구현 상태를 따른다.
 
-### 2.3 모바일 앱 (Flutter MVP)
+### 2.3 모바일 앱 (Flutter MVP + 고도화)
 
 다음 기능을 앱에서 바로 검증할 수 있다.
 
-- 로그인: 소셜 토큰 입력 방식(Google/Kakao), Dev 로그인
-- 찬양: 목록 조회/검색, 상세 조회
+- 로그인: 소셜 SDK 직접 로그인(Google/Kakao 모바일), Kakao 웹/미지원 플랫폼 토큰 입력 fallback, Dev 로그인
+- 찬양: 목록 조회/검색, 상세 조회, PNG 에셋 표시, MIDI 앱 내 재생(재생/일시정지/정지/속도)
 - 개인화: 즐겨찾기 토글, 메모 조회/저장, 최근 열람 히스토리
+- 오프라인: 목록/상세/메모/즐겨찾기/히스토리 캐시 fallback + 오프라인 변경 동기화 큐
 - 인증: 토큰 저장, 401 시 자동 refresh 후 재시도
 
 관련 파일:
 
 - `apps/mobile/lib/src/app.dart`
 - `apps/mobile/lib/src/features/auth/login_page.dart`
+- `apps/mobile/lib/src/features/auth/social_sdk_service.dart`
 - `apps/mobile/lib/src/features/hymn/hymn_list_page.dart`
 - `apps/mobile/lib/src/features/hymn/hymn_detail_page.dart`
 - `apps/mobile/lib/src/features/history/history_page.dart`
 - `apps/mobile/lib/src/core/network/api_client.dart`
 
-## 3. 조건부로 써볼 수 있는 범위 (스테이징)
+## 3. 조건부로 검증 가능한 범위 (스테이징)
 
 AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성 완료 상태다.
 
@@ -85,45 +92,41 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - `apps/admin/nginx.conf`
 - `apps/api/Dockerfile`
 
-단, 실제 동작을 위해 아래가 선행되어야 한다.
+실제 동작을 위해 아래 선행 조건이 필요하다.
 
-- AWS 리소스 생성(Terraform)
-- GitHub Secrets 설정(`AWS_*`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`)
-- EC2 접근 가능 상태 및 배포 계정 권한 확인
+- [ ] AWS 리소스 생성(Terraform)
+- [ ] GitHub Secrets 설정(`AWS_*`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`, 선택: `ENABLE_AWSLOGS`)
+- [ ] EC2 접근 가능 상태 및 배포 계정 권한 확인
+- [ ] 첫 `develop` 배포 후 `GET /api/v1/ping` + 관리자 로그인 + 핵심 API 스모크 테스트
 
 ## 4. 최근 PR 기준 변경 포인트
 
-### PR #31 (aws-staging)
+### PR #38 (mobile-offline-cache-sync)
+- 목록/상세/메모/즐겨찾기/히스토리 캐시 fallback, 오프라인 동기화 큐
+- 리뷰 반영: 캐시/큐 세션 스코프(`userId`) 분리
 
+### PR #37 (mobile-midi-player-ux)
+- 상세 화면 MIDI 재생/일시정지/정지/속도 UI
+- 리뷰 반영: paused 상태에서 `resume()` 사용
+
+### PR #36 (mobile-social-sdk)
+- Google/Kakao SDK 직접 로그인 흐름 추가
+- 리뷰 반영: KakaoTalk 실패 시 `loginWithKakaoAccount()` fallback
+
+### PR #31 (aws-staging)
 - AWS Free Tier 스테이징 인프라(Terraform) 추가
 - Staging 자동 배포 워크플로우 추가
 - Admin Dockerfile + Nginx 설정 추가
 - API Dockerfile 보완(헬스체크 관련)
 
-### PR #30 (social-login-ui)
+## 5. 미완료 범위 (우선순위)
 
-- Admin 로그인 화면에 Google/Kakao 소셜 로그인 UI 추가
-- 인증 관련 클라이언트 흐름 정리
-
-### PR #29 (token-auto-refresh)
-
-- 401 응답 시 Access Token 자동 갱신 및 재시도 로직 추가
-- 인증 실패 처리 모드 정리(`redirect` / `throw`)
-
-### PR #28 (invite-code-expiry-ui)
-
-- 초대코드 만료일 입력/표시 UI 추가
-
-### PR #27 (hymn-delete-ui)
-
-- 찬양 삭제 UI 추가(목록/상세 화면)
-
-## 5. 미완료 범위
-
-- 모바일 고도화:
-  - 소셜 SDK 직접 연동 (현재는 토큰 입력 방식)
-  - MIDI 재생 UX
-  - 오프라인 캐시/동기화
+- 스테이징 실가동 전환
+  - Terraform apply 및 리소스 활성화
+  - GitHub Secrets 구성
+  - 배포/롤백/장애 대응 실동작 검증
+- 운영 기능 백로그
+  - 감사 로그 고도화(집계 기간 커스텀, 대용량 비동기 export)
 
 ## 6. 빠른 사용 체크리스트
 
@@ -137,9 +140,10 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
    - `npm install`
    - `npm run dev`
 3. Mobile 실행
+   - `.\scripts\flutterw.ps1 --version`
    - `cd apps/mobile`
-   - `flutter pub get`
-   - `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1`
+   - `..\..\scripts\flutterw.ps1 pub get`
+   - `..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1`
 4. 접속
    - Admin: `http://localhost:5173`
    - API Base: `http://localhost:8080/api/v1`
