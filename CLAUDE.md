@@ -20,9 +20,9 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (25 UseCase)
+│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (26 UseCase)
 │   │   └── Dockerfile    # Multi-stage (JDK build → JRE run + curl for healthcheck)
-│   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 7페이지 완료
+│   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 8페이지 완료
 │   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
 │   │   └── nginx.conf    # 정적 파일 serve + /api/v1 프록시 + SPA fallback
 │   └── mobile/           # Flutter 모바일 앱 (MVP: 로그인/목록/상세/메모/히스토리)
@@ -157,9 +157,9 @@ com.eunhyehymn/
 │   └── repository/     # Repository 인터페이스
 ├── application/
 │   ├── ports/          # 외부 서비스 인터페이스 (SocialTokenVerifier)
-│   └── usecases/       # 비즈니스 로직 Use Cases (25개)
+│   └── usecases/       # 비즈니스 로직 Use Cases (26개)
 ├── presentation/
-│   ├── controllers/    # REST 컨트롤러 (10개)
+│   ├── controllers/    # REST 컨트롤러 (11개)
 │   └── dto/            # Request/Response DTOs
 ├── infrastructure/
 │   ├── persistence/    # JPA Repository Adapters (9개)
@@ -254,7 +254,14 @@ com.eunhyehymn/
 | GET | `/admin/invite-codes` | ADMIN | 초대코드 목록 |
 | DELETE | `/admin/invite-codes/{code}` | ADMIN | 초대코드 비활성화 |
 
-### 7.7 사용자 개인 (`MeController`)
+### 7.7 감사 로그 - 관리자 (`AdminEventController`)
+
+| Method | Path | 인증 | 설명 |
+|--------|------|------|------|
+| GET | `/admin/events` | ADMIN | 이벤트 로그 조회 + 최근 N일 이벤트 타입 집계 |
+| GET | `/admin/events/export` | ADMIN | 이벤트 로그 CSV 내보내기 |
+
+### 7.8 사용자 개인 (`MeController`)
 
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
@@ -265,13 +272,13 @@ com.eunhyehymn/
 | PUT | `/me/hymns/{hymnId}/note` | 필요 | 메모 저장 (NoteRequest) |
 | GET | `/me/history` | 필요 | 최근 본 찬양 → `List<HistoryItemResponse>` |
 
-### 7.8 이벤트 (`EventController`)
+### 7.9 이벤트 (`EventController`)
 
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
 | POST | `/events` | 필요 | 이벤트 기록 (단건 또는 배열, JsonNode 파싱) |
 
-### 7.9 시스템
+### 7.10 시스템
 
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
@@ -280,7 +287,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (25개)
+## 8. Use Cases (26개)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -305,6 +312,7 @@ com.eunhyehymn/
 | `RecordEventsUseCase` | `record(userId, List<EventInput>)` | EventType/PartType 검증 후 저장 |
 | `AdminListUsersUseCase` | `listAll()` | 전체 사용자 목록 조회 |
 | `AdminUpdateUserUseCase` | `update(userId, role, status)` | 사용자 역할/상태 변경 |
+| `AdminListEventsUseCase` | `execute(query)` | 관리자 이벤트 로그 조회 + 이벤트 타입 집계 |
 | `AdminCreateInviteCodeUseCase` | `create(code, createdBy, ...)` | 초대코드 생성 (중복 검사) |
 | `AdminListInviteCodesUseCase` | `listAll()` | 전체 초대코드 목록 |
 | `AdminRevokeInviteCodeUseCase` | `revoke(code)` | 초대코드 비활성화 (enabled=false) |
@@ -387,6 +395,7 @@ com.eunhyehymn/
 | `FlywayRepositoryIntegrationTest` | DB 마이그레이션 통합 |
 | `GetHistoryUseCaseTest` | 히스토리 Use Case 단위 |
 | `AdminUserApiTest` | 사용자 관리 API (목록, 역할/상태 변경, 권한 검사) |
+| `AdminEventApiTest` | 관리자 이벤트 API (로그 조회, 집계, 페이지네이션, CSV export, 검증) |
 | `AdminInviteCodeApiTest` | 초대코드 관리 API (생성, 목록, 비활성화, 검증) |
 
 - **테스트 DB**: H2 인메모리 (test 프로필)
@@ -412,10 +421,11 @@ com.eunhyehymn/
 | `src/api/hymns.ts` | 찬양 목록/생성/수정/**삭제**/상세 API |
 | `src/api/adminAssets.ts` | 에셋 presign/confirm/삭제 API (공통 클라이언트 사용) |
 | `src/api/adminUsers.ts` | 사용자 목록/역할·상태 변경 API |
+| `src/api/adminEvents.ts` | 관리자 이벤트 로그/집계 조회 API |
 | `src/api/adminInviteCodes.ts` | 초대코드 목록/생성/비활성화 API |
 | `src/auth/AuthContext.tsx` | AuthProvider + `useAuth()` 훅, JWT 파싱, localStorage 토큰 관리, **`loginWithSocial`** + `setTokensAndUser` 공통 헬퍼 |
 | `src/auth/ProtectedRoute.tsx` | 미인증 시 `/login` redirect |
-| `src/components/Layout.tsx` | 사이드바(찬양 관리, 에셋 업로드, 사용자 관리, 초대코드 관리) + 로그아웃 |
+| `src/components/Layout.tsx` | 사이드바(찬양 관리, 에셋 업로드, 사용자 관리, 초대코드 관리, 감사 로그/분석) + 로그아웃 |
 | `src/pages/LoginPage.tsx` | **Google/Kakao 소셜 로그인** + 초대코드 입력 + 접이식 Dev Login |
 | `src/pages/HymnListPage.tsx` | 찬양 목록 테이블 (번호, 제목, 태그, 활성 상태) + 검색/필터 + 활성화 토글 + **삭제** |
 | `src/pages/HymnCreatePage.tsx` | 찬양 생성 폼 (title, number, tags, enabled) |
@@ -423,6 +433,7 @@ com.eunhyehymn/
 | `src/pages/AdminAssetUploadPage.tsx` | 에셋 업로드 3단계 UI (Tailwind 스타일, hymnId/onConfirmed props 지원) |
 | `src/pages/UserListPage.tsx` | 사용자 목록 테이블 + 역할/상태 변경 + 검색/필터 |
 | `src/pages/InviteCodePage.tsx` | 초대코드 목록 + 생성/비활성화 + **만료일 설정 및 표시** |
+| `src/pages/AdminEventPage.tsx` | 감사 로그 필터/페이지네이션 조회 + 최근 N일 집계 + CSV 내보내기 |
 | `src/App.tsx` | BrowserRouter 라우팅 설정 |
 
 ### 라우팅 구조
@@ -437,6 +448,7 @@ com.eunhyehymn/
 | `/assets/upload` | AdminAssetUploadPage | 필요 |
 | `/users` | UserListPage | 필요 |
 | `/invite-codes` | InviteCodePage | 필요 |
+| `/events` | AdminEventPage | 필요 |
 
 ### Mobile 앱 (Flutter MVP)
 
@@ -453,7 +465,7 @@ com.eunhyehymn/
 | `lib/src/core/network/api_client.dart` | 공통 HTTP 클라이언트, API envelope 파싱, **401 시 자동 토큰 갱신 후 재시도** |
 | `lib/src/core/storage/token_storage.dart` | Access/Refresh 토큰 로컬 저장/조회/삭제 |
 | `lib/src/features/auth/auth_repository.dart` | 소셜/Dev 로그인, 프로필 조회, 로그아웃 |
-| `lib/src/features/auth/login_page.dart` | 소셜 토큰 입력 로그인 + Dev 로그인 UI |
+| `lib/src/features/auth/login_page.dart` | 소셜 SDK 직접 로그인 + 수동 토큰 fallback + Dev 로그인 UI |
 | `lib/src/features/hymn/hymn_repository.dart` | 찬양 목록/상세, 즐겨찾기, 메모, 히스토리 API |
 | `lib/src/features/hymn/hymn_list_page.dart` | 찬양 목록 + 검색 |
 | `lib/src/features/hymn/hymn_detail_page.dart` | 찬양 상세 + PNG 에셋 표시 + 즐겨찾기 + 메모 저장 |
@@ -464,7 +476,7 @@ com.eunhyehymn/
 
 | 화면 | 경로(개념) | 설명 |
 |------|------------|------|
-| LoginPage | 앱 시작 | 소셜 토큰/Dev 로그인 |
+| LoginPage | 앱 시작 | 소셜 SDK/수동 토큰 fallback/Dev 로그인 |
 | Home(탭) | 로그인 후 기본 | 찬양 목록 탭 + 최근 열람 탭 |
 | HymnDetailPage | 목록/히스토리 진입 | 상세 정보, 에셋, 메모, 즐겨찾기 |
 
@@ -608,7 +620,7 @@ develop push → GitHub Actions
 5. GitHub Secrets 등록 (terraform output 값 사용)
 6. develop push → 자동 배포
 
-상세 가이드: `infra/aws/README.md`
+상세 가이드: `infra/aws/README.md`, `docs/admin/aws-free-tier-onboarding.md`
 
 ---
 
@@ -617,7 +629,7 @@ develop push → GitHub Actions
 | 브랜치 | 용도 |
 |--------|------|
 | `main` | 프로덕션 릴리스 |
-| `develop` | 개발 통합 (현재 작업 브랜치) |
+| `develop` | 개발 통합 (기본 기준 브랜치) |
 | `staging` | 스테이징 배포 |
 
 ---
@@ -626,7 +638,7 @@ develop push → GitHub Actions
 
 ### 완료
 
-**백엔드 API (25 UseCase, 10 Controller)**
+**백엔드 API (26 UseCase, 11 Controller)**
 - 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
 - S3 에셋 관리 (presign/confirm/삭제)
 - JWT 인증 + 소셜 로그인 (Google/Kakao) + 토큰 회전
@@ -634,13 +646,14 @@ develop push → GitHub Actions
 - 사용자 관리 (역할/상태 변경)
 - 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
 - DB 스키마 Flyway 마이그레이션 (V1~V6)
-- 테스트 11개 파일 전체 통과 (SocialLoginApiTest 포함)
+- 테스트 12개 파일 전체 통과 (SocialLoginApiTest 포함)
 
-**Admin 프론트엔드 (7페이지)**
+**Admin 프론트엔드 (8페이지)**
 - 찬양 목록/생성/수정/삭제 + 검색/필터 + 활성화 토글
 - 에셋 업로드 3단계 (presign/upload/confirm) + 삭제
 - 사용자 관리 (역할/상태 변경, 검색/필터)
 - 초대코드 관리 (생성/비활성화/만료일 설정)
+- 감사 로그/분석 화면 (`GET /admin/events`) - 필터/페이지네이션 조회 + 최근 N일 집계 + CSV 내보내기
 - 소셜 로그인 UI (Google/Kakao) + 초대코드 입력 플로우
 - Access Token 자동 갱신 (401 → refresh → 재시도, mutex 패턴)
 - 인증 컨텍스트 (`loginWithSocial`, `setTokensAndUser`), 공통 API 클라이언트, 사이드바 레이아웃
@@ -681,8 +694,18 @@ develop push → GitHub Actions
 
 ### 미완료 (우선순위순)
 
-**1. 모바일 고도화**
-- 현재 계획된 모바일 고도화 3개 항목 완료
+**1. 스테이징 실가동 전환**
+- Terraform 실제 적용 및 AWS 리소스 활성화
+- GitHub Actions Secrets 설정 완료 및 첫 자동 배포 검증
+- EC2 접근 권한/배포 계정 권한 점검 및 운영 체크리스트 실행
+- 단계별 온보딩: `docs/admin/aws-free-tier-onboarding.md`
+
+**2. 운영 문서/절차 고도화**
+- `docs/runbook.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
+- 배포 후 스모크 테스트 항목과 점검 결과를 주기적으로 갱신
+
+**3. 기능 백로그**
+- 감사 로그 고도화(집계 기간 커스텀, 대용량 비동기 export)
 
 ---
 

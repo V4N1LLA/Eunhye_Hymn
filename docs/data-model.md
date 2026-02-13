@@ -38,9 +38,10 @@
 ### 1.5 assets
 - `id` (UUID, PK)
 - `hymn_id` (UUID, FK -> hymns.id)
-- `type` (varchar, PDF/AUDIO)
-- `part` (varchar, nullable, S/A/T/B/ALL)
+- `type` (varchar, PNG/MIDI)
+- `part` (varchar, S/A/T/B/ALL)
 - `url` (varchar)
+- `object_key` (varchar)
 - `checksum` (varchar, nullable)
 - `version` (varchar, nullable)
 - `created_at` (timestamp)

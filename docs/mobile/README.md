@@ -80,7 +80,9 @@ cd apps/mobile
   - `flutter analyze`
   - `flutter test`
 
-## 7. 다음 고도화 항목
+## 7. 다음 작업 항목
 
-- 현재 계획된 모바일 고도화 3개 항목 완료
+- 스테이징 환경에서 실기기 로그인/재생/동기화 스모크 테스트 수행
+- Kakao 웹 fallback(수동 토큰 입력) 가이드와 운영 체크리스트를 런북과 동기화
+- CI(`flutter analyze`, `flutter test`) 결과를 릴리즈 체크리스트에 연계
 

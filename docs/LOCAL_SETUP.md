@@ -126,6 +126,25 @@ npx tsc --noEmit
 npm run build
 ```
 
+### 방법 D: Docker가 안 될 때 (WSL PostgreSQL 우회)
+
+Docker Desktop/WSL2 엔진이 올라오지 않아도, **WSL(Ubuntu) + PostgreSQL**로 API를 실행할 수 있습니다.
+
+```powershell
+# 1. WSL PostgreSQL 준비 (서비스 시작 + DB 생성/보정)
+.\scripts\start-wsl-postgres.ps1
+
+# 2. API 실행 (DB/JWT/초대코드 환경변수 자동 세팅)
+.\scripts\run-api-local-wsl-db.ps1
+
+# 3. 헬스 체크 (별도 터미널)
+curl http://localhost:8080/api/v1/ping
+```
+
+기본값:
+- DB: `localhost:5432`, DB명 `eunhye_hymn`, 계정 `postgres/postgres`
+- JWT/초대코드: 개발용 기본값 자동 적용
+
 ---
 
 ## 4. Admin 로그인 방법
@@ -193,6 +212,19 @@ export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-17.0.x-hotspot"
 `init-s3` 컨테이너 로그 확인:
 ```bash
 docker compose -f infra/docker/docker-compose.yml logs init-s3
+```
+
+### Docker Desktop이 `unable to start` / WSL2 `0x8037011e`로 실패
+
+- `vmcompute`, `vmms`가 반복적으로 종료되면 Docker Linux 엔진이 올라오지 않습니다.
+- 즉시 개발을 진행하려면 위의 **방법 D(WSL PostgreSQL 우회)** 를 사용하세요.
+- 근본 해결은 BIOS/가상화/재부팅 등 호스트 설정이 필요할 수 있습니다.
+
+### Flutter Android 라이선스 미승인
+
+`flutter doctor`에서 Android 라이선스 경고가 보이면 인터랙티브 터미널에서:
+```powershell
+.\scripts\flutterw.ps1 doctor --android-licenses
 ```
 
 ---
