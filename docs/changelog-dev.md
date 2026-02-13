@@ -1,19 +1,19 @@
-﻿## 날짜
-- 2026-02-13
-
-## 변경 내역
-1. 감사 로그 summary/집계가 목록 필터(userId, eventType, hymnId, rom, 	o)와 동일한 범위를 사용하도록 백엔드 UseCase/Repository를 리팩토링하고 테스트를 추가했습니다.
-2. Admin CSV 내보내기가 공통 API 클라이언트(auth/refresh) 경로를 재사용하도록 수정해 액세스 토큰 만료 시에도 자동으로 재시도/리다이렉트됩니다.
-
-## 검증 결과
-- ./gradlew test --tests "*AdminEventApiTest*"
 # 개발 변경 이력
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
 ## 2026-02-13
 
-### Admin 토큰 저장 하드닝(작업중)
+### 문서/배포 준비도 검수
+- 배포 준비도 점검 리포트 추가
+  - `docs/deployment-readiness-audit.md`
+- 기준 문서 최신화
+  - `README.md`
+  - `docs/current-usable-scope.md`
+  - `docs/mobile/README.md`
+  - `CLAUDE.md`
+
+### Admin 토큰 저장 하드닝(완료)
 - Admin 웹 토큰 저장소를 `localStorage`에서 `sessionStorage` 기반으로 전환
 - 구버전 `localStorage` 토큰은 최초 로드시 `sessionStorage`로 마이그레이션 후 삭제
 - 적용 파일:
@@ -22,7 +22,7 @@
   - `apps/admin/src/api/client.ts`
   - `apps/admin/src/api/adminEvents.ts`
 
-### 이벤트 조회 성능 인덱스(작업중)
+### 이벤트 조회 성능 인덱스(완료)
 - 관리자 이벤트 조회/CSV 패턴 최적화 인덱스 추가
   - `idx_events_created_at_desc`
   - `idx_events_event_type_created`
@@ -49,7 +49,7 @@
   - `docs/WORK_CYCLE.md`
   - 작업 요청 시 기본 동작: 구현 -> 검증 -> 커밋 -> PR
 
-### 관리자 감사 로그 기능(작업중)
+### 관리자 감사 로그 기능(완료)
 - API
   - `GET /api/v1/admin/events`
   - `GET /api/v1/admin/events/export`
@@ -59,13 +59,20 @@
   - `AdminEventApiTest` 추가
 
 ## 검증 로그
+
 - API
-  - `./gradlew.bat test --no-daemon --tests "*AdminEventApiTest*"`
+  - `./gradlew.bat test --no-daemon --stacktrace`
 - Admin
   - `npm run build` (`apps/admin`)
+- Mobile
+  - `..\..\scripts\flutterw.ps1 analyze` (`apps/mobile`)
+  - `..\..\scripts\flutterw.ps1 test --reporter expanded` (`apps/mobile`)
+- Terraform
+  - `terraform -chdir=infra/aws init -backend=false -input=false`
+  - `terraform -chdir=infra/aws validate`
 
 ## 운영 참고
+
 - 로컬 API 실행 보조 스크립트
   - `scripts/start-wsl-postgres.ps1`
   - `scripts/run-api-local-wsl-db.ps1`
-

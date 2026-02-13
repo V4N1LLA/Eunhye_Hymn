@@ -332,12 +332,16 @@ com.eunhyehymn/
 | `V4__asset_part_not_null.sql` | assets.part NULL → 'ALL' 변환 후 NOT NULL 제약 |
 | `V5__asset_type_png_midi.sql` | assets.type PDF → PNG, AUDIO → MIDI 변환 |
 | `V6__invite_codes.sql` | invite_codes 테이블 생성 (code PK, created_by FK, max_uses, used_count, enabled, expires_at) |
+| `V7__events_admin_indexes.sql` | 관리자 이벤트 조회/CSV 최적화 인덱스 3개 추가 |
 
 ### 주요 인덱스
 - `idx_refresh_tokens_user_id` ON refresh_tokens(user_id)
 - `idx_assets_hymn_id` ON assets(hymn_id)
 - `idx_user_hymn_state_user_opened` ON user_hymn_state(user_id, last_opened_at)
 - `idx_events_user_created` ON events(user_id, created_at)
+- `idx_events_created_at_desc` ON events(created_at DESC)
+- `idx_events_event_type_created` ON events(event_type, created_at DESC)
+- `idx_events_hymn_created` ON events(hymn_id, created_at DESC)
 
 ### 주요 제약조건
 - `uq_auth_identity_provider_subject` UNIQUE(provider, provider_subject)
@@ -399,7 +403,7 @@ com.eunhyehymn/
 | `AdminInviteCodeApiTest` | 초대코드 관리 API (생성, 목록, 비활성화, 검증) |
 
 - **테스트 DB**: H2 인메모리 (test 프로필)
-- **전체 테스트 통과** 확인 (2026-02-12 기준)
+- **전체 테스트 통과** 확인 (2026-02-13 기준)
 
 ---
 
@@ -646,7 +650,7 @@ develop push → GitHub Actions
 - DB 기반 초대코드 관리 (CRUD + 검증 + 원자적 사용 횟수 증가)
 - 사용자 관리 (역할/상태 변경)
 - 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
-- DB 스키마 Flyway 마이그레이션 (V1~V6)
+- DB 스키마 Flyway 마이그레이션 (V1~V7)
 - 테스트 12개 파일 전체 통과 (SocialLoginApiTest 포함)
 
 **Admin 프론트엔드 (8페이지)**
@@ -693,6 +697,14 @@ develop push → GitHub Actions
 - CloudWatch 대시보드 (EC2/RDS 메트릭 + 에러 로그 쿼리)
 - EC2 IAM 정책 (CloudWatch Logs 전송 권한, account ID 스코핑)
 
+**문서/준비도 점검**
+- 문서 정합성 및 배포 준비도 점검 리포트 추가
+  - `docs/deployment-readiness-audit.md`
+- 기준 문서 최신화
+  - `docs/current-usable-scope.md`
+  - `docs/mobile/README.md`
+  - `README.md`
+
 ### 미완료 (우선순위순)
 
 **1. 스테이징 실가동 전환**
@@ -707,6 +719,10 @@ develop push → GitHub Actions
 
 **3. 기능 백로그**
 - 감사 로그 고도화(집계 기간 커스텀, 대용량 비동기 export)
+
+**4. 모바일 배포 패키징**
+- 현재 저장소 기준 실행은 `flutter run -d chrome` 중심
+- 앱스토어 배포(Android/iOS)를 위한 네이티브 프로젝트 디렉토리 및 서명/릴리즈 파이프라인 준비 필요
 
 ---
 
