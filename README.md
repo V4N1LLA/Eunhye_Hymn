@@ -148,7 +148,8 @@ PostgreSQL, LocalStack(S3), API 서버가 함께 실행됩니다.
 | | `PATCH /admin/users/{id}` | 역할/상태 변경 |
 | 초대코드 (관리자) | `POST /admin/invite-codes` | 초대코드 생성 |
 | | `DELETE /admin/invite-codes/{code}` | 비활성화 |
-| 멤버 | `POST /me/favorites/{hymnId}` | 즐겨찾기 토글 |
+| 멤버 | `GET /me/favorites/{hymnId}` | 즐겨찾기 상태 조회 |
+| | `POST /me/favorites/{hymnId}` | 즐겨찾기 토글 |
 | | `PUT /me/hymns/{hymnId}/note` | 메모 저장 |
 | | `GET /me/history` | 히스토리 |
 | 헬스체크 | `GET /ping` | `{ "ok": true }` |

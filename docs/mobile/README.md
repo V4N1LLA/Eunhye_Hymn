@@ -45,6 +45,7 @@
   - `POST /auth/refresh`
   - `POST /auth/logout`
   - `GET /me/profile`
+  - `GET /me/favorites/{hymnId}`
   - `GET /hymns`
   - `GET /hymns/{id}`
   - `POST /me/favorites/{hymnId}`

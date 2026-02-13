@@ -36,8 +36,11 @@ class AuthRepository {
         throw ApiException('프로필 응답 형식이 올바르지 않습니다.');
       }
       return _toSessionProfile(raw);
-    } on ApiException catch (_) {
-      return null;
+    } on ApiException catch (e) {
+      if (_isUnauthorized(e)) {
+        return null;
+      }
+      rethrow;
     }
   }
 
@@ -64,6 +67,7 @@ class AuthRepository {
 
     final profile = await fetchProfile();
     if (profile == null) {
+      await tokenStorage.clear();
       throw ApiException('로그인 후 프로필 조회에 실패했습니다.');
     }
     return profile;
@@ -92,6 +96,7 @@ class AuthRepository {
 
     final profile = await fetchProfile();
     if (profile == null) {
+      await tokenStorage.clear();
       throw ApiException('Dev 로그인 후 프로필 조회에 실패했습니다.');
     }
     return profile;
@@ -126,6 +131,10 @@ class AuthRepository {
 
     final role = roleText == 'ADMIN' ? UserRole.admin : UserRole.user;
     return SessionProfile(userId: userId, role: role);
+  }
+
+  bool _isUnauthorized(ApiException exception) {
+    return exception.statusCode == 401 || exception.code == 'unauthorized';
   }
 
   (String, String) _extractTokens(Object? raw) {

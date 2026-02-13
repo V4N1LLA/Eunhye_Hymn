@@ -48,12 +48,14 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
     try {
       final detail = await widget.hymnRepository.getHymnDetail(widget.hymnId);
       final note = await widget.hymnRepository.getNote(widget.hymnId);
+      final favorite = await widget.hymnRepository.getFavorite(widget.hymnId);
       if (!mounted) {
         return;
       }
       setState(() {
         _detail = detail;
         _noteController.text = note ?? '';
+        _favorite = favorite;
       });
     } catch (e) {
       if (!mounted) {

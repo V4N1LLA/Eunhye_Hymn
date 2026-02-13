@@ -20,7 +20,7 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (24 UseCase)
+│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (25 UseCase)
 │   │   └── Dockerfile    # Multi-stage (JDK build → JRE run + curl for healthcheck)
 │   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 7페이지 완료
 │   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
@@ -143,7 +143,7 @@ com.eunhyehymn/
 │   └── repository/     # Repository 인터페이스
 ├── application/
 │   ├── ports/          # 외부 서비스 인터페이스 (SocialTokenVerifier)
-│   └── usecases/       # 비즈니스 로직 Use Cases (24개)
+│   └── usecases/       # 비즈니스 로직 Use Cases (25개)
 ├── presentation/
 │   ├── controllers/    # REST 컨트롤러 (10개)
 │   └── dto/            # Request/Response DTOs
@@ -245,6 +245,7 @@ com.eunhyehymn/
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
 | GET | `/me/profile` | 필요 | 프로필 → `{userId, role}` |
+| GET | `/me/favorites/{hymnId}` | 필요 | 즐겨찾기 상태 조회 → `FavoriteResponse` |
 | POST | `/me/favorites/{hymnId}` | 필요 | 즐겨찾기 토글 → `FavoriteResponse` |
 | GET | `/me/hymns/{hymnId}/note` | 필요 | 메모 조회 → `NoteResponse` |
 | PUT | `/me/hymns/{hymnId}/note` | 필요 | 메모 저장 (NoteRequest) |
@@ -265,7 +266,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (24개)
+## 8. Use Cases (25개)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -280,6 +281,7 @@ com.eunhyehymn/
 | `AdminDeleteAssetUseCase` | `delete(assetId)` | 단일 에셋 삭제 |
 | `GetHymnNoteUseCase` | `get(userId, hymnId)` | 메모 조회 |
 | `SaveHymnNoteUseCase` | `save(userId, hymnId, content)` | 메모 upsert |
+| `GetFavoriteUseCase` | `get(userId, hymnId)` | 즐겨찾기 상태 조회 (없으면 false) |
 | `ToggleFavoriteUseCase` | `toggle(userId, hymnId)` | 즐겨찾기 토글 (없으면 true, 있으면 반전) |
 | `GetHistoryUseCase` | `getHistory(userId)` | lastOpenedAt desc 정렬 |
 | `SocialLoginUseCase` | `login(provider, token, inviteCode?)` | Google/Kakao 토큰 검증, 신규 사용자는 초대코드 필요 |
@@ -604,7 +606,7 @@ develop push → GitHub Actions
 
 ### 완료
 
-**백엔드 API (24 UseCase, 10 Controller)**
+**백엔드 API (25 UseCase, 10 Controller)**
 - 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
 - S3 에셋 관리 (presign/confirm/삭제)
 - JWT 인증 + 소셜 로그인 (Google/Kakao) + 토큰 회전

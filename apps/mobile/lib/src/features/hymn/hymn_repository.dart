@@ -133,6 +133,14 @@ class HymnRepository {
     return raw['favorite'] == true;
   }
 
+  Future<bool> getFavorite(String hymnId) async {
+    final raw = await apiClient.get('/me/favorites/$hymnId');
+    if (raw is! Map<String, dynamic>) {
+      throw ApiException('즐겨찾기 조회 응답 형식이 올바르지 않습니다.');
+    }
+    return raw['favorite'] == true;
+  }
+
   Future<String?> getNote(String hymnId) async {
     final raw = await apiClient.get('/me/hymns/$hymnId/note');
     if (raw is! Map<String, dynamic>) {

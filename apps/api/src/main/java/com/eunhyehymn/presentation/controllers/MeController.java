@@ -1,6 +1,7 @@
 package com.eunhyehymn.presentation.controllers;
 
 import com.eunhyehymn.application.usecases.GetHistoryUseCase;
+import com.eunhyehymn.application.usecases.GetFavoriteUseCase;
 import com.eunhyehymn.application.usecases.GetHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
@@ -23,17 +24,20 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public class MeController {
     private final ToggleFavoriteUseCase toggleFavoriteUseCase;
+    private final GetFavoriteUseCase getFavoriteUseCase;
     private final GetHymnNoteUseCase getHymnNoteUseCase;
     private final SaveHymnNoteUseCase saveHymnNoteUseCase;
     private final GetHistoryUseCase getHistoryUseCase;
 
     public MeController(
         ToggleFavoriteUseCase toggleFavoriteUseCase,
+        GetFavoriteUseCase getFavoriteUseCase,
         GetHymnNoteUseCase getHymnNoteUseCase,
         SaveHymnNoteUseCase saveHymnNoteUseCase,
         GetHistoryUseCase getHistoryUseCase
     ) {
         this.toggleFavoriteUseCase = toggleFavoriteUseCase;
+        this.getFavoriteUseCase = getFavoriteUseCase;
         this.getHymnNoteUseCase = getHymnNoteUseCase;
         this.saveHymnNoteUseCase = saveHymnNoteUseCase;
         this.getHistoryUseCase = getHistoryUseCase;
@@ -52,6 +56,13 @@ public class MeController {
     public ApiResponse<FavoriteResponse> toggleFavorite(@PathVariable UUID hymnId, Authentication authentication) {
         UUID userId = UUID.fromString(authentication.getName());
         boolean favorite = toggleFavoriteUseCase.toggle(userId, hymnId).favorite();
+        return ApiResponse.success(new FavoriteResponse(favorite));
+    }
+
+    @GetMapping("/favorites/{hymnId}")
+    public ApiResponse<FavoriteResponse> getFavorite(@PathVariable UUID hymnId, Authentication authentication) {
+        UUID userId = UUID.fromString(authentication.getName());
+        boolean favorite = getFavoriteUseCase.get(userId, hymnId);
         return ApiResponse.success(new FavoriteResponse(favorite));
     }
 
