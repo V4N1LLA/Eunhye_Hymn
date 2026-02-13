@@ -1,9 +1,70 @@
-# 모바일 문서
+# 모바일 앱 문서
 
-모바일 앱 요구사항, 화면 목록, UX 메모를 정리한다.
+## 1. 현재 상태 (MVP)
 
-## 추천 섹션
-- 화면 인벤토리
-- 네비게이션 맵
-- 오프라인 고려 사항
-- 미디어 재생 UX
+`apps/mobile`에 Flutter MVP가 추가되었다.
+
+구현 기능:
+
+- 로그인
+  - 소셜 로그인 API 토큰 입력 방식 (Google/Kakao)
+  - Dev 로그인 (개발 환경)
+- 찬양
+  - 목록 조회 + 검색
+  - 상세 조회
+  - PNG 에셋 이미지 표시
+- 개인화
+  - 즐겨찾기 토글
+  - 메모 조회/저장
+  - 최근 열람 히스토리 조회
+- 인증
+  - Access/Refresh 토큰 저장
+  - 401 시 `/auth/refresh` 자동 토큰 갱신 후 재시도
+
+## 2. 화면 인벤토리
+
+1. 로그인 화면
+2. 찬양 목록 화면
+3. 찬양 상세 화면
+4. 최근 열람 히스토리 화면
+
+## 3. 네비게이션
+
+- 로그인 성공 후 Home 진입
+- Home 하단 탭:
+  - 찬양 목록
+  - 최근 열람
+- 목록/히스토리에서 상세 화면으로 이동
+
+## 4. API 연동 기준
+
+- Base URL: `/api/v1`
+- 사용 API:
+  - `POST /auth/social`
+  - `POST /auth/dev/login`
+  - `POST /auth/refresh`
+  - `POST /auth/logout`
+  - `GET /me/profile`
+  - `GET /me/favorites/{hymnId}`
+  - `GET /hymns`
+  - `GET /hymns/{id}`
+  - `POST /me/favorites/{hymnId}`
+  - `GET /me/hymns/{hymnId}/note`
+  - `PUT /me/hymns/{hymnId}/note`
+  - `GET /me/history`
+
+## 5. 실행
+
+```bash
+cd apps/mobile
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+```
+
+실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.
+
+## 6. 다음 고도화 항목
+
+- 소셜 SDK 직접 연동 (현재는 토큰 입력 방식)
+- MIDI 재생 UX (앱 내 플레이어)
+- 오프라인 캐시/동기화

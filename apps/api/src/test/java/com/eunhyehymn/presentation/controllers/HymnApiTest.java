@@ -143,7 +143,17 @@ class HymnApiTest {
         UUID hymnId = UUID.randomUUID();
         hymnJpaRepository.save(new HymnEntity(hymnId, "즐겨찾기", "4", "tag", true, Instant.now()));
 
+        mockMvc.perform(get("/me/favorites/" + hymnId)
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.favorite").value(false));
+
         mockMvc.perform(post("/me/favorites/" + hymnId)
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.favorite").value(true));
+
+        mockMvc.perform(get("/me/favorites/" + hymnId)
                 .header("Authorization", "Bearer " + accessToken))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.favorite").value(true));

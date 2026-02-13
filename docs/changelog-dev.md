@@ -1,6 +1,22 @@
 # 안정화 작업 이력
 
 ## 날짜
+- 2026-02-13
+
+## 변경 요약
+1. `apps/mobile` Flutter MVP를 추가했다.
+2. 모바일에서 API 인증 흐름(토큰 저장, 401 자동 refresh 재시도)을 구현했다.
+3. 모바일 핵심 화면(로그인, 찬양 목록/상세, 메모, 히스토리)을 구현했다.
+4. 리뷰 반영 리팩토링:
+   - `fetchProfile()`는 401일 때만 세션 만료로 처리하고, 5xx/429 등은 오류로 노출하도록 수정했다.
+   - `GET /me/favorites/{hymnId}` 조회 API를 추가해 상세 화면 즐겨찾기 상태를 초기 hydrate하도록 수정했다.
+5. `README.md`, `docs/mobile/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`를 모바일 현황 기준으로 동기화했다.
+
+## 검증 결과
+- Flutter SDK가 현재 실행 환경에 없어 `flutter pub get`/`flutter test`/`flutter run`은 실행하지 못했다.
+- 코드 정합성은 API 계약 및 파일 단위 자체 검수로 확인했다.
+
+## 날짜
 - 2026-02-06
 
 ## 변경 요약

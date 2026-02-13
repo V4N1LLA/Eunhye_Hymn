@@ -10,10 +10,10 @@
 apps/
   api/      Spring Boot 백엔드 (Java 17, Gradle)
   admin/    React 관리자 웹 (TypeScript, Vite, Tailwind CSS)
-  mobile/   Flutter 모바일 앱 (미구현)
+  mobile/   Flutter 모바일 앱 (MVP)
 infra/
   docker/   Docker Compose (PostgreSQL + LocalStack + API)
-  aws/      AWS 인프라 (미구현)
+  aws/      AWS Staging 인프라 (Terraform)
 docs/       프로젝트 문서
 ```
 
@@ -37,10 +37,22 @@ docs/       프로젝트 문서
 - Google/Kakao 소셜 로그인 + Dev 로그인 (개발용)
 - Access Token 만료 시 자동 갱신
 
+### 모바일 앱 (Flutter MVP)
+
+- 소셜 토큰 기반 로그인 + Dev 로그인
+- 찬양 목록 조회 + 검색
+- 찬양 상세 조회 (PNG 에셋 미리보기)
+- 즐겨찾기 토글
+- 메모 조회/저장
+- 최근 열람 히스토리
+- Access Token 만료 시 자동 갱신
+
 ## 문서
 
 - 현재 사용 가능 범위: [docs/current-usable-scope.md](./docs/current-usable-scope.md)
 - 운영 런북(스테이징): [docs/runbook.md](./docs/runbook.md)
+- 모바일 문서: [docs/mobile/README.md](./docs/mobile/README.md)
+- 모바일 앱 README: [apps/mobile/README.md](./apps/mobile/README.md)
 - 작업 기준 문서: [CLAUDE.md](./CLAUDE.md)
 
 ## 시작하기
@@ -50,6 +62,7 @@ docs/       프로젝트 문서
 - Java 17
 - Node.js 20+
 - PostgreSQL 15 (또는 Docker)
+- Flutter 3.24+
 
 ### 백엔드 실행
 
@@ -83,6 +96,16 @@ npm run dev
 ```
 
 `http://localhost:5173` 에서 실행됩니다. API 요청은 Vite 프록시를 통해 `localhost:8080`으로 전달됩니다.
+
+### 모바일 앱 실행
+
+```bash
+cd apps/mobile
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+```
+
+실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용하세요.
 
 ### Docker로 한 번에 실행
 
@@ -125,7 +148,8 @@ PostgreSQL, LocalStack(S3), API 서버가 함께 실행됩니다.
 | | `PATCH /admin/users/{id}` | 역할/상태 변경 |
 | 초대코드 (관리자) | `POST /admin/invite-codes` | 초대코드 생성 |
 | | `DELETE /admin/invite-codes/{code}` | 비활성화 |
-| 멤버 | `POST /me/favorites/{hymnId}` | 즐겨찾기 토글 |
+| 멤버 | `GET /me/favorites/{hymnId}` | 즐겨찾기 상태 조회 |
+| | `POST /me/favorites/{hymnId}` | 즐겨찾기 토글 |
 | | `PUT /me/hymns/{hymnId}/note` | 메모 저장 |
 | | `GET /me/history` | 히스토리 |
 | 헬스체크 | `GET /ping` | `{ "ok": true }` |

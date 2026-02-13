@@ -20,12 +20,12 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (24 UseCase)
+│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (25 UseCase)
 │   │   └── Dockerfile    # Multi-stage (JDK build → JRE run + curl for healthcheck)
 │   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 7페이지 완료
 │   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
 │   │   └── nginx.conf    # 정적 파일 serve + /api/v1 프록시 + SPA fallback
-│   └── mobile/           # Flutter 모바일 (placeholder)
+│   └── mobile/           # Flutter 모바일 앱 (MVP: 로그인/목록/상세/메모/히스토리)
 ├── infra/
 │   ├── docker/           # 로컬 Docker Compose (PostgreSQL + LocalStack + API)
 │   └── aws/              # AWS Staging 인프라 (아래 상세)
@@ -70,6 +70,7 @@ Eunhye_Hymn/
 | Security | Spring Security + JWT | - |
 | Frontend | React + TypeScript | 18.3.1 / 5.6.3 |
 | Frontend Build | Vite | 5.4.10 |
+| Mobile | Flutter + Dart | 3.24+ / 3.4+ |
 | CI/CD | GitHub Actions | - |
 | IaC | Terraform | ~> 5.0 (AWS provider) |
 | Container | Docker + Nginx | - |
@@ -142,7 +143,7 @@ com.eunhyehymn/
 │   └── repository/     # Repository 인터페이스
 ├── application/
 │   ├── ports/          # 외부 서비스 인터페이스 (SocialTokenVerifier)
-│   └── usecases/       # 비즈니스 로직 Use Cases (24개)
+│   └── usecases/       # 비즈니스 로직 Use Cases (25개)
 ├── presentation/
 │   ├── controllers/    # REST 컨트롤러 (10개)
 │   └── dto/            # Request/Response DTOs
@@ -244,6 +245,7 @@ com.eunhyehymn/
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
 | GET | `/me/profile` | 필요 | 프로필 → `{userId, role}` |
+| GET | `/me/favorites/{hymnId}` | 필요 | 즐겨찾기 상태 조회 → `FavoriteResponse` |
 | POST | `/me/favorites/{hymnId}` | 필요 | 즐겨찾기 토글 → `FavoriteResponse` |
 | GET | `/me/hymns/{hymnId}/note` | 필요 | 메모 조회 → `NoteResponse` |
 | PUT | `/me/hymns/{hymnId}/note` | 필요 | 메모 저장 (NoteRequest) |
@@ -264,7 +266,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (24개)
+## 8. Use Cases (25개)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -279,6 +281,7 @@ com.eunhyehymn/
 | `AdminDeleteAssetUseCase` | `delete(assetId)` | 단일 에셋 삭제 |
 | `GetHymnNoteUseCase` | `get(userId, hymnId)` | 메모 조회 |
 | `SaveHymnNoteUseCase` | `save(userId, hymnId, content)` | 메모 upsert |
+| `GetFavoriteUseCase` | `get(userId, hymnId)` | 즐겨찾기 상태 조회 (없으면 false) |
 | `ToggleFavoriteUseCase` | `toggle(userId, hymnId)` | 즐겨찾기 토글 (없으면 true, 있으면 반전) |
 | `GetHistoryUseCase` | `getHistory(userId)` | lastOpenedAt desc 정렬 |
 | `SocialLoginUseCase` | `login(provider, token, inviteCode?)` | Google/Kakao 토큰 검증, 신규 사용자는 초대코드 필요 |
@@ -377,7 +380,7 @@ com.eunhyehymn/
 
 ---
 
-## 13. Admin 프론트엔드 현황
+## 13. 프론트엔드 현황 (Admin + Mobile)
 
 ### 기술 스택
 - React 18 + TypeScript + Vite (ESM, `"type": "module"`)
@@ -420,6 +423,36 @@ com.eunhyehymn/
 | `/assets/upload` | AdminAssetUploadPage | 필요 |
 | `/users` | UserListPage | 필요 |
 | `/invite-codes` | InviteCodePage | 필요 |
+
+### Mobile 앱 (Flutter MVP)
+
+#### 기술 스택
+- Flutter (Material 3) + Dart
+- `http` 기반 API 클라이언트
+- `shared_preferences` 토큰 저장
+- API Base URL: `--dart-define=API_BASE_URL=...` 주입
+
+#### 구현된 기능
+
+| 파일 | 역할 |
+|------|------|
+| `lib/src/core/network/api_client.dart` | 공통 HTTP 클라이언트, API envelope 파싱, **401 시 자동 토큰 갱신 후 재시도** |
+| `lib/src/core/storage/token_storage.dart` | Access/Refresh 토큰 로컬 저장/조회/삭제 |
+| `lib/src/features/auth/auth_repository.dart` | 소셜/Dev 로그인, 프로필 조회, 로그아웃 |
+| `lib/src/features/auth/login_page.dart` | 소셜 토큰 입력 로그인 + Dev 로그인 UI |
+| `lib/src/features/hymn/hymn_repository.dart` | 찬양 목록/상세, 즐겨찾기, 메모, 히스토리 API |
+| `lib/src/features/hymn/hymn_list_page.dart` | 찬양 목록 + 검색 |
+| `lib/src/features/hymn/hymn_detail_page.dart` | 찬양 상세 + PNG 에셋 표시 + 즐겨찾기 + 메모 저장 |
+| `lib/src/features/history/history_page.dart` | 최근 열람 히스토리 목록 |
+| `lib/src/app.dart` | 앱 부트스트랩, 세션 복구, 탭 네비게이션(찬양/히스토리), 로그아웃 |
+
+#### 화면/네비게이션
+
+| 화면 | 경로(개념) | 설명 |
+|------|------------|------|
+| LoginPage | 앱 시작 | 소셜 토큰/Dev 로그인 |
+| Home(탭) | 로그인 후 기본 | 찬양 목록 탭 + 최근 열람 탭 |
+| HymnDetailPage | 목록/히스토리 진입 | 상세 정보, 에셋, 메모, 즐겨찾기 |
 
 ---
 
@@ -573,7 +606,7 @@ develop push → GitHub Actions
 
 ### 완료
 
-**백엔드 API (24 UseCase, 10 Controller)**
+**백엔드 API (25 UseCase, 10 Controller)**
 - 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
 - S3 에셋 관리 (presign/confirm/삭제)
 - JWT 인증 + 소셜 로그인 (Google/Kakao) + 토큰 회전
@@ -592,6 +625,14 @@ develop push → GitHub Actions
 - Access Token 자동 갱신 (401 → refresh → 재시도, mutex 패턴)
 - 인증 컨텍스트 (`loginWithSocial`, `setTokensAndUser`), 공통 API 클라이언트, 사이드바 레이아웃
 - Dev Login (개발용, 접이식)
+
+**Mobile 앱 (Flutter MVP)**
+- 소셜 토큰 입력 로그인 + Dev 로그인
+- 찬양 목록/검색 + 상세 조회
+- PNG 에셋 표시 + 메모 조회/저장
+- 즐겨찾기 토글 + 최근 열람 히스토리
+- Access Token 자동 갱신 (401 → refresh → 재시도)
+- 토큰 로컬 저장(shared_preferences) + 세션 복구
 
 **인프라/CI**
 - Docker Compose (PostgreSQL + LocalStack + API)
@@ -619,7 +660,13 @@ develop push → GitHub Actions
 
 ### 미완료 (우선순위순)
 
-**1. 모바일 앱**: Flutter (코드 없음)
+**1. 모바일 고도화**
+- 소셜 SDK 직접 연동 (현재는 토큰 입력 방식)
+- MIDI 재생 UX (앱 내 플레이어)
+- 오프라인 캐시/동기화
+
+**2. 모바일 CI**
+- mobile lint/test 워크플로우 추가
 
 ---
 

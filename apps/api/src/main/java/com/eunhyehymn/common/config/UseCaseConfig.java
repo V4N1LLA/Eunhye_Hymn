@@ -6,6 +6,7 @@ import com.eunhyehymn.application.usecases.AdminListHymnsUseCase;
 import com.eunhyehymn.application.usecases.AdminListUsersUseCase;
 import com.eunhyehymn.application.usecases.AdminUpdateHymnUseCase;
 import com.eunhyehymn.application.usecases.AdminUpdateUserUseCase;
+import com.eunhyehymn.application.usecases.GetFavoriteUseCase;
 import com.eunhyehymn.application.usecases.GetHistoryUseCase;
 import com.eunhyehymn.application.usecases.GetHymnDetailUseCase;
 import com.eunhyehymn.application.usecases.GetHymnNoteUseCase;
@@ -41,6 +42,11 @@ public class UseCaseConfig {
     @Bean
     ToggleFavoriteUseCase toggleFavoriteUseCase(UserHymnStateRepository userHymnStateRepository) {
         return new ToggleFavoriteUseCase(userHymnStateRepository);
+    }
+
+    @Bean
+    GetFavoriteUseCase getFavoriteUseCase(UserHymnStateRepository userHymnStateRepository) {
+        return new GetFavoriteUseCase(userHymnStateRepository);
     }
 
     @Bean
