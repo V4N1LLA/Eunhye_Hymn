@@ -1,4 +1,4 @@
-﻿# Eunhye Hymn 이벤트 정의
+# Eunhye Hymn 이벤트 정의
 
 ## 1. 목적
 - 모바일/웹 사용자 행동 이벤트를 수집해 감사 로그, 분석, 디버깅에 활용한다.
@@ -51,9 +51,23 @@
 ### 4.2 관리자 감사 로그 조회
 - `GET /api/v1/admin/events`
 - 관리자 권한 필요
-- 필터: `eventType`, `userId`, `hymnId`, `from`, `to`, `limit`
+- 필터: `eventType`, `userId`, `hymnId`, `from`, `to`
+- 페이지네이션: `page`, `size` (`limit` 하위 호환)
 - 집계: `summaryDays` 기준 최근 N일 이벤트 타입별 합계
 
-## 5. 운영 메모
-- 이벤트는 텍스트 기반 `metadataJson`으로 저장한다.
-- 감사 화면에서 문제 시간대/사용자/찬양 단위로 필터링해 원인 추적에 활용한다.
+### 4.3 관리자 감사 로그 CSV
+- `GET /api/v1/admin/events/export`
+- 관리자 권한 필요
+- 필터: `eventType`, `userId`, `hymnId`, `from`, `to`
+- 제한: `limit` (서버 상한 적용)
+
+## 5. 인덱스/성능 메모
+- 관리자 조회 패턴 최적화를 위해 아래 인덱스를 사용한다.
+  - `idx_events_user_created` (`user_id`, `created_at`) - 기존
+  - `idx_events_created_at_desc` (`created_at DESC`)
+  - `idx_events_event_type_created` (`event_type`, `created_at DESC`)
+  - `idx_events_hymn_created` (`hymn_id`, `created_at DESC`)
+- 운영 시 확인 항목
+  - 관리자 이벤트 조회 응답 시간이 증가하면 `EXPLAIN ANALYZE`로 인덱스 사용 여부 확인
+  - 이벤트 테이블 급증 시 CSV `limit` 정책과 백필/아카이빙 정책을 함께 점검
+

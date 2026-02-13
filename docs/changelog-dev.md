@@ -4,6 +4,16 @@
 
 ## 2026-02-13
 
+### 이벤트 조회 성능 인덱스(작업중)
+- 관리자 이벤트 조회/CSV 패턴 최적화 인덱스 추가
+  - `idx_events_created_at_desc`
+  - `idx_events_event_type_created`
+  - `idx_events_hymn_created`
+- 마이그레이션 추가
+  - `apps/api/src/main/resources/db/migration/V7__events_admin_indexes.sql`
+- 운영 문서 업데이트
+  - `docs/events.md`에 조회 파라미터, 인덱스, 점검 항목 반영
+
 ### 모바일 기능 3건 머지
 - PR #36 `feat/mobile-social-sdk`
   - Google/Kakao 소셜 SDK 로그인 추가
