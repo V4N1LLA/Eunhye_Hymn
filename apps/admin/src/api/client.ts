@@ -107,13 +107,12 @@ interface RequestOptions extends ApiRequestOptions {
   body?: unknown;
 }
 
-async function apiFetch<T>({
+async function authorizedFetch({
   method,
   path,
   body,
   includeAuth = true,
-  unauthorized = "redirect",
-}: RequestOptions): Promise<T> {
+}: RequestOptions): Promise<Response> {
   const doFetch = () => {
     const headers: Record<string, string> = { ...authHeaders(includeAuth) };
     if (body !== undefined) {
@@ -127,16 +126,26 @@ async function apiFetch<T>({
     });
   };
 
-  const response = await doFetch();
+  let response = await doFetch();
 
-  if (response.status === 401 && includeAuth && unauthorized === "redirect") {
+  if (response.status === 401 && includeAuth) {
     const refreshed = await tryRefreshToken();
     if (refreshed) {
-      const retryResponse = await doFetch();
-      return handleResponse<T>(retryResponse, unauthorized);
+      response = await doFetch();
     }
   }
 
+  return response;
+}
+
+async function apiFetch<T>({
+  method,
+  path,
+  body,
+  includeAuth = true,
+  unauthorized = "redirect",
+}: RequestOptions): Promise<T> {
+  const response = await authorizedFetch({ method, path, body, includeAuth, unauthorized });
   return handleResponse<T>(response, unauthorized);
 }
 
@@ -154,5 +163,18 @@ export async function apiPatch<T>(path: string, body: unknown, options?: ApiRequ
 
 export async function apiDelete<T>(path: string, options?: ApiRequestOptions): Promise<T> {
   return apiFetch<T>({ method: "DELETE", path, ...options });
+}
+
+export async function apiFetchRaw(options: RequestOptions): Promise<Response> {
+  const { unauthorized = "redirect" } = options;
+  const response = await authorizedFetch(options);
+
+  if (response.status === 401) {
+    if (unauthorized === "redirect") {
+      return redirectToLogin();
+    }
+  }
+
+  return response;
 }
 

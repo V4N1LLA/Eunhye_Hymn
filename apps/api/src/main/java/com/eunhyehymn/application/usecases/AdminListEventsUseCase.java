@@ -48,10 +48,18 @@ public class AdminListEventsUseCase {
             query.hymnId()
         );
 
-        Instant summaryTo = Instant.now();
-        Instant summaryFrom = summaryTo.minus(summaryDays, ChronoUnit.DAYS);
+        Instant summaryTo = query.toExclusive() != null ? query.toExclusive() : Instant.now();
+        Instant summaryFrom = query.fromInclusive() != null
+            ? query.fromInclusive()
+            : summaryTo.minus(summaryDays, ChronoUnit.DAYS);
 
-        Map<EventType, Long> byType = eventRepository.countByEventType(summaryFrom, summaryTo).stream()
+        Map<EventType, Long> byType = eventRepository.countByEventType(
+            summaryFrom,
+            summaryTo,
+            query.eventType(),
+            query.userId(),
+            query.hymnId()
+        ).stream()
             .collect(Collectors.toMap(EventRepository.EventTypeCount::eventType, EventRepository.EventTypeCount::count));
 
         List<EventTypeCount> counts = Arrays.stream(EventType.values())

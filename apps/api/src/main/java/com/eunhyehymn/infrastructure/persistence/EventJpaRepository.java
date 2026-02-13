@@ -51,13 +51,19 @@ public interface EventJpaRepository extends JpaRepository<EventEntity, UUID> {
     @Query("""
         SELECT e.eventType AS eventType, COUNT(e) AS total
         FROM EventEntity e
-        WHERE e.createdAt >= :fromInclusive
-          AND e.createdAt < :toExclusive
+        WHERE (:fromInclusive IS NULL OR e.createdAt >= :fromInclusive)
+          AND (:toExclusive IS NULL OR e.createdAt < :toExclusive)
+          AND (:eventType IS NULL OR e.eventType = :eventType)
+          AND (:userId IS NULL OR e.userId = :userId)
+          AND (:hymnId IS NULL OR e.hymnId = :hymnId)
         GROUP BY e.eventType
         """)
     List<EventTypeCountProjection> countByEventType(
         @Param("fromInclusive") Instant fromInclusive,
-        @Param("toExclusive") Instant toExclusive
+        @Param("toExclusive") Instant toExclusive,
+        @Param("eventType") EventType eventType,
+        @Param("userId") UUID userId,
+        @Param("hymnId") UUID hymnId
     );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)

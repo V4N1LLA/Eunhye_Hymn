@@ -1,4 +1,13 @@
-﻿# 개발 변경 이력
+﻿## 날짜
+- 2026-02-13
+
+## 변경 내역
+1. 감사 로그 summary/집계가 목록 필터(userId, eventType, hymnId, rom, 	o)와 동일한 범위를 사용하도록 백엔드 UseCase/Repository를 리팩토링하고 테스트를 추가했습니다.
+2. Admin CSV 내보내기가 공통 API 클라이언트(auth/refresh) 경로를 재사용하도록 수정해 액세스 토큰 만료 시에도 자동으로 재시도/리다이렉트됩니다.
+
+## 검증 결과
+- ./gradlew test --tests "*AdminEventApiTest*"
+# 개발 변경 이력
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
@@ -59,3 +68,4 @@
 - 로컬 API 실행 보조 스크립트
   - `scripts/start-wsl-postgres.ps1`
   - `scripts/run-api-local-wsl-db.ps1`
+
