@@ -12,9 +12,16 @@ void initializeKakaoSdk(String nativeAppKey) {
 Future<String> fetchKakaoAccessToken() async {
   try {
     final isInstalled = await isKakaoTalkInstalled();
-    final token = isInstalled
-        ? await UserApi.instance.loginWithKakaoTalk()
-        : await UserApi.instance.loginWithKakaoAccount();
+    OAuthToken token;
+    if (isInstalled) {
+      try {
+        token = await UserApi.instance.loginWithKakaoTalk();
+      } catch (_) {
+        token = await UserApi.instance.loginWithKakaoAccount();
+      }
+    } else {
+      token = await UserApi.instance.loginWithKakaoAccount();
+    }
 
     if (token.accessToken.isEmpty) {
       throw ApiException('카카오 Access Token을 가져오지 못했습니다.');
