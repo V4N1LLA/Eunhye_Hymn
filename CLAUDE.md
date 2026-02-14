@@ -508,9 +508,9 @@ com.eunhyehymn/
 - **실행**: `flutter pub get` → `flutter analyze` → `flutter test`
 
 ### Deploy Staging (`deploy-staging.yml`)
-- **트리거**: develop push
-- **Jobs**: `test-api` → `check-admin` → `build-and-push` → `deploy`
-- **단계**: API 테스트 → Admin 타입체크+빌드 → Docker 이미지 빌드 & ECR push (api:latest + admin:latest) → EC2 SSH 배포 (compose + awslogs 오버레이 + deploy.sh) → 헬스체크
+- **트리거**: develop push + `workflow_dispatch`
+- **Jobs**: `preflight-secrets` → `test-api` → `check-admin` → `build-and-push` → `deploy`
+- **단계**: Secrets 유효성 검사 → API 테스트 → Admin 타입체크+빌드 → Docker 이미지 빌드 & ECR push (api:latest + admin:latest) → EC2 SSH 배포 (compose + 선택적 awslogs 오버레이 + deploy.sh) → 헬스체크
 - **필수 Secrets**:
 
 | Secret | 설명 |
@@ -523,6 +523,8 @@ com.eunhyehymn/
 | `EC2_SSH_KEY` | EC2 SSH 프라이빗 키 (PEM) |
 | `DEPLOY_ENV_FILE` | `.env` 파일 전체 내용 (DB, JWT, S3 등) |
 | `ENABLE_AWSLOGS` | CloudWatch 로그 전송 활성화 여부 (`true` 시 활성화, 미설정 시 기본 `false`) |
+
+- **수동 검증 실행**: `workflow_dispatch`로 브랜치 기준 배포 검증 가능 (`enable_awslogs` 입력)
 
 ---
 
@@ -590,6 +592,7 @@ develop push → GitHub Actions
 - `api`는 `.env` 파일에서 DB_URL, JWT_SECRET 등 환경변수 로드
 - `nginx`는 `nginx.conf`에서 `/api/v1` → `http://api:8080` 프록시
 - 기본 로깅 드라이버는 `json-file`; `ENABLE_AWSLOGS=true`일 때 `docker-compose.prod.awslogs.yml` 오버레이로 CloudWatch 로그 전송 활성화
+- `deploy.sh`는 awslogs 드라이버 미지원/재기동 실패 시 기본 로깅으로 자동 fallback 후 재시도
 
 ### 15.6 Nginx 설정 (`apps/admin/nginx.conf`)
 

@@ -140,6 +140,17 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 .\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile eunhye-staging]
 ```
 
+### 수동 실행 (권장 점검 루트)
+
+`deploy-staging.yml`은 `workflow_dispatch`를 지원합니다.
+
+- 브랜치 검증 시:
+  - GitHub Actions > `Deploy Staging` > `Run workflow`
+  - `Use workflow from`: 검증 브랜치 선택
+  - `enable_awslogs`: 기본 `false`로 실행
+- 운영 반영 시:
+  - `develop` 머지 후 push 트리거 자동 실행
+
 ### DEPLOY_ENV_FILE 내용
 
 `infra/aws/.env.example`을 참고하여 작성:
@@ -195,6 +206,8 @@ ssh -i eunhye-staging.pem ec2-user@${EC2_IP} \
 ```
 
 `ENABLE_AWSLOGS`는 기본값 `false`입니다. 기존 스테이징 인스턴스에서 Terraform(IAM/Log Group) 적용 전에 `true`로 배포하면 컨테이너 시작이 실패할 수 있으므로, 인프라 적용 이후에만 활성화하세요.
+
+참고: `deploy.sh`는 `ENABLE_AWSLOGS=true`라도 호스트가 awslogs 드라이버를 지원하지 않거나 awslogs 모드 재기동에 실패하면 기본 logging(`json-file`)으로 자동 fallback 후 재시도합니다.
 
 ## 검증
 

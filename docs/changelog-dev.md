@@ -4,6 +4,18 @@
 
 ## 2026-02-14
 
+### 스테이징 배포 안정화(2차)
+- `deploy-staging.yml` 개선
+  - `workflow_dispatch` 트리거 추가 (`enable_awslogs` 입력)
+  - `preflight-secrets` job을 선행해 필수 Secrets 누락 시 조기 실패
+- `deploy.sh` 안정화
+  - awslogs 드라이버 미지원 시 자동 fallback
+  - awslogs 모드 재기동 실패 시 기본 logging(`json-file`)으로 자동 재시도
+- 운영 문서 보강
+  - `infra/aws/README.md`에 수동 검증 실행(workflow_dispatch) 루트 추가
+  - `docs/runbook.md` 배포 절차에 운영 반영/리허설 실행 경로 분리 명시
+  - `CLAUDE.md` CI/CD 섹션 최신화
+
 ### 스테이징 실가동 준비 문서 사이클
 - 스테이징 스모크 테스트 기준 문서 추가
   - `docs/staging-smoke-checklist.md`
