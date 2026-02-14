@@ -4,6 +4,14 @@
 
 ## 2026-02-14
 
+### 스테이징 컨테이너 상태 검증 추가(18차)
+- `deploy-staging.yml`의 `Verify deployment` 단계 보강
+  - EC2 원격에서 `docker inspect`로 `eunhye-api` 상태(`running healthy`) 검증 추가
+  - `eunhye-nginx` 상태(`running`) 검증 추가
+  - 재시도 소진 시 명시적으로 배포 실패 처리
+- 효과
+  - 외부 HTTP 체크뿐 아니라 실제 컨테이너 런타임 상태까지 포함한 배포 완료 판정 가능
+
 ### 스테이징 배포 검증 강화(17차)
 - `deploy-staging.yml`의 `Verify deployment` 단계 강화
   - `/api/v1/ping` 응답 본문에서 `"ok": true`를 retry 기반으로 검증
