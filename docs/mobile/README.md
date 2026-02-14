@@ -85,9 +85,9 @@ cd apps/mobile
   - `flutter analyze`
   - `flutter test`
 
-## 7. 다음 작업 항목
+## 7. 운영 연계 체크포인트
 
-- 스테이징 환경에서 실기기 로그인/재생/동기화 스모크 테스트 수행
-- Kakao 웹 fallback(수동 토큰 입력) 가이드와 운영 체크리스트를 런북과 동기화
-- CI(`flutter analyze`, `flutter test`) 결과를 릴리즈 체크리스트에 연계
+- 스테이징 스모크 테스트는 `docs/staging-smoke-checklist.md` 기준으로 수행한다.
+- 모바일 결과(로그인/재생/동기화/Kakao fallback)는 `docs/runbook.md` 배포 기록과 함께 남긴다.
+- CI(`flutter analyze`, `flutter test`) 결과를 배포 승인 근거로 포함한다.
 

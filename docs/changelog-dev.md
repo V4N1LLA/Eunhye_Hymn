@@ -2,6 +2,28 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-14
+
+### 스테이징 실가동 준비 문서 사이클
+- 스테이징 스모크 테스트 기준 문서 추가
+  - `docs/staging-smoke-checklist.md`
+- 운영 런북에 배포 후 스모크/롤백 절차를 구체화
+  - `docs/runbook.md`
+- 기준 범위 문서 최신화
+  - `docs/current-usable-scope.md` 기준 커밋/우선 과제/선행 체크리스트 갱신
+- 개발 가이드 충돌 해소
+  - `docs/dev-guide.md`에서 Gradle 실행 기준을 wrapper(`./gradlew`)로 통일
+- 데이터 모델 문서 보완
+  - `docs/data-model.md` events 인덱스(`V7__events_admin_indexes.sql`) 반영
+- 상위 문서 동기화
+  - `README.md` (스모크 체크리스트 링크 추가)
+  - `docs/mobile/README.md` (운영 연계 체크포인트 반영)
+  - `docs/WORK_CYCLE.md`, `CLAUDE.md` 동기화
+
+### 문서 검증
+- `rg -n "Placeholder|PDF/AUDIO|PDF/MP3|소셜 토큰 입력 방식|미완료: 모바일 고도화|시스템 Gradle" docs README.md CLAUDE.md`
+- `rg -n "<<<<<<<|>>>>>>>" docs README.md CLAUDE.md`
+
 ## 2026-02-13
 
 ### 시크릿 관리 가이드 정리

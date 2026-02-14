@@ -86,11 +86,43 @@
 - `docs/mobile/README.md` 최신화 및 포맷 깨짐 복구
 - `CLAUDE.md` 진행 상태 최신화 및 포맷 깨짐 복구
 
-## 3. 다음 사이클 시작 템플릿 (작성 완료: 2026-02-13)
+## 3. 이번 사이클 기록 (2026-02-14)
+
+### 목표
+- 문서 정합성 동기화 + 스테이징 실가동 체크리스트 확정
+
+### 범위
+- 포함: 운영/배포/개발 문서 정합성 정리, 스모크 테스트 기준 확정
+- 제외: 신규 기능 개발, AWS 리소스 실제 생성/변경
+
+### 수행 작업
+1. 스테이징 스모크 테스트 체크리스트 신설
+- `docs/staging-smoke-checklist.md`
+
+2. 운영 런북 강화
+- 배포 후 스모크 테스트 수행 절차 반영
+- 롤백 절차 구체화
+- `docs/runbook.md`
+
+3. 문서 충돌 해소
+- `docs/dev-guide.md`: Gradle 정책을 wrapper 기준으로 통일
+- `docs/data-model.md`: events 인덱스(`V7__events_admin_indexes.sql`) 반영
+- `docs/current-usable-scope.md`: 기준 커밋/선행 체크리스트/우선 과제 갱신
+
+4. 문서 동기화
+- `README.md`: 스모크 체크리스트 링크 추가
+- `docs/mobile/README.md`: 운영 연계 체크포인트 반영
+- `docs/changelog-dev.md`, `CLAUDE.md` 동기화
+
+### 검증
+- `rg -n "Placeholder|PDF/AUDIO|PDF/MP3|소셜 토큰 입력 방식|미완료: 모바일 고도화|시스템 Gradle" docs README.md CLAUDE.md`
+- `rg -n "<<<<<<<|>>>>>>>" docs README.md CLAUDE.md`
+
+## 4. 다음 사이클 시작 템플릿 (작성 완료: 2026-02-14)
 
 아래 4줄을 채워 바로 시작한다.
 
-- 목표: 문서 정합성 동기화 + 스테이징 실가동 체크리스트 확정
-- 범위 제외: 신규 기능 개발 및 인프라 리소스 실제 생성/변경
-- 완료 기준: 핵심 문서(`README.md`, `CLAUDE.md`, `docs/*`)에서 기능 상태/용어/운영 절차 충돌 0건
-- 검증 명령: `rg -n "Placeholder|PDF/AUDIO|PDF/MP3|소셜 토큰 입력 방식|미완료: 모바일 고도화" docs README.md CLAUDE.md`
+- 목표: 스테이징 실가동 전환 (Terraform apply + Secrets 설정 + 첫 자동 배포 + 스모크/롤백 리허설)
+- 범위 제외: 신규 기능 개발
+- 완료 기준: `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준으로 Go/No-Go 판단 근거 확보
+- 검증 명령: `rg -n "No-Go|필수 체크리스트|스모크|롤백" docs/runbook.md docs/staging-smoke-checklist.md docs/current-usable-scope.md docs/deployment-readiness-audit.md`
