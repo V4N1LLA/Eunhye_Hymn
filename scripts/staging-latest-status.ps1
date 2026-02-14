@@ -6,7 +6,10 @@ param(
   [int]$Limit = 1,
   [switch]$Wait,
   [int]$WatchIntervalSeconds = 10,
+  [int]$MaxAgeMinutes = 0,
   [switch]$RequireSuccess,
+  [switch]$RequireDeploySuccess,
+  [switch]$RequireVerifySuccess,
   [switch]$AsMarkdown,
   [switch]$AsJson
 )
@@ -81,6 +84,10 @@ if ($Limit -lt 1) {
   throw "Limit must be >= 1"
 }
 
+if ($MaxAgeMinutes -lt 0) {
+  throw "MaxAgeMinutes must be >= 0"
+}
+
 $outputModeCount = 0
 if ($AsJson) { $outputModeCount++ }
 if ($AsMarkdown) { $outputModeCount++ }
@@ -127,6 +134,9 @@ $jobs = @($runView.jobs)
 $deployJob = $jobs | Where-Object { $_.name -eq "deploy" } | Select-Object -First 1
 $verifyStepConclusion = Get-StepConclusion -Job $deployJob -StepName "Verify deployment"
 $runDeployConclusion = if ($null -eq $deployJob) { "-" } else { $deployJob.conclusion }
+$createdAtUtc = ([DateTime]$runView.createdAt).ToUniversalTime()
+$updatedAtUtc = ([DateTime]$runView.updatedAt).ToUniversalTime()
+$runAgeMinutes = [math]::Round(((Get-Date).ToUniversalTime() - $createdAtUtc).TotalMinutes, 1)
 
 $jobTable = $jobs | ForEach-Object {
   [PSCustomObject]@{
@@ -148,8 +158,9 @@ $summary = [PSCustomObject]@{
   Conclusion = $runView.conclusion
   DeployJobConclusion = $runDeployConclusion
   VerifyStepConclusion = $verifyStepConclusion
-  CreatedAtUtc = ([DateTime]$runView.createdAt).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-  UpdatedAtUtc = ([DateTime]$runView.updatedAt).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+  RunAgeMinutes = $runAgeMinutes
+  CreatedAtUtc = $createdAtUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")
+  UpdatedAtUtc = $updatedAtUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")
   Url = $runView.url
 }
 
@@ -159,9 +170,9 @@ if ($AsJson) {
     jobs = $jobTable
   } | ConvertTo-Json -Depth 6
 } elseif ($AsMarkdown) {
-  Write-Output "| RunId | Event | Branch | HeadSha | Conclusion | Deploy | Verify | URL |"
-  Write-Output "|---|---|---|---|---|---|---|---|"
-  Write-Output "| $($summary.RunId) | $($summary.Event) | $($summary.Branch) | $($summary.HeadSha) | $($summary.Conclusion) | $($summary.DeployJobConclusion) | $($summary.VerifyStepConclusion) | $($summary.Url) |"
+  Write-Output "| RunId | Event | Branch | HeadSha | Conclusion | Deploy | Verify | AgeMin | URL |"
+  Write-Output "|---|---|---|---|---|---|---|---|---|"
+  Write-Output "| $($summary.RunId) | $($summary.Event) | $($summary.Branch) | $($summary.HeadSha) | $($summary.Conclusion) | $($summary.DeployJobConclusion) | $($summary.VerifyStepConclusion) | $($summary.RunAgeMinutes) | $($summary.Url) |"
   Write-Output ""
   Write-Output "| Job | Status | Conclusion | DurationSec |"
   Write-Output "|---|---|---|---|"
@@ -178,6 +189,18 @@ if ($AsJson) {
 
 if ($RequireSuccess -and $runView.conclusion -ne "success") {
   throw "Latest run is not successful (run_id=$runId, conclusion=$($runView.conclusion))"
+}
+
+if ($RequireDeploySuccess -and $runDeployConclusion -ne "success") {
+  throw "Deploy job did not succeed (run_id=$runId, deploy_conclusion=$runDeployConclusion)"
+}
+
+if ($RequireVerifySuccess -and $verifyStepConclusion -ne "success") {
+  throw "Verify deployment step did not succeed (run_id=$runId, verify_conclusion=$verifyStepConclusion)"
+}
+
+if ($MaxAgeMinutes -gt 0 -and $runAgeMinutes -gt $MaxAgeMinutes) {
+  throw "Latest run is too old (run_id=$runId, age_minutes=$runAgeMinutes, max_age_minutes=$MaxAgeMinutes)"
 }
 
 exit 0

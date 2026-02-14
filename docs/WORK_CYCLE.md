@@ -842,3 +842,31 @@
 
 ### 검증
 - `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Event push -RequireSuccess -AsMarkdown`
+
+## 30. 이번 사이클 기록 (2026-02-14, 27차)
+
+### 목표
+- 스테이징 수동 검수 진입 기준 강화: 최신 배포 run의 성공 여부뿐 아니라 deploy/verify 단계 성공과 실행 신선도까지 자동 게이트화
+
+### 범위
+- 포함: `staging-latest-status.ps1` 옵션 확장(`-RequireDeploySuccess`, `-RequireVerifySuccess`, `-MaxAgeMinutes`), 운영 문서 동기화
+- 제외: 배포 workflow 로직 변경, 애플리케이션 기능 코드 변경
+
+### 수행 작업
+1. 상태 확인 게이트 확장
+- `scripts/staging-latest-status.ps1`에 `-RequireDeploySuccess` 추가
+- `scripts/staging-latest-status.ps1`에 `-RequireVerifySuccess` 추가
+- `scripts/staging-latest-status.ps1`에 `-MaxAgeMinutes` 추가
+- run 요약에 `RunAgeMinutes` 필드 추가, Markdown 출력 테이블에 `AgeMin` 컬럼 추가
+
+2. 운영 문서 동기화
+- `docs/runbook.md`, `docs/staging-smoke-checklist.md`, `infra/aws/README.md`의 상태 확인 명령을 강화 옵션 기준으로 갱신
+- `-MaxAgeMinutes` 신선도 기준 사용 가이드 추가
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Event push -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120 -AsJson`
+- `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Event push -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120 -AsMarkdown`
+- `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Event push -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 1 -AsJson` (expected non-zero exit)
