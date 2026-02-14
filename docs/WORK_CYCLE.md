@@ -635,3 +635,29 @@
 
 ### 검증
 - `gh api repos/V4N1LLA/Eunhye_Hymn/contents/.github/workflows/deploy-staging.yml?ref=ci/staging-verify-container-health --jq .sha`
+
+## 22. 이번 사이클 기록 (2026-02-14, 19차)
+
+### 목표
+- 스테이징 배포 재현성 강화: `latest` 의존도를 낮추고 워크플로우 SHA 이미지로 배포/검증 일치 보장
+
+### 범위
+- 포함: compose 이미지 태그 전략 변경, deploy/env 전달 보강, 배포 후 이미지 태그 검증 추가, 문서 동기화
+- 제외: 애플리케이션 기능 코드 변경
+
+### 수행 작업
+1. 이미지 태그 전략 전환
+- `infra/aws/docker-compose.prod.yml`의 API/Admin 이미지를 `${IMAGE_TAG:-latest}`로 변경
+
+2. 배포 파이프라인 연계
+- `deploy-staging.yml`에서 `IMAGE_TAG=${{ github.sha }}`를 deploy 스크립트에 전달
+- `infra/aws/deploy.sh`가 `IMAGE_TAG`를 기본값 `latest`로 처리하고 로그에 노출
+
+3. 배포 검증 강화
+- Verify 단계에서 `docker inspect`로 `eunhye-api`, `eunhye-nginx`의 실제 이미지 태그가 `github.sha`와 일치하는지 확인
+
+4. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `gh api repos/V4N1LLA/Eunhye_Hymn/contents/.github/workflows/deploy-staging.yml?ref=ci/staging-deploy-sha-tag --jq .sha`

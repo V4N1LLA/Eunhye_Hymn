@@ -18,6 +18,7 @@ if [ -z "${AWS_REGION:-}" ]; then
 fi
 
 ENABLE_AWSLOGS="${ENABLE_AWSLOGS:-false}"
+IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 to_lower() {
   echo "$1" | tr '[:upper:]' '[:lower:]'
@@ -84,12 +85,13 @@ if is_true "${ENABLE_AWSLOGS}"; then
   fi
 fi
 
-export ECR_REGISTRY AWS_REGION ENABLE_AWSLOGS
+export ECR_REGISTRY AWS_REGION ENABLE_AWSLOGS IMAGE_TAG
 
 echo "=== Eunhye Hymn Deploy ==="
 echo "ECR Registry: ${ECR_REGISTRY}"
 echo "AWS Region:   ${AWS_REGION}"
 echo "AWS Logs:     ${ENABLE_AWSLOGS} (effective=${USE_AWSLOGS})"
+echo "Image Tag:    ${IMAGE_TAG}"
 
 # ── 1. ECR Login ─────────────────────────────────────────────
 echo "[1/4] Logging in to ECR..."
@@ -97,7 +99,7 @@ aws ecr get-login-password --region "${AWS_REGION}" | \
   docker login --username AWS --password-stdin "${ECR_REGISTRY}"
 
 # ── 2. Pull latest images ───────────────────────────────────
-echo "[2/4] Pulling latest images..."
+echo "[2/4] Pulling target images (tag=${IMAGE_TAG})..."
 docker compose "${COMPOSE_ARGS[@]}" pull
 
 # ── 3. Restart containers ───────────────────────────────────

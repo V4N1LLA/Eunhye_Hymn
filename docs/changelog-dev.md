@@ -4,6 +4,18 @@
 
 ## 2026-02-14
 
+### 스테이징 SHA 고정 배포(19차)
+- `docker-compose.prod.yml` 이미지 태그 전략 변경
+  - API/Admin 이미지를 `:latest` 고정 대신 `${IMAGE_TAG:-latest}`로 사용
+- `deploy-staging.yml` 배포 환경 변수 보강
+  - deploy 시 `IMAGE_TAG=${{ github.sha }}`를 EC2 deploy 스크립트로 전달
+- `deploy-staging.yml` 검증 보강
+  - 배포 후 `docker inspect`로 `eunhye-api`, `eunhye-nginx`의 실제 이미지 태그가 해당 SHA인지 확인
+- `infra/aws/deploy.sh` 출력/동작 정합성
+  - `IMAGE_TAG`를 기본값 `latest`로 지원하고, 배포 로그에 현재 태그를 명시
+- 효과
+  - 동시 push 상황에서도 스테이징이 항상 해당 워크플로우 SHA 이미지로 배포되어 재현성과 추적성이 향상
+
 ### 스테이징 컨테이너 상태 검증 추가(18차)
 - `deploy-staging.yml`의 `Verify deployment` 단계 보강
   - EC2 원격에서 `docker inspect`로 `eunhye-api` 상태(`running healthy`) 검증 추가
