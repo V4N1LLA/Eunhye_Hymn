@@ -38,7 +38,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function parseJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const base64 = token.split(".")[1];
-    const json = atob(base64);
+    // JWT uses base64url, but atob expects base64.
+    const normalized = base64.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(base64.length / 4) * 4, "=");
+    const json = atob(normalized);
     return JSON.parse(json);
   } catch {
     return null;
