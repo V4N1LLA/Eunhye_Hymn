@@ -170,6 +170,59 @@ jobs:
 
       - name: Verify deployment
         run: |
+          set -euo pipefail
+
+          host="${{ secrets.EC2_HOST }}"
+
+          check_ping() {
+            local url="$1"
+            local max_attempts="$2"
+            local sleep_seconds="$3"
+            local attempt
+            local body
+
+            for attempt in $(seq 1 "${max_attempts}"); do
+              body="$(curl -fsS "${url}" 2>/dev/null || true)"
+              if printf "%s" "${body}" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+                echo "Ping check passed on attempt ${attempt}"
+                return 0
+              fi
+              echo "Ping check attempt ${attempt}/${max_attempts} failed; retrying in ${sleep_seconds}s"
+              sleep "${sleep_seconds}"
+            done
+
+            echo "::error::Ping check failed after ${max_attempts} attempts (${url})"
+            return 1
+          }
+
+          check_http_status() {
+            local name="$1"
+            local url="$2"
+            local max_attempts="$3"
+            local sleep_seconds="$4"
+            local attempt
+            local code
+
+            for attempt in $(seq 1 "${max_attempts}"); do
+              code="$(curl -s -o /dev/null -w '%{http_code}' "${url}" || true)"
+              if [[ "$name" == "admin-root" && ( "${code}" == "200" || "${code}" == "301" || "${code}" == "302" ) ]]; then
+                echo "${name} check passed with HTTP ${code} on attempt ${attempt}"
+                return 0
+              fi
+              if [[ "$name" == "admin-auth-guard" && ( "${code}" == "401" || "${code}" == "403" ) ]]; then
+                echo "${name} check passed with HTTP ${code} on attempt ${attempt}"
+                return 0
+              fi
+              echo "${name} check attempt ${attempt}/${max_attempts} returned HTTP ${code}; retrying in ${sleep_seconds}s"
+              sleep "${sleep_seconds}"
+            done
+
+            echo "::error::${name} check failed after ${max_attempts} attempts (${url})"
+            return 1
+          }
+
           echo "Waiting for services to start..."
           sleep 30
-          curl -sf http://${{ secrets.EC2_HOST }}/api/v1/ping || echo "WARNING: Health check failed (services may still be starting)"
+          check_ping "http://${host}/api/v1/ping" 10 6
+          check_http_status "admin-root" "http://${host}/" 5 4
+          check_http_status "admin-auth-guard" "http://${host}/api/v1/admin/hymns" 5 4

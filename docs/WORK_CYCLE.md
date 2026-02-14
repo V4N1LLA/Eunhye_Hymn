@@ -586,3 +586,28 @@
 
 ### 검증
 - `gh api repos/V4N1LLA/Eunhye_Hymn/contents/.github/workflows/workflow-lint.yml?ref=ci/workflow-lint --jq .sha`
+
+## 20. 이번 사이클 기록 (2026-02-14, 17차)
+
+### 목표
+- 스테이징 실서비스 유사 검증 강화: 배포 완료 판정 조건을 헬스체크 단일 항목에서 핵심 경로 다중 항목으로 확장
+
+### 범위
+- 포함: `deploy-staging.yml` verify 단계 강화, 문서 동기화
+- 제외: 애플리케이션 기능 코드 변경
+
+### 수행 작업
+1. 배포 verify 단계 강화
+- `/api/v1/ping` 응답 본문 `"ok": true`를 재시도 기반으로 검증
+- Admin 루트(`/`)의 HTTP 200/301/302 응답 검증 추가
+- 보호 API(`/api/v1/admin/hymns`)가 비인증 상태에서 401/403을 반환하는지 검증 추가
+
+2. 실패 감지 정책 명확화
+- 각 검증 항목에 최대 시도 횟수/대기 간격을 부여해 일시적인 기동 지연은 허용
+- 재시도 소진 시 `::error::`로 명확히 실패 처리
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `gh api repos/V4N1LLA/Eunhye_Hymn/contents/.github/workflows/deploy-staging.yml?ref=chore/staging-smoke-verify-steps --jq .sha`
