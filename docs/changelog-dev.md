@@ -4,6 +4,15 @@
 
 ## 2026-02-14
 
+### CI workflow lint 추가(16차)
+- 신규 워크플로: `.github/workflows/workflow-lint.yml`
+  - `rhysd/actionlint`로 GitHub Actions workflow 정적 검증
+  - `bash -n infra/aws/deploy.sh`로 배포 스크립트 문법 검증
+- 트리거 범위
+  - `pull_request`/`push(develop)`에서 `.github/workflows/**`, `infra/aws/deploy.sh` 변경 시 실행
+- 효과
+  - workflow/배포 스크립트 변경이 API/Admin 경로 필터에 가려 검증 누락되는 리스크를 감소
+
 ### 스테이징 deploy 직렬화 가드(15차)
 - `deploy-staging.yml` 개선
   - `deploy` job에 GitHub Actions concurrency group(`staging-ec2-deploy`) 추가
