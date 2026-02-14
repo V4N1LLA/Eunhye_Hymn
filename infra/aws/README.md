@@ -153,6 +153,10 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 
 로컬 문법/파라미터 검증만 필요하면 `-DryRun` 옵션을 사용한다.
 
+주의:
+- `-Ref`에는 branch/tag만 사용할 수 있다 (`workflow_dispatch` 제약).
+- 특정 커밋 SHA 기준 리허설이 필요하면 임시 브랜치를 만든 뒤 해당 브랜치명을 `-Ref`로 전달한다.
+
 ### 수동 실행 (권장 점검 루트)
 
 `deploy-staging.yml`은 `workflow_dispatch`를 지원합니다.

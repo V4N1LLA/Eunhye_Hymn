@@ -4,6 +4,18 @@
 
 ## 2026-02-14
 
+### 스테이징 실가동 리허설 실행(4차)
+- 요청된 사이클 1~3 실제 수행
+  - 1) `develop` 리허설 배포 성공: run `22010284332`
+  - 2) 롤백 리허설 성공: 임시 브랜치(`tmp/staging-rollback-6fef282`) 기준 run `22010387328`
+  - 3) 최신 `develop` 재배포(복구) 성공: run `22010470389`
+- 실행 결과 문서 반영
+  - `docs/staging-rehearsal-log.md` 실행 로그 3건 추가
+  - `docs/staging-smoke-checklist.md` 실행 기록 섹션(2026-02-14) 추가
+- 스크립트/문서 보강
+  - `scripts/staging-rehearsal.ps1`: commit SHA ref 입력 시 즉시 가이드 에러 처리 (`workflow_dispatch` branch/tag 제약 명시)
+  - `docs/runbook.md`, `infra/aws/README.md`: SHA 기반 롤백 리허설 시 임시 브랜치 사용 절차 추가
+
 ### 스테이징 리허설 자동화(3차)
 - 리허설 실행 스크립트 추가
   - `scripts/staging-rehearsal.ps1`

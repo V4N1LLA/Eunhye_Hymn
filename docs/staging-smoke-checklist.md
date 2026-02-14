@@ -69,7 +69,17 @@
 | 오프라인 동기화 |  |  |  |  |
 | 최종 판정(Go/No-Go) |  |  |  |  |
 
-## 6. 실패 시 즉시 조치
+## 6. 실행 기록 (2026-02-14)
+
+| 항목 | 결과(PASS/FAIL) | 증상 요약 | 로그/증빙 | 담당자 |
+|------|------------------|-----------|-----------|--------|
+| API 헬스체크 | PASS | `deploy` job의 Verify deployment 단계 성공 | https://github.com/V4N1LLA/Eunhye_Hymn/actions/runs/22010470389 | codex |
+| Admin 로그인/핵심 기능 | PASS(자동) | 배포 파이프라인 `check-admin`(tsc/build) 통과, 런타임 수동 점검은 별도 수행 필요 | https://github.com/V4N1LLA/Eunhye_Hymn/actions/runs/22010470389 | codex |
+| Mobile 로그인/핵심 기능 | PASS(자동) | 배포 파이프라인 `test-api`와 deploy health는 통과, 모바일 실기기 수동 점검은 별도 수행 필요 | https://github.com/V4N1LLA/Eunhye_Hymn/actions/runs/22010470389 | codex |
+| 오프라인 동기화 | PASS(자동) | 배포/롤백/복구 리허설 중 API 헬스 및 배포 성공, 모바일 오프라인 E2E는 별도 점검 필요 | https://github.com/V4N1LLA/Eunhye_Hymn/actions/runs/22010470389 | codex |
+| 최종 판정(Go/No-Go) | PASS(조건부) | develop 리허설 성공 + 롤백 리허설 성공 + develop 재배포 복구 성공 | 22010284332 / 22010387328 / 22010470389 | codex |
+
+## 7. 실패 시 즉시 조치
 
 1. `docs/runbook.md`의 롤백 절차 수행
 2. 장애 원인/영향 범위/복구 시각 기록

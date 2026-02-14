@@ -182,3 +182,42 @@
 - `powershell -NoProfile -File .\\scripts\\staging-rehearsal.ps1 -DryRun -SkipPreflight` (의존성/파라미터 경로 확인용)
 - `rg -n "staging-rehearsal|staging-rehearsal-log" docs/runbook.md docs/staging-smoke-checklist.md infra/aws/README.md CLAUDE.md`
 - `rg -n "^(<<<<<<<|>>>>>>>|=======)$" scripts/staging-rehearsal.ps1 docs/staging-rehearsal-log.md docs/runbook.md docs/staging-smoke-checklist.md infra/aws/README.md docs/changelog-dev.md docs/WORK_CYCLE.md CLAUDE.md`
+
+## 7. 이번 사이클 기록 (2026-02-14, 4차)
+
+### 목표
+- 사용자 요청 기준으로 사이클 1~3(리허설 실행 → 스모크 결과 기록 → 롤백 리허설) 완료
+
+### 범위
+- 포함: 실배포 리허설 실행, 롤백 리허설/복구 실행, 결과 문서화, 스크립트 UX 보강
+- 제외: AWS 리소스 스펙 변경
+
+### 수행 작업
+1. 리허설 실행 (사이클 1)
+- `scripts/staging-rehearsal.ps1 -Ref develop -SkipPreflight`
+- run `22010284332` 성공
+
+2. 스모크 결과 기록 (사이클 2)
+- `docs/staging-rehearsal-log.md`에 실행 로그 누적
+- `docs/staging-smoke-checklist.md`에 2026-02-14 실행 기록 추가
+
+3. 롤백 리허설 + 복구 (사이클 3)
+- `workflow_dispatch`가 SHA ref를 지원하지 않아 임시 브랜치 생성 후 실행
+  - rollback run `22010387328` 성공
+  - recover run `22010470389` 성공
+- 임시 브랜치 정리
+  - `git push origin --delete tmp/staging-rollback-6fef282`
+  - `git branch -D tmp/staging-rollback-6fef282`
+
+4. 개선 반영
+- `scripts/staging-rehearsal.ps1`에 SHA ref 가드 추가(명확한 에러 메시지)
+- `docs/runbook.md`, `infra/aws/README.md`에 SHA 리허설 절차 반영
+- `docs/changelog-dev.md`, `CLAUDE.md` 동기화
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -SkipTerraformPlan` (로컬 `aws`/`terraform` 미설치로 실패 확인)
+- `powershell -NoProfile -File .\\scripts\\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -SkipPreflight`
+- `powershell -NoProfile -File .\\scripts\\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref tmp/staging-rollback-6fef282 -SkipPreflight`
+- `gh run view 22010284332 --json conclusion,jobs,url`
+- `gh run view 22010387328 --json conclusion,jobs,url`
+- `gh run view 22010470389 --json conclusion,jobs,url`
