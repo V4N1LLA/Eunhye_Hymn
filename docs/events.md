@@ -54,6 +54,8 @@
 - 필터: `eventType`, `userId`, `hymnId`, `from`, `to`
 - 페이지네이션: `page`, `size` (`limit` 하위 호환)
 - 집계: `summaryDays` 기준 최근 N일 이벤트 타입별 합계
+  - 허용 범위: `1~90` (기본값 7)
+  - 관리자 UI는 숫자 입력 + 프리셋(`1/7/30/60/90`)을 지원
 
 ### 4.3 관리자 감사 로그 CSV
 - `GET /api/v1/admin/events/export`
