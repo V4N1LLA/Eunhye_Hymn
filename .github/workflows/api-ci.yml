@@ -4,11 +4,17 @@ on:
   pull_request:
     paths:
       - "apps/api/**"
+      - ".github/workflows/api-ci.yml"
   push:
     branches:
       - develop
     paths:
       - "apps/api/**"
+      - ".github/workflows/api-ci.yml"
+
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
