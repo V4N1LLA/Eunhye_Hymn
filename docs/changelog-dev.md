@@ -4,6 +4,16 @@
 
 ## 2026-02-14
 
+### API CI 트리거/동시성 정비(23차)
+- `api-ci.yml` 트리거 보강
+  - `apps/api/**` 변경 외에 `.github/workflows/api-ci.yml` 변경 시에도 API CI가 실행되도록 path 추가
+- `api-ci.yml` 동시성 제어 추가
+  - `concurrency.group: api-ci-${{ github.ref }}`
+  - `cancel-in-progress: true`로 동일 브랜치의 이전 API CI를 자동 취소
+- 효과
+  - API CI 워크플로우 자체 수정이 검증에서 누락되는 케이스를 차단하고,
+    연속 push 시 불필요한 중복 실행을 줄여 피드백 시간을 단축
+
 ### API Gradle 캐시 안정화(22차)
 - `deploy-staging.yml`의 API 테스트 단계 캐시 전략 변경
   - `gradle/actions/setup-gradle@v3` 대신 `actions/setup-java@v4`의 `cache: gradle` 사용

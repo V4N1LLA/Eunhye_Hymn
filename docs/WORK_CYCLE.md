@@ -739,3 +739,27 @@
 ### 검증
 - `gh workflow view api-ci.yml --yaml`
 - `gh workflow view deploy-staging.yml --yaml`
+
+## 26. 이번 사이클 기록 (2026-02-14, 23차)
+
+### 목표
+- API CI 누락/중복 실행 최소화: 워크플로우 파일 변경 시 검증 누락을 막고 동일 브랜치 중복 실행을 제어
+
+### 범위
+- 포함: `api-ci.yml` path 트리거 보강, workflow-level concurrency 추가, 문서 동기화
+- 제외: API 테스트 명령/빌드 설정 변경
+
+### 수행 작업
+1. API CI 트리거 보강
+- `pull_request`/`push` path에 `.github/workflows/api-ci.yml` 추가
+- API CI 워크플로우 자체 수정 시에도 자동 검증되도록 보강
+
+2. API CI 동시성 제어 추가
+- `concurrency.group`을 `api-ci-${{ github.ref }}`로 설정
+- `cancel-in-progress: true`를 적용해 동일 브랜치의 이전 실행을 자동 취소
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `gh workflow view api-ci.yml --yaml`
