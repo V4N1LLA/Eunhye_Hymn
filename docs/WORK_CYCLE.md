@@ -468,3 +468,29 @@
 - `./gradlew.bat test --tests "com.eunhyehymn.common.util.CsvUtilsTest" --tests "com.eunhyehymn.presentation.controllers.AdminEventApiTest" --no-daemon --stacktrace` (`apps/api`)
 - `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
 - `npm run build` (`apps/admin`)
+
+## 15. 이번 사이클 기록 (2026-02-14, 12차)
+
+### 목표
+- 기준 문서 정합성 유지: 최신 `develop`/PR 이력과 사용 가능 범위 문서 일치
+
+### 범위
+- 포함: `docs/current-usable-scope.md` 기준 커밋/근거 PR/최근 변경 포인트 최신화
+- 제외: 기능 코드 변경
+
+### 수행 작업
+1. 기준 커밋/근거 PR 갱신
+- 기준 커밋을 최신 `develop` HEAD(`5b08dc0`)로 수정
+- 근거 PR 목록에 #56/#55/#54/#53 반영
+
+2. 최근 PR 변경 포인트 보강
+- #56 CSV 보안 하드닝
+- #55 비동기 export 내구성/정합성/성능/알림
+- #54 운영 지표 파이프라인
+- #53 결과 정리 배치
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md`에 문서 최신화 사이클(12차) 추가
+
+### 검증
+- `rg -n "기준 커밋|근거 PR|PR #56|PR #55|PR #54|PR #53" docs/current-usable-scope.md`
