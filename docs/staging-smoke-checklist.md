@@ -8,9 +8,13 @@
 
 - [ ] GitHub Actions 배포 워크플로가 정상 완료되었는지 확인
 - [ ] 점검 대상 커밋 SHA/배포 시각/담당자 확정
+- [ ] 자동 리허설 로그(`docs/staging-rehearsal-log.md`) 최신 행 확인
 - [ ] 관리자 계정 및 모바일 테스트 계정 준비
 - [ ] 모바일 테스트 기기(최소 1대) + 웹(Chrome) 준비
 - [ ] 로그 확인 경로 준비 (EC2 docker logs, CloudWatch)
+
+권장 실행:
+- `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>]`
 
 ## 2. API 기본 점검
 

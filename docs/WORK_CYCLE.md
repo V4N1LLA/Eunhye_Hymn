@@ -153,3 +153,32 @@
 ### 검증
 - `bash -n infra/aws/deploy.sh`
 - `rg -n "<<<<<<<|>>>>>>>" .github/workflows/deploy-staging.yml infra/aws/deploy.sh infra/aws/README.md docs/runbook.md`
+
+## 6. 이번 사이클 기록 (2026-02-14, 3차)
+
+### 목표
+- 스테이징 리허설 실행/기록 자동화로 Go/No-Go 근거 수집 시간을 단축
+
+### 범위
+- 포함: 리허설 자동 실행 스크립트 추가, 운영 문서/로그 템플릿 동기화
+- 제외: AWS 리소스 실제 생성/변경
+
+### 수행 작업
+1. 리허설 자동화 스크립트 추가
+- `scripts/staging-rehearsal.ps1`
+- preflight 실행, `deploy-staging.yml` workflow_dispatch 트리거, run 완료 대기, 결과 로그 자동 기록
+
+2. 리허설 로그 문서 추가
+- `docs/staging-rehearsal-log.md`
+- UTC 시간/브랜치/run URL/결과를 표 형식으로 누적 기록
+
+3. 운영 문서 동기화
+- `docs/runbook.md`: 자동 리허설 경로 및 로그 기록 위치 반영
+- `docs/staging-smoke-checklist.md`: 실행 전 자동 리허설 로그 확인 항목 반영
+- `infra/aws/README.md`: 스크립트 사용법 추가
+- `docs/changelog-dev.md`, `CLAUDE.md` 업데이트
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-rehearsal.ps1 -DryRun -SkipPreflight` (의존성/파라미터 경로 확인용)
+- `rg -n "staging-rehearsal|staging-rehearsal-log" docs/runbook.md docs/staging-smoke-checklist.md infra/aws/README.md CLAUDE.md`
+- `rg -n "^(<<<<<<<|>>>>>>>|=======)$" scripts/staging-rehearsal.ps1 docs/staging-rehearsal-log.md docs/runbook.md docs/staging-smoke-checklist.md infra/aws/README.md docs/changelog-dev.md docs/WORK_CYCLE.md CLAUDE.md`
