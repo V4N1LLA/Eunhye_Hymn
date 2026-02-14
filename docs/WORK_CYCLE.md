@@ -576,6 +576,7 @@
 - `.github/workflows/workflow-lint.yml` 신규 추가
 - `rhysd/actionlint`로 GitHub Actions YAML/표현식 lint 수행
 - `bash -n infra/aws/deploy.sh`로 배포 스크립트 문법 검증 수행
+- lint 기준을 통과하도록 `deploy-staging.yml`의 Docker build/push 태그 변수를 quote 처리(SC2086 대응)
 
 2. 트리거 경로 최적화
 - `.github/workflows/**` 또는 `infra/aws/deploy.sh` 변경 시에만 실행되도록 path filter 적용

@@ -8,6 +8,8 @@
 - 신규 워크플로: `.github/workflows/workflow-lint.yml`
   - `rhysd/actionlint`로 GitHub Actions workflow 정적 검증
   - `bash -n infra/aws/deploy.sh`로 배포 스크립트 문법 검증
+- lint 기준 반영
+  - `deploy-staging.yml`의 Docker build/push 명령에서 이미지 태그 변수를 quote 처리(SC2086 대응)
 - 트리거 범위
   - `pull_request`/`push(develop)`에서 `.github/workflows/**`, `infra/aws/deploy.sh` 변경 시 실행
 - 효과
