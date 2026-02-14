@@ -525,6 +525,7 @@ com.eunhyehymn/
 | `ENABLE_AWSLOGS` | CloudWatch 로그 전송 활성화 여부 (`true` 시 활성화, 미설정 시 기본 `false`) |
 
 - **수동 검증 실행**: `workflow_dispatch`로 브랜치 기준 배포 검증 가능 (`enable_awslogs` 입력)
+- **리허설 자동 실행**: `scripts/staging-rehearsal.ps1`로 preflight + workflow_dispatch + run 대기 + 로그 기록 자동화
 
 ---
 
@@ -710,6 +711,8 @@ develop push → GitHub Actions
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`
+- 스테이징 리허설 실행 로그 문서 추가
+  - `docs/staging-rehearsal-log.md`
 
 ### 미완료 (우선순위순)
 
@@ -721,13 +724,14 @@ develop push → GitHub Actions
 - 보조 스크립트:
   - `scripts/staging-preflight.ps1`
   - `scripts/staging-sync-secrets.ps1`
+  - `scripts/staging-rehearsal.ps1`
 - IAM 정책 샘플:
   - `infra/aws/terraform-deployer-iam-policy.json`
 - 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
 
 **2. 운영 문서/절차 고도화**
 - `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
-- 배포 후 스모크 테스트 항목과 점검 결과를 주기적으로 갱신
+- 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`에 주기적으로 갱신
 
 **3. 기능 백로그**
 - 감사 로그 고도화(집계 기간 커스텀, 대용량 비동기 export)

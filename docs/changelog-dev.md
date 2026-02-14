@@ -4,6 +4,17 @@
 
 ## 2026-02-14
 
+### 스테이징 리허설 자동화(3차)
+- 리허설 실행 스크립트 추가
+  - `scripts/staging-rehearsal.ps1`
+  - preflight 실행 → `deploy-staging.yml` `workflow_dispatch` 트리거 → run 완료 대기 → 결과 로그 기록 자동화
+- 리허설 이력 문서 추가
+  - `docs/staging-rehearsal-log.md`
+- 운영 문서 동기화
+  - `docs/runbook.md`, `docs/staging-smoke-checklist.md`, `infra/aws/README.md`
+  - 리허설 자동 실행 경로/증빙 문서 반영
+  - `CLAUDE.md`, `docs/WORK_CYCLE.md` 업데이트
+
 ### 스테이징 배포 안정화(2차)
 - `deploy-staging.yml` 개선
   - `workflow_dispatch` 트리거 추가 (`enable_awslogs` 입력)

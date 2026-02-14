@@ -140,6 +140,19 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 .\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile eunhye-staging]
 ```
 
+리허설 자동 실행(권장):
+
+```powershell
+.\scripts\staging-rehearsal.ps1 `
+  -Repo V4N1LLA/Eunhye_Hymn `
+  -Ref develop `
+  [-AwsProfile eunhye-staging]
+```
+
+이 스크립트는 `staging-preflight.ps1` 실행 후 `deploy-staging.yml`을 `workflow_dispatch`로 트리거하고 run 완료까지 대기한 다음 `docs/staging-rehearsal-log.md`에 결과를 기록한다.
+
+로컬 문법/파라미터 검증만 필요하면 `-DryRun` 옵션을 사용한다.
+
 ### 수동 실행 (권장 점검 루트)
 
 `deploy-staging.yml`은 `workflow_dispatch`를 지원합니다.

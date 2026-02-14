@@ -12,6 +12,7 @@
 
 ## 3. 참조 문서
 - `docs/staging-smoke-checklist.md`
+- `docs/staging-rehearsal-log.md`
 - `docs/deployment-readiness-audit.md`
 - `infra/aws/README.md`
 - `docs/SECRETS_MANAGEMENT.md`
@@ -23,6 +24,9 @@
 - [ ] 롤백 기준 버전(이전 이미지 태그) 확인
 - [ ] 사전 점검 스크립트 통과
   - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile <profile>]`
+- [ ] 배포 리허설 자동 실행(권장)
+  - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>]`
+  - 로컬 확인만 필요하면 `-DryRun` 사용
 - [ ] GitHub Actions 필수 Secrets 등록 확인
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
 - [ ] GitHub Actions 배포 워크플로 최신 성공 이력 확인
@@ -33,6 +37,7 @@
 2. GitHub Actions 배포 워크플로 실행
    - 운영 반영: `develop` push 트리거
    - 리허설/선검증: `Deploy Staging` workflow_dispatch (`enable_awslogs=false` 권장)
+   - 자동화 경로: `.\scripts\staging-rehearsal.ps1` 실행 시 preflight + workflow_dispatch + run 완료 대기 + 로그 기록을 일괄 수행
 3. EC2에서 컨테이너 상태 확인
    - `docker ps`
    - `docker logs <api_container> --tail 200`
@@ -40,7 +45,7 @@
    - `curl http://<EC2_HOST>/api/v1/ping`
 5. `docs/staging-smoke-checklist.md` 전 항목 수행
 6. 결과 기록
-   - 성공: 배포 시각, 커밋, 수행자, 체크 결과를 문서/티켓에 기록
+   - 성공: 배포 시각, 커밋, 수행자, 체크 결과를 문서/티켓에 기록 (`docs/staging-rehearsal-log.md` 포함)
    - 실패: 즉시 롤백 후 장애 대응 절차로 전환
 
 ## 6. 롤백 절차
