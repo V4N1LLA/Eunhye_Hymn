@@ -292,6 +292,31 @@ class AdminEventApiTest {
     }
 
     @Test
+    void syncCsvExportSanitizesSpreadsheetFormulaCells() throws Exception {
+        Instant now = Instant.now();
+        saveEvent(
+            UUID.randomUUID(),
+            userAId,
+            EventType.HYMN_OPENED,
+            hymnAId,
+            PartType.ALL,
+            now.minus(1, ChronoUnit.MINUTES),
+            "=SUM(1,1)"
+        );
+
+        String csv = mockMvc.perform(get("/admin/events/export")
+                .header("Authorization", "Bearer " + adminToken)
+                .param("eventType", "HYMN_OPENED")
+                .param("limit", "10"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        assertThat(csv).contains("\"'=SUM(1,1)\"");
+    }
+
+    @Test
     void adminCanCreateAndDownloadAsyncExportJob() throws Exception {
         Instant now = Instant.now();
         saveEvent(UUID.randomUUID(), userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, now.minus(2, ChronoUnit.MINUTES));
@@ -327,6 +352,42 @@ class AdminEventApiTest {
         assertThat(csv).contains("id,userId,eventType,hymnId,part,metadataJson,createdAt");
         assertThat(csv).contains("HYMN_OPENED");
         assertThat(csv).doesNotContain("NOTE_SAVED");
+    }
+
+    @Test
+    void asyncCsvExportSanitizesSpreadsheetFormulaCells() throws Exception {
+        Instant now = Instant.now();
+        saveEvent(
+            UUID.randomUUID(),
+            userAId,
+            EventType.HYMN_OPENED,
+            hymnAId,
+            PartType.ALL,
+            now.minus(1, ChronoUnit.MINUTES),
+            "@SUM(1,1)"
+        );
+
+        String createResponse = mockMvc.perform(post("/admin/events/export-jobs")
+                .header("Authorization", "Bearer " + adminToken)
+                .param("eventType", "HYMN_OPENED")
+                .param("limit", "5000"))
+            .andExpect(status().isAccepted())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        UUID jobId = UUID.fromString(objectMapper.readTree(createResponse).get("data").get("id").asText());
+        JsonNode finalState = waitForJobCompletion(jobId, adminToken);
+        assertThat(finalState.get("status").asText()).isEqualTo("COMPLETED");
+
+        String csv = mockMvc.perform(get("/admin/events/export-jobs/{jobId}/download", jobId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        assertThat(csv).contains("\"'@SUM(1,1)\"");
     }
 
     @Test
@@ -508,13 +569,25 @@ class AdminEventApiTest {
         PartType part,
         Instant createdAt
     ) {
+        saveEvent(id, userId, type, hymnId, part, createdAt, "{\"source\":\"test\"}");
+    }
+
+    private void saveEvent(
+        UUID id,
+        UUID userId,
+        EventType type,
+        UUID hymnId,
+        PartType part,
+        Instant createdAt,
+        String metadataJson
+    ) {
         eventJpaRepository.save(new EventEntity(
             id,
             userId,
             type,
             hymnId,
             part,
-            "{\"source\":\"test\"}",
+            metadataJson,
             createdAt
         ));
     }

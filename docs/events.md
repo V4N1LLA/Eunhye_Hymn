@@ -62,6 +62,7 @@
 - 관리자 권한 필요
 - 필터: `eventType`, `userId`, `hymnId`, `from`, `to`
 - 제한: `limit` (서버 상한 적용)
+- 보안: CSV 셀 값이 스프레드시트 수식(`=`, `+`, `-`, `@`)으로 해석되지 않도록 이스케이프한다.
 
 ### 4.4 관리자 감사 로그 비동기 CSV (대용량)
 - `POST /api/v1/admin/events/export-jobs`
@@ -75,6 +76,7 @@
 - `GET /api/v1/admin/events/export-jobs/{jobId}/download`
   - 완료(`COMPLETED`) 작업 CSV 다운로드
   - 미완료/실패 작업은 `409` 반환
+  - 수식 셀 이스케이프 정책은 동기 CSV와 동일하게 적용한다.
 
 ### 4.5 비동기 export 결과 정리 정책
 - 완료(`COMPLETED`) 또는 실패(`FAILED`) 상태의 작업은 스케줄러가 주기적으로 정리한다.

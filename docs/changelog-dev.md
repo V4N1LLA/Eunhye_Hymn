@@ -4,6 +4,16 @@
 
 ## 2026-02-14
 
+### CSV export 보안 하드닝(11차)
+- CSV 수식 주입 방어 추가
+  - 동기/비동기 CSV 내보내기 모두에서 수식 시작 문자열(`=`, `+`, `-`, `@`)을 이스케이프
+  - 공통 유틸 `CsvUtils.toSafeCsvCell(...)`로 통합 적용
+- 테스트 보강
+  - `CsvUtilsTest` 신규
+  - `AdminEventApiTest`에 동기/비동기 CSV 수식 주입 방어 통합 테스트 추가
+- 문서 동기화
+  - `docs/events.md` CSV 보안 정책 명시
+
 ### 비동기 export 안정화/운영 사이클(10차)
 - 내구성 복구 경로 추가
   - `EventExportJobRepository.claimQueued(...)` 도입으로 작업 실행 claim을 원자화

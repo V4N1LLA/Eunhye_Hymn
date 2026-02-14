@@ -222,6 +222,7 @@ Base URL: `/api/v1`
 - `GET /admin/events/export` 응답:
   - `Content-Type: text/csv`
   - `Content-Disposition: attachment; filename="admin-events-*.csv"`
+  - 보안: CSV 셀 값이 수식(`=`, `+`, `-`, `@`)으로 시작하면 이스케이프 처리
 
 - `POST /admin/events/export-jobs` 응답 `data` 예시:
 ```json

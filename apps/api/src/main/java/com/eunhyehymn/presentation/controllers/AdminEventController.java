@@ -5,6 +5,7 @@ import com.eunhyehymn.application.usecases.AdminListEventsUseCase;
 import com.eunhyehymn.application.usecases.GetEventExportOpsMetricsUseCase;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.common.response.ApiResponse;
+import com.eunhyehymn.common.util.CsvUtils;
 import com.eunhyehymn.domain.model.Event;
 import com.eunhyehymn.domain.model.EventExportJob;
 import com.eunhyehymn.domain.model.EventExportJobStatus;
@@ -308,11 +309,7 @@ public class AdminEventController {
     }
 
     private String csv(Object value) {
-        if (value == null) {
-            return "";
-        }
-        String raw = value.toString().replace("\"", "\"\"");
-        return "\"" + raw + "\"";
+        return CsvUtils.toSafeCsvCell(value);
     }
 
     private EventType parseEventType(String value) {

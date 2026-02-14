@@ -1,6 +1,7 @@
 package com.eunhyehymn.application.usecases;
 
 import com.eunhyehymn.common.error.ApiException;
+import com.eunhyehymn.common.util.CsvUtils;
 import com.eunhyehymn.domain.model.Event;
 import com.eunhyehymn.domain.model.EventExportJob;
 import com.eunhyehymn.domain.model.EventExportJobStatus;
@@ -189,11 +190,7 @@ public class AdminEventExportJobUseCase {
     }
 
     private String csv(Object value) {
-        if (value == null) {
-            return "";
-        }
-        String raw = value.toString().replace("\"", "\"\"");
-        return "\"" + raw + "\"";
+        return CsvUtils.toSafeCsvCell(value);
     }
 
     private int normalizeExportLimit(Integer limit) {
