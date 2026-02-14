@@ -1,55 +1,39 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-
-type SocialProvider = "GOOGLE" | "KAKAO";
 
 function isLocalDevHost(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
 export default function LoginPage() {
-  const { login, loginWithSocial } = useAuth();
+  const { loginWithAdminPassword, login } = useAuth();
   const navigate = useNavigate();
+  const host = window.location.host;
   const showDevLogin = isLocalDevHost(window.location.hostname);
 
-  const [socialProvider, setSocialProvider] = useState<SocialProvider | null>(null);
-  const [socialToken, setSocialToken] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [needsInviteCode, setNeedsInviteCode] = useState(false);
-  const [showInviteInput, setShowInviteInput] = useState(false);
-  const host = window.location.host;
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [showDevLoginForm, setShowDevLoginForm] = useState(false);
   const [displayName, setDisplayName] = useState("");
 
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const socialTokenLabel = socialProvider === "KAKAO" ? "Access Token" : "ID Token";
-  const socialTokenPlaceholder =
-    socialProvider === "KAKAO" ? "Paste Kakao Access Token (without Bearer)" : "Paste Google ID Token";
-  const socialTokenGuide =
-    socialProvider === "KAKAO"
-      ? "Kakao login requires an Access Token. Do not paste an ID Token."
-      : "Google login requires an ID Token.";
-
-  const handleSocialLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!socialProvider || !socialToken.trim()) return;
+    if (!loginId.trim() || !password) {
+      setError("아이디와 비밀번호를 입력하세요.");
+      return;
+    }
 
     setError(null);
     setLoading(true);
     try {
-      await loginWithSocial(socialProvider, socialToken.trim(), inviteCode.trim() || undefined);
+      await loginWithAdminPassword(loginId.trim(), password);
       navigate("/", { replace: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed.";
-      if (message.includes("초대코드")) {
-        setNeedsInviteCode(true);
-        setShowInviteInput(true);
-      }
-      setError(message);
+      setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -70,21 +54,12 @@ export default function LoginPage() {
         role: "ADMIN",
         displayName: displayName.trim(),
       });
-      navigate("/hymns", { replace: true });
+      navigate("/", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed.");
     } finally {
       setLoading(false);
     }
-  };
-
-  const resetSocial = () => {
-    setSocialProvider(null);
-    setSocialToken("");
-    setInviteCode("");
-    setNeedsInviteCode(false);
-    setShowInviteInput(false);
-    setError(null);
   };
 
   return (
@@ -100,100 +75,56 @@ export default function LoginPage() {
         {error && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
-            <div className="mt-1 text-xs text-red-600">
-              도움이 필요하면 <a className="underline" href="/help">도움말</a>을 확인하세요.
-            </div>
           </div>
         )}
 
-        {!socialProvider ? (
-          <div className="flex flex-col gap-3 mb-6">
-            <button
-              type="button"
-              onClick={() => setSocialProvider("GOOGLE")}
-              className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded py-2 font-medium hover:bg-gray-50"
-            >
-              <span className="text-lg">G</span>
-              Google Login
-            </button>
-            <button
-              type="button"
-              onClick={() => setSocialProvider("KAKAO")}
-              className="w-full flex items-center justify-center gap-2 bg-yellow-300 rounded py-2 font-medium hover:bg-yellow-400"
-            >
-              <span className="text-lg">K</span>
-              Kakao Login
-            </button>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label htmlFor="loginId" className="block text-sm font-medium text-slate-700 mb-1">
+              아이디
+            </label>
+            <input
+              id="loginId"
+              type="text"
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              placeholder="admin id"
+              autoComplete="username"
+              required
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
           </div>
-        ) : (
-          <form onSubmit={handleSocialLogin} className="flex flex-col gap-3 mb-6">
-            <h2 className="text-sm font-semibold text-gray-700">
-              {socialProvider === "GOOGLE" ? "Google" : "Kakao"} Login
-            </h2>
-            <div>
-              <label htmlFor="socialToken" className="block text-sm font-medium text-gray-700 mb-1">
-                {socialTokenLabel}
-              </label>
-              <textarea
-                id="socialToken"
-                value={socialToken}
-                onChange={(e) => setSocialToken(e.target.value)}
-                placeholder={socialTokenPlaceholder}
-                required
-                rows={3}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">{socialTokenGuide}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowInviteInput((v) => !v)}
-              className="text-left text-xs text-slate-500 hover:text-slate-700 underline"
-            >
-              {showInviteInput ? "초대코드 입력 숨기기" : "초대코드가 있나요? (선택) 입력하기"}
-            </button>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+              비밀번호
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="password"
+              autoComplete="current-password"
+              required
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-indigo-600 text-white rounded-lg py-2 font-semibold hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
 
-            {(showInviteInput || needsInviteCode) && (
-              <div>
-                <label htmlFor="inviteCode" className="block text-sm font-medium text-gray-700 mb-1">
-                  Invite Code
-                </label>
-                <input
-                  id="inviteCode"
-                  type="text"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  placeholder="Enter invite code"
-                  required={needsInviteCode}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <p className="mt-1 text-xs text-slate-500">
-                  신규 계정 생성이 필요할 때만 요구됩니다. 운영자 allowlist가 설정된 환경이면 초대코드 없이도 로그인될 수 있습니다.
-                </p>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 bg-indigo-600 text-white rounded-lg py-2 font-semibold hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {loading ? "Signing in..." : "Sign In"}
-              </button>
-              <button
-                type="button"
-                onClick={resetSocial}
-                className="border border-slate-300 rounded-lg px-4 py-2 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
+        <div className="mt-4 text-xs text-slate-500">
+          로그인 문제가 있으면 <Link to="/help" className="underline">도움말</Link>을 확인하세요.
+        </div>
 
         {showDevLogin && (
           <>
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 my-4">
               <div className="flex-1 h-px bg-gray-300" />
               <span className="text-xs text-gray-400">or</span>
               <div className="flex-1 h-px bg-gray-300" />
@@ -238,3 +169,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

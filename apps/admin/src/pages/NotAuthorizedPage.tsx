@@ -23,7 +23,7 @@ export default function NotAuthorizedPage() {
           <div className="font-semibold">해결 방법</div>
           <div className="mt-1 space-y-1 text-slate-600">
             <div>- 로그아웃 후 다시 로그인하세요.</div>
-            <div>- (운영자 1인 운영) 서버에서 운영자 allowlist(카카오 ID)를 설정해 ADMIN으로 발급되게 구성하세요.</div>
+            <div>- 서버의 Admin ID/PW 설정(`ADMIN_LOGIN_ID`, `ADMIN_LOGIN_PASSWORD`)을 확인하세요.</div>
           </div>
         </div>
 

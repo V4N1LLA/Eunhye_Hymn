@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  adminPasswordLogin as apiAdminPasswordLogin,
   devLogin as apiDevLogin,
   logout as apiLogout,
   socialLogin as apiSocialLogin,
@@ -29,6 +30,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   user: User | null;
   login: (req: DevLoginRequest) => Promise<void>;
+  loginWithAdminPassword: (loginId: string, password: string) => Promise<{ newUser: boolean }>;
   loginWithSocial: (provider: "GOOGLE" | "KAKAO", token: string, inviteCode?: string) => Promise<{ newUser: boolean }>;
   logout: () => Promise<void>;
 }
@@ -78,6 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokensAndUser(tokens.accessToken, tokens.refreshToken, { userId: req.userId, role: req.role });
   }, [setTokensAndUser]);
 
+  const loginWithAdminPassword = useCallback(async (loginId: string, password: string) => {
+    const result = await apiAdminPasswordLogin({ loginId, password });
+    setTokensAndUser(result.accessToken, result.refreshToken);
+    return { newUser: result.newUser };
+  }, [setTokensAndUser]);
+
   const loginWithSocial = useCallback(async (provider: "GOOGLE" | "KAKAO", token: string, inviteCode?: string) => {
     const result = await apiSocialLogin({ provider, token, inviteCode });
     setTokensAndUser(result.accessToken, result.refreshToken);
@@ -102,10 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: user !== null,
       user,
       login,
+      loginWithAdminPassword,
       loginWithSocial,
       logout,
     }),
-    [user, login, loginWithSocial, logout],
+    [user, login, loginWithAdminPassword, loginWithSocial, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
