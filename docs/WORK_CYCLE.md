@@ -126,3 +126,30 @@
 - 범위 제외: 신규 기능 개발
 - 완료 기준: `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준으로 Go/No-Go 판단 근거 확보
 - 검증 명령: `rg -n "No-Go|필수 체크리스트|스모크|롤백" docs/runbook.md docs/staging-smoke-checklist.md docs/current-usable-scope.md docs/deployment-readiness-audit.md`
+
+## 5. 이번 사이클 기록 (2026-02-14, 2차)
+
+### 목표
+- 스테이징 배포 실패 원인(awslogs 옵션) 차단 + 브랜치 단위 배포 검증 경로 확보
+
+### 범위
+- 포함: deploy workflow/스크립트 안정화, 운영 문서 동기화
+- 제외: AWS 리소스 실제 생성/변경
+
+### 수행 작업
+1. 배포 워크플로 개선
+- `workflow_dispatch` 추가 (`enable_awslogs` 입력)
+- 필수 시크릿 검증 `preflight-secrets` 선행
+
+2. 배포 스크립트 안정화
+- `infra/aws/deploy.sh`에 awslogs 드라이버 감지
+- awslogs 실패 시 기본 로깅으로 자동 fallback 재시도
+
+3. 운영 문서 동기화
+- `infra/aws/README.md`: 수동 검증 실행 경로 추가
+- `docs/runbook.md`: 운영 반영/리허설 경로 분리 명시
+- `docs/changelog-dev.md`, `CLAUDE.md` 업데이트
+
+### 검증
+- `bash -n infra/aws/deploy.sh`
+- `rg -n "<<<<<<<|>>>>>>>" .github/workflows/deploy-staging.yml infra/aws/deploy.sh infra/aws/README.md docs/runbook.md`

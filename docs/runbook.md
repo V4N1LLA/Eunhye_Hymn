@@ -31,6 +31,8 @@
 ## 5. 배포 절차
 1. `develop`에 변경 머지
 2. GitHub Actions 배포 워크플로 실행
+   - 운영 반영: `develop` push 트리거
+   - 리허설/선검증: `Deploy Staging` workflow_dispatch (`enable_awslogs=false` 권장)
 3. EC2에서 컨테이너 상태 확인
    - `docker ps`
    - `docker logs <api_container> --tail 200`
