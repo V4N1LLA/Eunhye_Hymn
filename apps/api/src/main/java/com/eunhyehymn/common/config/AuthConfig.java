@@ -17,12 +17,25 @@ import com.eunhyehymn.infrastructure.security.JwtTokenService;
 import com.eunhyehymn.infrastructure.security.Sha256TokenHashService;
 import com.eunhyehymn.infrastructure.security.SocialTokenVerifierImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class AuthConfig {
+    private static Set<String> splitCsv(String csv) {
+        if (csv == null || csv.isBlank()) {
+            return Set.of();
+        }
+        return Arrays.stream(csv.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isBlank())
+            .collect(Collectors.toUnmodifiableSet());
+    }
+
     @Bean
     JwtService jwtService(
         ObjectMapper objectMapper,
@@ -106,7 +119,10 @@ public class AuthConfig {
         RefreshTokenRepository refreshTokenRepository,
         TokenService tokenService,
         TokenHashService tokenHashService,
-        @Value("${security.jwt.refresh-token-ttl-seconds}") long refreshTokenTtlSeconds
+        @Value("${security.jwt.refresh-token-ttl-seconds}") long refreshTokenTtlSeconds,
+        @Value("${security.admin.emails:}") String adminEmails,
+        @Value("${security.admin.kakao-subjects:}") String adminKakaoSubjects,
+        @Value("${security.admin.enforce-admin-only:false}") boolean enforceAdminOnly
     ) {
         return new SocialLoginUseCase(
             socialTokenVerifier,
@@ -116,7 +132,10 @@ public class AuthConfig {
             refreshTokenRepository,
             tokenService,
             tokenHashService,
-            refreshTokenTtlSeconds
+            refreshTokenTtlSeconds,
+            splitCsv(adminEmails).stream().map(s -> s.toLowerCase()).collect(Collectors.toUnmodifiableSet()),
+            splitCsv(adminKakaoSubjects),
+            enforceAdminOnly
         );
     }
 }

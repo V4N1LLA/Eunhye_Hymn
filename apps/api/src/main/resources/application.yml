@@ -34,6 +34,11 @@ security:
     refresh-token-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS}
   invite:
     code: ${INVITE_CODE}
+  admin:
+    # Comma-separated lists. If enforce-admin-only=true, only allowlisted operators can log in.
+    emails: ${ADMIN_EMAILS:}
+    kakao-subjects: ${ADMIN_KAKAO_SUBJECTS:}
+    enforce-admin-only: ${ADMIN_ENFORCE_ADMIN_ONLY:false}
   social:
     google:
       client-id: ${GOOGLE_CLIENT_ID:}
