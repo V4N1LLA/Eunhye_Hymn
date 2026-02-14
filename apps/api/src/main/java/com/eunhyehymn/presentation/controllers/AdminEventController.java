@@ -2,6 +2,7 @@ package com.eunhyehymn.presentation.controllers;
 
 import com.eunhyehymn.application.usecases.AdminEventExportJobUseCase;
 import com.eunhyehymn.application.usecases.AdminListEventsUseCase;
+import com.eunhyehymn.application.usecases.GetEventExportOpsMetricsUseCase;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.common.response.ApiResponse;
 import com.eunhyehymn.domain.model.Event;
@@ -36,15 +37,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminEventController {
     private final AdminListEventsUseCase adminListEventsUseCase;
     private final AdminEventExportJobUseCase adminEventExportJobUseCase;
+    private final GetEventExportOpsMetricsUseCase getEventExportOpsMetricsUseCase;
     private final TaskExecutor eventExportTaskExecutor;
 
     public AdminEventController(
         AdminListEventsUseCase adminListEventsUseCase,
         AdminEventExportJobUseCase adminEventExportJobUseCase,
+        GetEventExportOpsMetricsUseCase getEventExportOpsMetricsUseCase,
         @Qualifier("eventExportTaskExecutor") TaskExecutor eventExportTaskExecutor
     ) {
         this.adminListEventsUseCase = adminListEventsUseCase;
         this.adminEventExportJobUseCase = adminEventExportJobUseCase;
+        this.getEventExportOpsMetricsUseCase = getEventExportOpsMetricsUseCase;
         this.eventExportTaskExecutor = eventExportTaskExecutor;
     }
 
@@ -152,6 +156,14 @@ public class AdminEventController {
         return new ResponseEntity<>(result.csvContent(), headers, HttpStatus.OK);
     }
 
+    @GetMapping("/export-jobs/metrics")
+    public ApiResponse<EventExportJobOpsMetricsResponse> getExportJobOpsMetrics(
+        @RequestParam(required = false) Integer days
+    ) {
+        GetEventExportOpsMetricsUseCase.Result metrics = getEventExportOpsMetricsUseCase.execute(days);
+        return ApiResponse.success(toExportJobOpsMetricsResponse(metrics));
+    }
+
     @GetMapping("/export")
     public ResponseEntity<String> exportCsv(
         @RequestParam(required = false) String eventType,
@@ -199,6 +211,31 @@ public class AdminEventController {
             statusUrl,
             downloadUrl,
             job.status() == EventExportJobStatus.COMPLETED
+        );
+    }
+
+    private EventExportJobOpsMetricsResponse toExportJobOpsMetricsResponse(GetEventExportOpsMetricsUseCase.Result metrics) {
+        return new EventExportJobOpsMetricsResponse(
+            metrics.windowDays(),
+            metrics.fromInclusive(),
+            metrics.toExclusive(),
+            new EventExportJobOpsMetricsJobResponse(
+                metrics.jobs().total(),
+                metrics.jobs().queued(),
+                metrics.jobs().running(),
+                metrics.jobs().completed(),
+                metrics.jobs().failed(),
+                metrics.jobs().failureRatePercent()
+            ),
+            new EventExportJobOpsMetricsProcessingResponse(
+                metrics.processing().measuredJobs(),
+                metrics.processing().averageSeconds(),
+                metrics.processing().p95Seconds()
+            ),
+            new EventExportJobOpsMetricsCleanupResponse(
+                metrics.cleanup().runCount(),
+                metrics.cleanup().deletedJobs()
+            )
         );
     }
 
@@ -367,6 +404,39 @@ public class AdminEventController {
         String statusUrl,
         String downloadUrl,
         boolean downloadable
+    ) {
+    }
+
+    public record EventExportJobOpsMetricsResponse(
+        int windowDays,
+        Instant fromInclusive,
+        Instant toExclusive,
+        EventExportJobOpsMetricsJobResponse jobs,
+        EventExportJobOpsMetricsProcessingResponse processing,
+        EventExportJobOpsMetricsCleanupResponse cleanup
+    ) {
+    }
+
+    public record EventExportJobOpsMetricsJobResponse(
+        long total,
+        long queued,
+        long running,
+        long completed,
+        long failed,
+        double failureRatePercent
+    ) {
+    }
+
+    public record EventExportJobOpsMetricsProcessingResponse(
+        int measuredJobs,
+        double averageSeconds,
+        double p95Seconds
+    ) {
+    }
+
+    public record EventExportJobOpsMetricsCleanupResponse(
+        long runCount,
+        long deletedJobs
     ) {
     }
 

@@ -98,6 +98,29 @@ export interface AdminEventExportJob {
   downloadable: boolean;
 }
 
+export interface AdminEventExportOpsMetrics {
+  windowDays: number;
+  fromInclusive: string;
+  toExclusive: string;
+  jobs: {
+    total: number;
+    queued: number;
+    running: number;
+    completed: number;
+    failed: number;
+    failureRatePercent: number;
+  };
+  processing: {
+    measuredJobs: number;
+    averageSeconds: number;
+    p95Seconds: number;
+  };
+  cleanup: {
+    runCount: number;
+    deletedJobs: number;
+  };
+}
+
 export interface CreateAdminEventExportJobParams {
   eventType?: EventType;
   userId?: string;
@@ -155,6 +178,16 @@ export function createAdminEventExportJob(
 
 export function getAdminEventExportJob(jobId: string): Promise<AdminEventExportJob> {
   return apiGet<AdminEventExportJob>(`/admin/events/export-jobs/${jobId}`);
+}
+
+export function getAdminEventExportOpsMetrics(days?: number): Promise<AdminEventExportOpsMetrics> {
+  const query = new URLSearchParams();
+  if (days != null) {
+    query.set("days", String(days));
+  }
+  const suffix = query.toString();
+  const path = suffix ? `/admin/events/export-jobs/metrics?${suffix}` : "/admin/events/export-jobs/metrics";
+  return apiGet<AdminEventExportOpsMetrics>(path);
 }
 
 export async function downloadAdminEventExportJobCsv(jobId: string): Promise<ExportAdminEventsCsvResult> {

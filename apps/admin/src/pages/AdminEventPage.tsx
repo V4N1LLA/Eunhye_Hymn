@@ -3,8 +3,10 @@ import {
   createAdminEventExportJob,
   downloadAdminEventExportJobCsv,
   exportAdminEventsCsv,
+  getAdminEventExportOpsMetrics,
   getAdminEventExportJob,
   type AdminEventExportJob,
+  type AdminEventExportOpsMetrics,
   listAdminEvents,
   type AdminEventItem,
   type AdminEventSummary,
@@ -19,7 +21,7 @@ const EVENT_TYPE_OPTIONS: Array<{ label: string; value: "all" | EventType }> = [
   { label: "즐겨찾기", value: "FAVORITE_TOGGLED" },
 ];
 
-const SUMMARY_DAY_PRESETS = [1, 7, 30, 60, 90];
+const DAY_PRESETS = [1, 7, 30, 60, 90];
 const MIN_SUMMARY_DAYS = 1;
 const MAX_SUMMARY_DAYS = 90;
 const SIZE_OPTIONS = [20, 50, 100, 200];
@@ -56,6 +58,10 @@ function clampSummaryDays(days: number): number {
   return Math.min(Math.max(days, MIN_SUMMARY_DAYS), MAX_SUMMARY_DAYS);
 }
 
+function formatSeconds(value: number): string {
+  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}s`;
+}
+
 function formatAsyncJobStatus(status: AdminEventExportJob["status"]): string {
   if (status === "QUEUED") {
     return "대기 중";
@@ -76,6 +82,7 @@ export default function AdminEventPage() {
   const [fromLocal, setFromLocal] = useState("");
   const [toLocal, setToLocal] = useState("");
   const [summaryDays, setSummaryDays] = useState(7);
+  const [opsMetricsDays, setOpsMetricsDays] = useState(7);
   const [size, setSize] = useState(50);
   const [page, setPage] = useState(1);
 
@@ -94,6 +101,8 @@ export default function AdminEventPage() {
   const [creatingAsyncJob, setCreatingAsyncJob] = useState(false);
   const [downloadingAsyncJob, setDownloadingAsyncJob] = useState(false);
   const [asyncJob, setAsyncJob] = useState<AdminEventExportJob | null>(null);
+  const [opsMetrics, setOpsMetrics] = useState<AdminEventExportOpsMetrics | null>(null);
+  const [opsMetricsLoading, setOpsMetricsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isSummaryWindowFromDateFilter = Boolean(fromLocal || toLocal);
 
@@ -128,10 +137,27 @@ export default function AdminEventPage() {
     }
   };
 
+  const fetchOpsMetrics = async (days: number) => {
+    setOpsMetricsLoading(true);
+    try {
+      const data = await getAdminEventExportOpsMetrics(days);
+      setOpsMetrics(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "운영 지표를 불러오지 못했습니다.");
+    } finally {
+      setOpsMetricsLoading(false);
+    }
+  };
+
   useEffect(() => {
     void fetchEvents(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
+
+  useEffect(() => {
+    void fetchOpsMetrics(opsMetricsDays);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opsMetricsDays]);
 
   useEffect(() => {
     if (!asyncJob || (asyncJob.status !== "QUEUED" && asyncJob.status !== "RUNNING")) {
@@ -235,6 +261,73 @@ export default function AdminEventPage() {
     <div>
       <h1 className="text-2xl font-bold mb-6">감사 로그/분석</h1>
 
+      <div className="bg-white rounded-lg shadow p-4 mb-4 border border-indigo-100">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Async Export Ops Metrics</h2>
+            {opsMetrics && (
+              <p className="text-xs text-gray-500 mt-1">
+                {formatDateTime(opsMetrics.fromInclusive)} ~ {formatDateTime(opsMetrics.toExclusive)}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {DAY_PRESETS.map((days) => (
+              <button
+                key={days}
+                type="button"
+                onClick={() => setOpsMetricsDays(days)}
+                className={`px-2 py-1 text-xs rounded border ${
+                  opsMetricsDays === days
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {`${days}d`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {opsMetricsLoading && <p className="text-sm text-gray-500 mt-3">Loading metrics...</p>}
+
+        {!opsMetricsLoading && opsMetrics && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+            <div className="rounded border border-gray-200 px-3 py-2">
+              <p className="text-xs text-gray-500">Total Jobs</p>
+              <p className="text-xl font-semibold text-gray-900">{opsMetrics.jobs.total.toLocaleString("ko-KR")}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                completed {opsMetrics.jobs.completed.toLocaleString("ko-KR")} / failed{" "}
+                {opsMetrics.jobs.failed.toLocaleString("ko-KR")}
+              </p>
+            </div>
+            <div className="rounded border border-gray-200 px-3 py-2">
+              <p className="text-xs text-gray-500">Failure Rate</p>
+              <p className="text-xl font-semibold text-rose-600">{opsMetrics.jobs.failureRatePercent.toFixed(2)}%</p>
+              <p className="text-xs text-gray-500 mt-1">
+                queued {opsMetrics.jobs.queued.toLocaleString("ko-KR")} / running{" "}
+                {opsMetrics.jobs.running.toLocaleString("ko-KR")}
+              </p>
+            </div>
+            <div className="rounded border border-gray-200 px-3 py-2">
+              <p className="text-xs text-gray-500">Processing Time</p>
+              <p className="text-xl font-semibold text-gray-900">{formatSeconds(opsMetrics.processing.averageSeconds)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                p95 {formatSeconds(opsMetrics.processing.p95Seconds)} / sample{" "}
+                {opsMetrics.processing.measuredJobs.toLocaleString("ko-KR")}
+              </p>
+            </div>
+            <div className="rounded border border-gray-200 px-3 py-2">
+              <p className="text-xs text-gray-500">Cleanup Volume</p>
+              <p className="text-xl font-semibold text-emerald-700">
+                {opsMetrics.cleanup.deletedJobs.toLocaleString("ko-KR")}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">runs {opsMetrics.cleanup.runCount.toLocaleString("ko-KR")}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-4 mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <select
@@ -307,7 +400,7 @@ export default function AdminEventPage() {
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-xs text-gray-500">집계 기간 프리셋</span>
-          {SUMMARY_DAY_PRESETS.map((days) => (
+          {DAY_PRESETS.map((days) => (
             <button
               key={days}
               type="button"

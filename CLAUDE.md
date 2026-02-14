@@ -20,7 +20,7 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (28 UseCase)
+│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (29 UseCase)
 │   │   └── Dockerfile    # Multi-stage (JDK build → JRE run + curl for healthcheck)
 │   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 8페이지 완료
 │   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
@@ -160,7 +160,7 @@ com.eunhyehymn/
 │   └── repository/     # Repository 인터페이스
 ├── application/
 │   ├── ports/          # 외부 서비스 인터페이스 (SocialTokenVerifier)
-│   └── usecases/       # 비즈니스 로직 Use Cases (28개)
+│   └── usecases/       # 비즈니스 로직 Use Cases (29개)
 ├── presentation/
 │   ├── controllers/    # REST 컨트롤러 (11개)
 │   └── dto/            # Request/Response DTOs
@@ -266,6 +266,7 @@ com.eunhyehymn/
 | POST | `/admin/events/export-jobs` | ADMIN | 비동기 대용량 CSV 작업 생성 (202 Accepted) |
 | GET | `/admin/events/export-jobs/{jobId}` | ADMIN | 비동기 CSV 작업 상태 조회 |
 | GET | `/admin/events/export-jobs/{jobId}/download` | ADMIN | 완료된 비동기 CSV 다운로드 |
+| GET | `/admin/events/export-jobs/metrics` | ADMIN | 비동기 export 운영 지표(실패율/처리시간/정리량) 조회 |
 
 ### 7.8 사용자 개인 (`MeController`)
 
@@ -293,7 +294,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (28개)
+## 8. Use Cases (29개)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -321,6 +322,7 @@ com.eunhyehymn/
 | `AdminListEventsUseCase` | `execute(query)` | 관리자 이벤트 로그 조회 + 이벤트 타입 집계 |
 | `AdminEventExportJobUseCase` | `create/get/process/getDownload` | 관리자 비동기 대용량 CSV 작업 생성/상태/처리/다운로드 |
 | `CleanupEventExportJobsUseCase` | `cleanup(now)` | 완료/실패 비동기 export 작업 보관기한 정리 |
+| `GetEventExportOpsMetricsUseCase` | `execute(windowDays)` | 비동기 export 운영 지표(실패율/처리시간/정리량) 집계 |
 | `AdminCreateInviteCodeUseCase` | `create(code, createdBy, ...)` | 초대코드 생성 (중복 검사) |
 | `AdminListInviteCodesUseCase` | `listAll()` | 전체 초대코드 목록 |
 | `AdminRevokeInviteCodeUseCase` | `revoke(code)` | 초대코드 비활성화 (enabled=false) |
@@ -342,6 +344,7 @@ com.eunhyehymn/
 | `V6__invite_codes.sql` | invite_codes 테이블 생성 (code PK, created_by FK, max_uses, used_count, enabled, expires_at) |
 | `V7__events_admin_indexes.sql` | 관리자 이벤트 조회/CSV 최적화 인덱스 3개 추가 |
 | `V8__event_export_jobs.sql` | 비동기 대용량 CSV 작업 테이블(event_export_jobs) 추가 |
+| `V9__event_export_job_cleanup_runs.sql` | 비동기 export 정리 실행 이력 테이블(event_export_job_cleanup_runs) 추가 |
 
 ### 주요 인덱스
 - `idx_refresh_tokens_user_id` ON refresh_tokens(user_id)
@@ -409,12 +412,13 @@ com.eunhyehymn/
 | `GetHistoryUseCaseTest` | 히스토리 Use Case 단위 |
 | `CleanupEventExportJobsUseCaseTest` | 비동기 export 정리 Use Case 단위 |
 | `CleanupEventExportJobsUseCaseIntegrationTest` | 비동기 export 정리 정책 통합 |
+| `GetEventExportOpsMetricsUseCaseTest` | 비동기 export 운영 지표 Use Case 단위 |
 | `AdminUserApiTest` | 사용자 관리 API (목록, 역할/상태 변경, 권한 검사) |
 | `AdminEventApiTest` | 관리자 이벤트 API (로그 조회, 집계, 페이지네이션, 동기/비동기 CSV export, 접근 제어 검증) |
 | `AdminInviteCodeApiTest` | 초대코드 관리 API (생성, 목록, 비활성화, 검증) |
 
 - **테스트 DB**: H2 인메모리 (test 프로필)
-- **전체 테스트 통과** 확인 (2026-02-13 기준)
+- **전체 테스트 통과** 확인 (2026-02-14 기준)
 
 ---
 
@@ -658,7 +662,7 @@ develop push → GitHub Actions
 
 ### 완료
 
-**백엔드 API (28 UseCase, 11 Controller)**
+**백엔드 API (29 UseCase, 11 Controller)**
 - 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
 - S3 에셋 관리 (presign/confirm/삭제)
 - JWT 인증 + 소셜 로그인 (Google/Kakao) + 토큰 회전
@@ -666,15 +670,16 @@ develop push → GitHub Actions
 - 사용자 관리 (역할/상태 변경)
 - 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
 - 비동기 export 결과 정리 배치 (완료/실패 작업 기본 7일 보관 후 정리)
-- DB 스키마 Flyway 마이그레이션 (V1~V8)
-- 테스트 14개 파일 전체 통과 (SocialLoginApiTest 포함)
+- 비동기 export 운영 지표 API (`/admin/events/export-jobs/metrics`) + cleanup 실행 이력 기록
+- DB 스키마 Flyway 마이그레이션 (V1~V9)
+- 테스트 15개 파일 전체 통과 (SocialLoginApiTest 포함)
 
 **Admin 프론트엔드 (8페이지)**
 - 찬양 목록/생성/수정/삭제 + 검색/필터 + 활성화 토글
 - 에셋 업로드 3단계 (presign/upload/confirm) + 삭제
 - 사용자 관리 (역할/상태 변경, 검색/필터)
 - 초대코드 관리 (생성/비활성화/만료일 설정)
-- 감사 로그/분석 화면 (`GET /admin/events`) - 필터/페이지네이션 조회 + 집계 기간(1~90일) 커스텀 + 동기 CSV 내보내기 + 비동기 대용량 CSV 작업/다운로드
+- 감사 로그/분석 화면 (`GET /admin/events`) - 필터/페이지네이션 조회 + 집계 기간(1~90일) 커스텀 + 동기 CSV 내보내기 + 비동기 대용량 CSV 작업/다운로드 + 운영 지표 카드(실패율/처리시간/정리량)
 - 소셜 로그인 UI (Google/Kakao) + 초대코드 입력 플로우
 - Access Token 자동 갱신 (401 → refresh → 재시도, mutex 패턴)
 - 인증 컨텍스트 (`loginWithSocial`, `setTokensAndUser`), 공통 API 클라이언트, 사이드바 레이아웃
@@ -753,7 +758,8 @@ develop push → GitHub Actions
 - 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`에 주기적으로 갱신
 
 **3. 기능 백로그**
-- 비동기 export 운영 지표(실패율/처리시간/정리량) 정례화
+- 비동기 export 운영 지표(실패율/처리시간/정리량) 정례화 완료 (2026-02-14)
+- 후속: 지표 임계치 기반 알림/대시보드 연동 설계
 
 **4. 모바일 배포 패키징**
 - 현재 저장소 기준 실행은 `flutter run -d chrome` 중심

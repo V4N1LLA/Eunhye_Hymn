@@ -4,6 +4,22 @@
 
 ## 2026-02-14
 
+### 비동기 export 운영 지표 정례화(9차)
+- 백엔드 운영 지표 API 추가
+  - `GET /api/v1/admin/events/export-jobs/metrics`
+  - 기간(`days`, 1~90일) 기준으로 실패율/처리시간/정리량 집계 반환
+- 정리량 집계 이력 저장 추가
+  - `V9__event_export_job_cleanup_runs.sql`
+  - 스케줄러 실행마다 `event_export_job_cleanup_runs`에 삭제량/보관일수 기록
+- 관리자 UI 반영
+  - `apps/admin/src/pages/AdminEventPage.tsx`에 운영 지표 카드(작업량/실패율/평균·p95 처리시간/정리량) 추가
+  - `apps/admin/src/api/adminEvents.ts`에 운영 지표 API 클라이언트 추가
+- 테스트 보강
+  - `GetEventExportOpsMetricsUseCaseTest` 신규 추가
+  - `AdminEventApiTest`에 운영 지표 엔드포인트 통합 테스트 추가
+- 문서 동기화
+  - `docs/events.md`, `docs/api-contract.md`, `docs/current-usable-scope.md`, `docs/WORK_CYCLE.md`, `CLAUDE.md`
+
 ### 비동기 export 결과 정리 배치(8차)
 - 백엔드 정리 정책 추가
   - `CleanupEventExportJobsUseCase` 추가 (완료/실패 작업 보관 기한 기준 삭제)

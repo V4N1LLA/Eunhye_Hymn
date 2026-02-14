@@ -30,6 +30,13 @@ public class EventExportJobRepositoryAdapter implements EventExportJobRepository
     }
 
     @Override
+    public List<MetricsRow> findMetricsRows(Instant fromInclusive, Instant toExclusive) {
+        return jpaRepository.findMetricsRows(fromInclusive, toExclusive).stream()
+            .map(row -> new MetricsRow(row.getStatus(), row.getStartedAt(), row.getCompletedAt()))
+            .toList();
+    }
+
+    @Override
     public long deleteCompletedOrFailedBefore(Instant completedBeforeExclusive) {
         return jpaRepository.deleteByStatusInAndCompletedAtBefore(
             List.of(EventExportJobStatus.COMPLETED, EventExportJobStatus.FAILED),

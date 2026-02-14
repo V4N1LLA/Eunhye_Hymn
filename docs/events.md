@@ -85,6 +85,16 @@
   - `EVENT_EXPORT_JOB_CLEANUP_CRON` (기본 `0 15 3 * * *`)
   - `EVENT_EXPORT_JOB_CLEANUP_ZONE` (기본 `UTC`)
 
+### 4.6 비동기 export 운영 지표
+- `GET /api/v1/admin/events/export-jobs/metrics`
+- 관리자 권한 필요
+- 쿼리: `days` (`1~90`, 기본 `7`)
+- 응답 핵심 항목
+  - `jobs`: 전체 작업 수, 상태별 카운트, 실패율
+  - `processing`: 측정 가능 작업 기준 평균/95퍼센타일 처리시간(초)
+  - `cleanup`: 정리 스케줄 실행 횟수와 삭제량
+- `cleanup` 지표는 `event_export_job_cleanup_runs` 실행 이력 테이블을 기반으로 계산한다.
+
 ## 5. 인덱스/성능 메모
 - 관리자 조회 패턴 최적화를 위해 아래 인덱스를 사용한다.
   - `idx_events_user_created` (`user_id`, `created_at`) - 기존

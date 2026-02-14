@@ -170,6 +170,7 @@ Base URL: `/api/v1`
 - `POST /admin/events/export-jobs` (비동기 대용량 CSV 작업 생성, 202 Accepted)
 - `GET /admin/events/export-jobs/{jobId}` (작업 상태 조회)
 - `GET /admin/events/export-jobs/{jobId}/download` (완료 작업 다운로드)
+- `GET /admin/events/export-jobs/metrics` (비동기 export 운영 지표)
 - 지원 쿼리:
   - `eventType`: `HYMN_OPENED` | `PART_PLAYED` | `NOTE_SAVED` | `FAVORITE_TOGGLED`
   - `userId`, `hymnId`: UUID
@@ -178,6 +179,7 @@ Base URL: `/api/v1`
   - `size`: 페이지 크기 (기본 50, 최대 200)
   - `limit`: 하위 호환 조회 개수 파라미터(미지정 시 `page/size` 사용)
   - `summaryDays`: 최근 집계 일수 (기본 7, 최대 90)
+  - `days`: 운영 지표 집계 일수 (기본 7, 최대 90, `GET /admin/events/export-jobs/metrics` 전용)
 - 응답 `data` 예시:
 ```json
 {
@@ -233,6 +235,32 @@ Base URL: `/api/v1`
   "statusUrl": "/admin/events/export-jobs/job-uuid",
   "downloadUrl": "/admin/events/export-jobs/job-uuid/download",
   "downloadable": false
+}
+```
+
+- `GET /admin/events/export-jobs/metrics` 응답 `data` 예시:
+```json
+{
+  "windowDays": 7,
+  "fromInclusive": "2026-02-07T05:00:00Z",
+  "toExclusive": "2026-02-14T05:00:00Z",
+  "jobs": {
+    "total": 24,
+    "queued": 1,
+    "running": 0,
+    "completed": 21,
+    "failed": 2,
+    "failureRatePercent": 8.7
+  },
+  "processing": {
+    "measuredJobs": 23,
+    "averageSeconds": 14.8,
+    "p95Seconds": 39.0
+  },
+  "cleanup": {
+    "runCount": 7,
+    "deletedJobs": 43
+  }
 }
 ```
 
