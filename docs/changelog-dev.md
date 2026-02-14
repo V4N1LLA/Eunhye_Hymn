@@ -4,6 +4,14 @@
 
 ## 2026-02-14
 
+### 스테이징 배포 검증 강화(17차)
+- `deploy-staging.yml`의 `Verify deployment` 단계 강화
+  - `/api/v1/ping` 응답 본문에서 `"ok": true`를 retry 기반으로 검증
+  - Admin 루트(`/`)의 HTTP 상태(200/301/302) 검증 추가
+  - 인증 보호 API(`/api/v1/admin/hymns`)가 401/403을 반환하는지 검증 추가
+- 효과
+  - 배포 완료 판정 시 헬스체크뿐 아니라 Admin 라우팅/인증 가드까지 자동 확인 가능
+
 ### CI workflow lint 추가(16차)
 - 신규 워크플로: `.github/workflows/workflow-lint.yml`
   - `rhysd/actionlint`로 GitHub Actions workflow 정적 검증
