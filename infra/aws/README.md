@@ -60,6 +60,14 @@ aws ec2 create-key-pair \
 # Linux/Mac: chmod 400 eunhye-staging.pem
 ```
 
+### 4. Terraform 실행 IAM 권한 확인
+
+현재 Terraform은 VPC/EC2/RDS/S3/ECR/CloudWatch/SNS/IAM 리소스를 생성한다.
+`terraform plan` 단계에서 `UnauthorizedOperation`이 발생하면 먼저 IAM 정책을 보강해야 한다.
+
+- 정책 샘플: `infra/aws/terraform-deployer-iam-policy.json`
+- 빠른 점검: `.\scripts\staging-preflight.ps1`
+
 ## 인프라 배포
 
 ### 1. 변수 설정
@@ -106,6 +114,31 @@ GitHub 리포지토리 → Settings → Secrets and variables → Actions에 등
 | `EC2_SSH_KEY` | `eunhye-staging.pem` 파일 내용 | 키페어 생성 시 |
 | `DEPLOY_ENV_FILE` | `.env` 파일 전체 내용 (아래 참조) | 직접 작성 |
 | `ENABLE_AWSLOGS` | `true` 또는 빈값(기본) | 선택 (Terraform 적용 후만 `true`) |
+
+### Secrets 자동 동기화 스크립트 (권장)
+
+Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기화할 수 있다.
+
+```powershell
+.\scripts\staging-sync-secrets.ps1 `
+  -Repo V4N1LLA/Eunhye_Hymn `
+  -TerraformDir infra/aws `
+  -Ec2Host <terraform output ec2_public_ip> `
+  -Ec2SshKeyPath <eunhye-staging.pem 경로> `
+  -DbPassword <terraform.tfvars의 db_password 값> `
+  -JwtSecret <terraform.tfvars의 jwt_secret 값> `
+  -InviteCode <terraform.tfvars의 invite_code 값>
+```
+
+옵션:
+- `-AwsProfile <profile>`: 기본 프로필이 아닌 AWS CLI 프로필 사용
+- `-AwsAccessKeyId`/`-AwsSecretAccessKey`/`-AwsRegion`: AWS 자격증명/리전 직접 지정
+
+사전 점검:
+
+```powershell
+.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile eunhye-staging]
+```
 
 ### DEPLOY_ENV_FILE 내용
 
@@ -215,6 +248,7 @@ infra/aws/
 ├── docker-compose.prod.yml    # 프로덕션 컨테이너 구성
 ├── docker-compose.prod.awslogs.yml # CloudWatch 로그 오버레이(옵션)
 ├── deploy.sh                  # EC2 배포 스크립트
+├── terraform-deployer-iam-policy.json # Terraform 실행 IAM 정책 샘플
 ├── .env.example               # 환경변수 예시
 ├── .gitignore                 # tfstate, .terraform 제외
 └── README.md                  # 이 파일

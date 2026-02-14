@@ -26,6 +26,16 @@
 
 ## 2026-02-13
 
+### 스테이징 실가동 전환 준비(진행중)
+- 스테이징 사전 점검 스크립트 추가
+  - `scripts/staging-preflight.ps1`
+- Terraform 출력 기반 시크릿 동기화 스크립트 추가
+  - `scripts/staging-sync-secrets.ps1`
+- Terraform 배포 IAM 정책 샘플 추가
+  - `infra/aws/terraform-deployer-iam-policy.json`
+- 운영 체크
+  - 시크릿/권한 최신 상태는 `scripts/staging-preflight.ps1` 실행 결과를 기준으로 관리
+
 ### 시크릿 관리 가이드 정리
 - `.env.example` 템플릿(루트/API/AWS) 주석과 기본값을 정리해 오해 가능성을 줄임
 - 시크릿 관리 기준 문서 추가

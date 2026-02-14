@@ -9,6 +9,35 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
+  preflight-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required secrets
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
+        run: |
+          missing=()
+          [ -z "${AWS_ACCESS_KEY_ID}" ] && missing+=("AWS_ACCESS_KEY_ID")
+          [ -z "${AWS_SECRET_ACCESS_KEY}" ] && missing+=("AWS_SECRET_ACCESS_KEY")
+          [ -z "${AWS_REGION}" ] && missing+=("AWS_REGION")
+          [ -z "${ECR_REGISTRY}" ] && missing+=("ECR_REGISTRY")
+          [ -z "${EC2_HOST}" ] && missing+=("EC2_HOST")
+          [ -z "${EC2_SSH_KEY}" ] && missing+=("EC2_SSH_KEY")
+          [ -z "${DEPLOY_ENV_FILE}" ] && missing+=("DEPLOY_ENV_FILE")
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+
+          echo "All required secrets are set."
+
   # ── 1. API Tests ─────────────────────────────────────────────
   test-api:
     runs-on: ubuntu-latest
@@ -44,7 +73,7 @@ jobs:
 
   # ── 3. Build & Push Docker Images ────────────────────────────
   build-and-push:
-    needs: [test-api, check-admin]
+    needs: [preflight-secrets, test-api, check-admin]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -104,7 +133,9 @@ jobs:
 
       - name: Write .env file on EC2
         run: |
-          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > /tmp/.env.deploy
+          cat <<'EOF' > /tmp/.env.deploy
+          ${{ secrets.DEPLOY_ENV_FILE }}
+          EOF
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             /tmp/.env.deploy \
             ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/app/.env

@@ -87,6 +87,27 @@
   - 찬양 목록/상세, 에셋 업로드, 감사 로그 조회
 - [ ] 롤백 리허설 1회 수행 (`docs/runbook.md`)
 
+### 4.1 2026-02-13 진행 업데이트 (기록)
+
+- 완료:
+  - GitHub Secrets 일부 등록 완료
+    - `AWS_ACCESS_KEY_ID`
+    - `AWS_SECRET_ACCESS_KEY`
+    - `AWS_REGION`
+    - `ECR_REGISTRY`
+    - `ENABLE_AWSLOGS=false`
+- 미완료:
+  - `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
+- 차단 이슈:
+  - 현재 IAM 사용자(`terraform-deployer`)에서 아래 조회 권한 부족으로 `terraform plan/apply` 진행 불가
+    - `ec2:DescribeAvailabilityZones`
+    - `ec2:DescribeImages`
+    - `ec2:DescribeKeyPairs`
+- 조치:
+  - 권한 정책 샘플 추가: `infra/aws/terraform-deployer-iam-policy.json`
+  - 사전 점검 스크립트 추가: `scripts/staging-preflight.ps1`
+  - Secrets 동기화 스크립트 추가: `scripts/staging-sync-secrets.ps1`
+
 ## 5. 현재 판단 (Go/No-Go)
 
 - 로컬 데모/개발: **Go**

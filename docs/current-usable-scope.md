@@ -102,6 +102,11 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - [ ] 첫 `develop` 배포 후 `GET /api/v1/ping` + 관리자 로그인 + 핵심 API 스모크 테스트
 - [ ] `docs/staging-smoke-checklist.md` 기준 점검 결과 기록 및 `docs/runbook.md`와 동기화
 
+실행 상태 확인:
+- 사전 점검: `scripts/staging-preflight.ps1`
+- 시크릿 동기화: `scripts/staging-sync-secrets.ps1`
+- IAM 권한 샘플: `infra/aws/terraform-deployer-iam-policy.json`
+
 ## 4. 최근 PR 기준 변경 포인트
 
 ### PR #38 (mobile-offline-cache-sync)

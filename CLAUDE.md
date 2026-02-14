@@ -715,6 +715,12 @@ develop push → GitHub Actions
 - GitHub Actions Secrets 설정 완료 및 첫 자동 배포 검증
 - EC2 접근 권한/배포 계정 권한 점검 및 운영 체크리스트 실행
 - 단계별 온보딩: `docs/admin/aws-free-tier-onboarding.md`
+- 보조 스크립트:
+  - `scripts/staging-preflight.ps1`
+  - `scripts/staging-sync-secrets.ps1`
+- IAM 정책 샘플:
+  - `infra/aws/terraform-deployer-iam-policy.json`
+- 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
 
 **2. 운영 문서/절차 고도화**
 - `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
