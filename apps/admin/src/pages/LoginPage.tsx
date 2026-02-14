@@ -17,6 +17,8 @@ export default function LoginPage() {
   const [socialToken, setSocialToken] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [needsInviteCode, setNeedsInviteCode] = useState(false);
+  const [showInviteInput, setShowInviteInput] = useState(false);
+  const host = window.location.host;
 
   const [showDevLoginForm, setShowDevLoginForm] = useState(false);
   const [displayName, setDisplayName] = useState("");
@@ -40,11 +42,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await loginWithSocial(socialProvider, socialToken.trim(), inviteCode.trim() || undefined);
-      navigate("/hymns", { replace: true });
+      navigate("/", { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed.";
       if (message.includes("초대코드")) {
         setNeedsInviteCode(true);
+        setShowInviteInput(true);
       }
       setError(message);
     } finally {
@@ -80,15 +83,28 @@ export default function LoginPage() {
     setSocialToken("");
     setInviteCode("");
     setNeedsInviteCode(false);
+    setShowInviteInput(false);
     setError(null);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white rounded-lg shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center mb-6">Eunhye Admin</h1>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-10">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 w-full max-w-md p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-center text-slate-900">Eunhye Admin</h1>
+          <p className="mt-2 text-center text-sm text-slate-600">
+            운영자 전용 로그인 (host: <span className="font-mono">{host}</span>)
+          </p>
+        </div>
 
-        {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+            <div className="mt-1 text-xs text-red-600">
+              도움이 필요하면 <a className="underline" href="/help">도움말</a>을 확인하세요.
+            </div>
+          </div>
+        )}
 
         {!socialProvider ? (
           <div className="flex flex-col gap-3 mb-6">
@@ -118,18 +134,26 @@ export default function LoginPage() {
               <label htmlFor="socialToken" className="block text-sm font-medium text-gray-700 mb-1">
                 {socialTokenLabel}
               </label>
-              <input
+              <textarea
                 id="socialToken"
-                type="text"
                 value={socialToken}
                 onChange={(e) => setSocialToken(e.target.value)}
                 placeholder={socialTokenPlaceholder}
                 required
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                rows={3}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <p className="mt-1 text-xs text-gray-500">{socialTokenGuide}</p>
             </div>
-            {needsInviteCode && (
+            <button
+              type="button"
+              onClick={() => setShowInviteInput((v) => !v)}
+              className="text-left text-xs text-slate-500 hover:text-slate-700 underline"
+            >
+              {showInviteInput ? "초대코드 입력 숨기기" : "초대코드가 있나요? (선택) 입력하기"}
+            </button>
+
+            {(showInviteInput || needsInviteCode) && (
               <div>
                 <label htmlFor="inviteCode" className="block text-sm font-medium text-gray-700 mb-1">
                   Invite Code
@@ -140,23 +164,26 @@ export default function LoginPage() {
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
                   placeholder="Enter invite code"
-                  required
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required={needsInviteCode}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+                <p className="mt-1 text-xs text-slate-500">
+                  신규 계정 생성이 필요할 때만 요구됩니다. 운영자 allowlist가 설정된 환경이면 초대코드 없이도 로그인될 수 있습니다.
+                </p>
               </div>
             )}
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-indigo-600 text-white rounded py-2 font-medium hover:bg-indigo-700 disabled:opacity-50"
+                className="flex-1 bg-indigo-600 text-white rounded-lg py-2 font-semibold hover:bg-indigo-700 disabled:opacity-50"
               >
                 {loading ? "Signing in..." : "Sign In"}
               </button>
               <button
                 type="button"
                 onClick={resetSocial}
-                className="border border-gray-300 rounded px-4 py-2 hover:bg-gray-50"
+                className="border border-slate-300 rounded-lg px-4 py-2 hover:bg-slate-50"
               >
                 Cancel
               </button>
