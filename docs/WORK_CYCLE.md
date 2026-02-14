@@ -691,3 +691,26 @@
 ### 검증
 - `bash -n infra/aws/deploy.sh`
 - `bash -n infra/aws/verify-staging.sh`
+
+## 24. 이번 사이클 기록 (2026-02-14, 21차)
+
+### 목표
+- 스테이징 배포 회귀 복구: verify 단계 SSH 키 경로 해석 오류로 인한 실패 제거
+
+### 범위
+- 포함: `verify-staging.sh` 경로 정규화 버그 수정, workflow verify env 경로 고정, 문서 동기화
+- 제외: 애플리케이션 기능 코드/배포 대상 인프라 변경
+
+### 수행 작업
+1. SSH 키 경로 정규화 버그 수정
+- `expand_home_path`에서 `~/` 처리 시 문자열 슬라이싱(`${path:2}`)을 사용하도록 변경
+- `~` 단일 값도 `${HOME}`으로 해석하도록 처리 추가
+
+2. workflow 경로 명시
+- `deploy-staging.yml` Verify 단계의 `STAGING_SSH_KEY`를 `/home/runner/.ssh/deploy_key` 절대 경로로 변경
+
+3. 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `bash -n infra/aws/verify-staging.sh`

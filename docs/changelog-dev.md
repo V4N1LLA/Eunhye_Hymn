@@ -4,6 +4,15 @@
 
 ## 2026-02-14
 
+### 스테이징 verify SSH 키 경로 hotfix(21차)
+- `infra/aws/verify-staging.sh` 경로 정규화 수정
+  - `~`/`~/...` 입력을 `HOME` 기준 절대 경로로 정확히 치환하도록 `expand_home_path` 로직 보정
+  - 치환 후 키 파일 존재 여부 확인 로직은 유지
+- `deploy-staging.yml` verify 단계 환경 변수 수정
+  - `STAGING_SSH_KEY`를 `~/.ssh/deploy_key` 대신 `/home/runner/.ssh/deploy_key`로 명시
+- 효과
+  - verify 단계가 SSH 키 경로를 오인식해 즉시 실패하던 회귀를 제거하고, 배포 검증 단계 안정성을 복구
+
 ### 스테이징 검증 스크립트 분리/하드닝(20차)
 - `deploy-staging.yml` 검증 단계 리팩토링
   - 인라인 verify 로직을 `infra/aws/verify-staging.sh`로 분리
