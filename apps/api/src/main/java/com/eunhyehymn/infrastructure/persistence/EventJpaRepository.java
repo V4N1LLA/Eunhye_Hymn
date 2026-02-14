@@ -20,7 +20,7 @@ public interface EventJpaRepository extends JpaRepository<EventEntity, UUID> {
           AND (:eventType IS NULL OR e.eventType = :eventType)
           AND (:userId IS NULL OR e.userId = :userId)
           AND (:hymnId IS NULL OR e.hymnId = :hymnId)
-        ORDER BY e.createdAt DESC
+        ORDER BY e.createdAt DESC, e.id DESC
         """)
     List<EventEntity> findRecent(
         @Param("fromInclusive") Instant fromInclusive,

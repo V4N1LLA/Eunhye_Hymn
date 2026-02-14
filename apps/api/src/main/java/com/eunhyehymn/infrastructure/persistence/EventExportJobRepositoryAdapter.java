@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -27,6 +28,39 @@ public class EventExportJobRepositoryAdapter implements EventExportJobRepository
     @Override
     public Optional<EventExportJob> findById(UUID id) {
         return jpaRepository.findById(id).map(EventExportJobMapper::toDomain);
+    }
+
+    @Override
+    public Optional<EventExportJob> claimQueued(UUID id, Instant startedAt) {
+        int updated = jpaRepository.claimQueued(
+            id,
+            startedAt,
+            EventExportJobStatus.QUEUED,
+            EventExportJobStatus.RUNNING
+        );
+        if (updated == 0) {
+            return Optional.empty();
+        }
+        return findById(id);
+    }
+
+    @Override
+    public List<UUID> findQueuedJobIds(int limit) {
+        int normalizedLimit = Math.max(limit, 1);
+        return jpaRepository.findQueuedJobIds(
+            EventExportJobStatus.QUEUED,
+            PageRequest.of(0, normalizedLimit)
+        );
+    }
+
+    @Override
+    public long requeueStaleRunningJobs(Instant staleBeforeExclusive) {
+        return jpaRepository.requeueStaleRunningJobs(
+            staleBeforeExclusive,
+            EventExportJobStatus.RUNNING,
+            EventExportJobStatus.QUEUED,
+            "Recovered stale running job"
+        );
     }
 
     @Override

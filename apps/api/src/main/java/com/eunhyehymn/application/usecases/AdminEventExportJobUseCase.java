@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 public class AdminEventExportJobUseCase {
     private static final int DEFAULT_EXPORT_LIMIT = 20_000;
     private static final int MAX_EXPORT_LIMIT = 100_000;
+    private static final int MAX_DISPATCH_BATCH_SIZE = 200;
     private static final int CSV_FETCH_BATCH_SIZE = 1_000;
     private static final int MAX_ERROR_MESSAGE_LENGTH = 500;
     private static final String CSV_HEADER = "id,userId,eventType,hymnId,part,metadataJson,createdAt\n";
@@ -32,6 +33,7 @@ public class AdminEventExportJobUseCase {
 
     public EventExportJob create(CreateCommand command) {
         int exportLimit = normalizeExportLimit(command.limit());
+        Instant toExclusive = command.toExclusive() == null ? Instant.now() : command.toExclusive();
         EventExportJob job = new EventExportJob(
             UUID.randomUUID(),
             command.requestedBy(),
@@ -39,7 +41,7 @@ public class AdminEventExportJobUseCase {
             command.userId(),
             command.hymnId(),
             command.fromInclusive(),
-            command.toExclusive(),
+            toExclusive,
             exportLimit,
             EventExportJobStatus.QUEUED,
             null,
@@ -69,19 +71,17 @@ public class AdminEventExportJobUseCase {
     }
 
     public EventExportJob process(UUID jobId) {
-        EventExportJob queuedJob = eventExportJobRepository.findById(jobId)
-            .orElseThrow(() -> new ApiException(
-                HttpStatus.NOT_FOUND,
-                "export_job_not_found",
-                "Export job not found",
-                null
-            ));
-
-        if (queuedJob.status() != EventExportJobStatus.QUEUED) {
-            return queuedJob;
+        EventExportJob runningJob = eventExportJobRepository.claimQueued(jobId, Instant.now())
+            .orElseGet(() -> eventExportJobRepository.findById(jobId)
+                .orElseThrow(() -> new ApiException(
+                    HttpStatus.NOT_FOUND,
+                    "export_job_not_found",
+                    "Export job not found",
+                    null
+                )));
+        if (runningJob.status() != EventExportJobStatus.RUNNING) {
+            return runningJob;
         }
-
-        EventExportJob runningJob = eventExportJobRepository.save(queuedJob.markRunning(Instant.now()));
 
         try {
             CsvBuildResult csvBuildResult = buildCsv(runningJob);
@@ -96,6 +96,14 @@ public class AdminEventExportJobUseCase {
             String errorMessage = toErrorMessage(ex);
             return eventExportJobRepository.save(runningJob.markFailed(errorMessage, Instant.now()));
         }
+    }
+
+    public long requeueStaleRunningJobs(Instant staleBeforeExclusive) {
+        return eventExportJobRepository.requeueStaleRunningJobs(staleBeforeExclusive);
+    }
+
+    public List<UUID> findQueuedJobIds(int limit) {
+        return eventExportJobRepository.findQueuedJobIds(normalizeDispatchBatchSize(limit));
     }
 
     public DownloadResult getDownload(UUID jobId, UUID requestedBy) {
@@ -196,6 +204,13 @@ public class AdminEventExportJobUseCase {
             return 1;
         }
         return Math.min(limit, MAX_EXPORT_LIMIT);
+    }
+
+    private int normalizeDispatchBatchSize(int limit) {
+        if (limit < 1) {
+            return 1;
+        }
+        return Math.min(limit, MAX_DISPATCH_BATCH_SIZE);
     }
 
     private String buildFileName(UUID jobId) {

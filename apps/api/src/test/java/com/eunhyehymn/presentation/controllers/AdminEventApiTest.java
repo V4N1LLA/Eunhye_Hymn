@@ -247,6 +247,29 @@ class AdminEventApiTest {
     }
 
     @Test
+    void adminEventOrderingIsStableWhenCreatedAtIsSame() throws Exception {
+        Instant createdAt = Instant.parse("2026-02-14T00:00:00Z");
+        UUID smallerId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID largerId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+
+        saveEvent(smallerId, userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, createdAt);
+        saveEvent(largerId, userAId, EventType.NOTE_SAVED, hymnAId, null, createdAt);
+
+        String response = mockMvc.perform(get("/admin/events")
+                .header("Authorization", "Bearer " + adminToken)
+                .param("size", "2"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items.length()").value(2))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        JsonNode items = objectMapper.readTree(response).get("data").get("items");
+        assertThat(items.get(0).get("id").asText()).isEqualTo(largerId.toString());
+        assertThat(items.get(1).get("id").asText()).isEqualTo(smallerId.toString());
+    }
+
+    @Test
     void adminCanExportEventsCsv() throws Exception {
         Instant now = Instant.now();
         saveEvent(UUID.randomUUID(), userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, now.minus(2, ChronoUnit.MINUTES));
@@ -307,6 +330,39 @@ class AdminEventApiTest {
     }
 
     @Test
+    void asyncExportUsesCreationSnapshotWhenToIsOmitted() throws Exception {
+        UUID firstEventId = UUID.randomUUID();
+        UUID futureEventId = UUID.randomUUID();
+        Instant now = Instant.now();
+        saveEvent(firstEventId, userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, now.minus(1, ChronoUnit.MINUTES));
+
+        String createResponse = mockMvc.perform(post("/admin/events/export-jobs")
+                .header("Authorization", "Bearer " + adminToken)
+                .param("eventType", "HYMN_OPENED")
+                .param("limit", "5000"))
+            .andExpect(status().isAccepted())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        UUID jobId = UUID.fromString(objectMapper.readTree(createResponse).get("data").get("id").asText());
+        saveEvent(futureEventId, userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, now.plus(1, ChronoUnit.HOURS));
+
+        JsonNode finalState = waitForJobCompletion(jobId, adminToken);
+        assertThat(finalState.get("status").asText()).isEqualTo("COMPLETED");
+
+        String csv = mockMvc.perform(get("/admin/events/export-jobs/{jobId}/download", jobId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        assertThat(csv).contains(firstEventId.toString());
+        assertThat(csv).doesNotContain(futureEventId.toString());
+    }
+
+    @Test
     void asyncExportJobIsVisibleOnlyToRequester() throws Exception {
         UUID secondAdminId = UUID.randomUUID();
         userJpaRepository.save(new UserEntity(
@@ -333,6 +389,21 @@ class AdminEventApiTest {
             .andExpect(jsonPath("$.error.code").value("export_job_not_found"));
 
         waitForJobCompletion(jobId, adminToken);
+    }
+
+    @Test
+    void downloadReturnsConflictWhenAsyncExportJobIsNotCompleted() throws Exception {
+        UUID queuedJobId = saveExportJob(
+            EventExportJobStatus.QUEUED,
+            Instant.now().minus(1, ChronoUnit.MINUTES),
+            null,
+            null
+        );
+
+        mockMvc.perform(get("/admin/events/export-jobs/{jobId}/download", queuedJobId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.error.code").value("export_job_not_ready"));
     }
 
     @Test
@@ -448,14 +519,15 @@ class AdminEventApiTest {
         ));
     }
 
-    private void saveExportJob(
+    private UUID saveExportJob(
         EventExportJobStatus status,
         Instant createdAt,
         Instant startedAt,
         Instant completedAt
     ) {
+        UUID id = UUID.randomUUID();
         eventExportJobJpaRepository.save(new com.eunhyehymn.infrastructure.persistence.EventExportJobEntity(
-            UUID.randomUUID(),
+            id,
             adminId,
             EventType.HYMN_OPENED,
             userAId,
@@ -472,6 +544,7 @@ class AdminEventApiTest {
             startedAt,
             completedAt
         ));
+        return id;
     }
 
     private void saveCleanupRun(Instant executedAt, long deletedCount) {

@@ -68,6 +68,7 @@
   - 비동기 내보내기 작업 생성(202 Accepted)
   - 필터: `eventType`, `userId`, `hymnId`, `from`, `to`
   - `limit`: 기본 20,000 / 최대 100,000
+  - `to` 미지정 시 작업 생성 시각(`now`)을 상한으로 고정해 내보내기 결과를 스냅샷으로 보장
 - `GET /api/v1/admin/events/export-jobs/{jobId}`
   - 작업 상태 조회
   - 상태: `QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`
@@ -95,12 +96,40 @@
   - `cleanup`: 정리 스케줄 실행 횟수와 삭제량
 - `cleanup` 지표는 `event_export_job_cleanup_runs` 실행 이력 테이블을 기반으로 계산한다.
 
+### 4.7 비동기 export 복구 스케줄러
+- 큐 적체/프로세스 재기동 상황에서 `QUEUED` 작업 재디스패치, stale `RUNNING` 작업 재큐잉을 수행한다.
+- 기본 정책
+  - stale 판정 기준: 15분
+  - 디스패치 배치 크기: 20건
+  - 실행 스케줄: 30초 간격 (`0/30 * * * * *`, UTC)
+- 설정 값
+  - `EVENT_EXPORT_JOB_RECOVERY_STALE_RUNNING_MINUTES`
+  - `EVENT_EXPORT_JOB_RECOVERY_DISPATCH_BATCH_SIZE`
+  - `EVENT_EXPORT_JOB_RECOVERY_CRON`
+  - `EVENT_EXPORT_JOB_RECOVERY_ZONE`
+
+### 4.8 비동기 export 알림(베이스라인)
+- 운영 지표를 주기적으로 평가해 임계치 초과 시 WARN 로그를 남긴다.
+- 기본 임계치
+  - 실패율: 20%
+  - p95 처리시간: 120초
+  - queued 작업 수: 20건
+- 설정 값
+  - `EVENT_EXPORT_JOB_ALERT_WINDOW_DAYS`
+  - `EVENT_EXPORT_JOB_ALERT_MIN_FINISHED_JOBS`
+  - `EVENT_EXPORT_JOB_ALERT_MAX_QUEUED_JOBS`
+  - `EVENT_EXPORT_JOB_ALERT_MAX_FAILURE_RATE_PERCENT`
+  - `EVENT_EXPORT_JOB_ALERT_MAX_P95_SECONDS`
+  - `EVENT_EXPORT_JOB_ALERT_CRON`
+  - `EVENT_EXPORT_JOB_ALERT_ZONE`
+
 ## 5. 인덱스/성능 메모
 - 관리자 조회 패턴 최적화를 위해 아래 인덱스를 사용한다.
   - `idx_events_user_created` (`user_id`, `created_at`) - 기존
   - `idx_events_created_at_desc` (`created_at DESC`)
   - `idx_events_event_type_created` (`event_type`, `created_at DESC`)
   - `idx_events_hymn_created` (`hymn_id`, `created_at DESC`)
+  - `idx_event_export_jobs_status_completed_at` (`status`, `completed_at`)
 - 운영 시 확인 항목
   - 관리자 이벤트 조회 응답 시간이 증가하면 `EXPLAIN ANALYZE`로 인덱스 사용 여부 확인
   - 이벤트 테이블 급증 시 CSV `limit` 정책과 백필/아카이빙 정책을 함께 점검

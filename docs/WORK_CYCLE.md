@@ -393,3 +393,47 @@
 - `./gradlew.bat test --tests "com.eunhyehymn.application.usecases.GetEventExportOpsMetricsUseCaseTest" --tests "com.eunhyehymn.presentation.controllers.AdminEventApiTest" --no-daemon --stacktrace` (`apps/api`)
 - `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
 - `npx tsc --noEmit` + `npm run build` (`apps/admin`)
+
+## 13. 이번 사이클 기록 (2026-02-14, 10차)
+
+### 목표
+- 기능 백로그 완료: 비동기 export 내구성/정합성/성능/알림/테스트 강화
+
+### 범위
+- 포함: 복구 스케줄러, 원자적 claim, snapshot 정합성, 정리 인덱스, 알림 스케줄러, 테스트 확장, 문서 동기화
+- 제외: 외부 알림 채널(CloudWatch/SNS/PagerDuty) 직접 연동
+
+### 수행 작업
+1. 내구성 복구 경로 구현
+- `EventExportJobRepository.claimQueued(...)` 추가로 작업 실행 claim 원자화
+- `EventExportJobRecoveryScheduler` 추가
+  - stale `RUNNING` 재큐잉
+  - `QUEUED` 작업 배치 재디스패치
+- `AdminEventController`에서 executor reject 시 `QUEUED` 유지(요청은 `202 Accepted`)
+
+2. export 결과 정합성 강화
+- `to` 미지정 시 작업 생성 시각을 `toExclusive`로 고정(snapshot)
+- 이벤트 조회 정렬을 `createdAt DESC, id DESC`로 안정화
+
+3. 정리 배치 성능 보강
+- `V10__event_export_jobs_cleanup_index.sql` 추가
+- 인덱스: `idx_event_export_jobs_status_completed_at (status, completed_at)`
+
+4. 운영 알림 베이스라인 추가
+- `EventExportJobOpsAlertScheduler` 추가
+- 실패율/p95/queued 임계치 초과 시 WARN 로그 출력
+- 알림/복구 스케줄러 설정 키를 `application.yml`에 추가
+
+5. 테스트 확장
+- 신규: `AdminEventExportJobUseCaseTest`
+- 신규: `EventExportJobRecoverySchedulerTest`
+- 신규: `EventExportJobOpsAlertSchedulerTest`
+- 신규: `AdminEventControllerTest` (queue rejection 시 `202`)
+- 보강: `AdminEventApiTest`
+  - 미완료 다운로드 `409`
+  - snapshot 결과 검증
+  - 동일 시각 데이터 안정 정렬 검증
+
+### 검증
+- `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
+- `npm run build` (`apps/admin`)

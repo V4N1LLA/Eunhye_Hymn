@@ -90,6 +90,21 @@ class GetEventExportOpsMetricsUseCaseTest {
         }
 
         @Override
+        public Optional<EventExportJob> claimQueued(UUID id, Instant startedAt) {
+            return Optional.empty();
+        }
+
+        @Override
+        public List<UUID> findQueuedJobIds(int limit) {
+            return List.of();
+        }
+
+        @Override
+        public long requeueStaleRunningJobs(Instant staleBeforeExclusive) {
+            return 0;
+        }
+
+        @Override
         public List<MetricsRow> findMetricsRows(Instant fromInclusive, Instant toExclusive) {
             this.lastFromInclusive = fromInclusive;
             this.lastToExclusive = toExclusive;

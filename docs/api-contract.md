@@ -180,6 +180,9 @@ Base URL: `/api/v1`
   - `limit`: 하위 호환 조회 개수 파라미터(미지정 시 `page/size` 사용)
   - `summaryDays`: 최근 집계 일수 (기본 7, 최대 90)
   - `days`: 운영 지표 집계 일수 (기본 7, 최대 90, `GET /admin/events/export-jobs/metrics` 전용)
+- 비동기 export 스냅샷 규칙:
+  - `POST /admin/events/export-jobs`에서 `to`를 생략하면 서버가 작업 생성 시각을 `toExclusive`로 고정한다.
+  - 실행 대기 중 신규 유입 이벤트는 해당 작업 결과에서 제외된다.
 - 응답 `data` 예시:
 ```json
 {
