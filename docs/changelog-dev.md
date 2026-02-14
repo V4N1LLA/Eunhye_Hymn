@@ -4,6 +4,20 @@
 
 ## 2026-02-14
 
+### 스테이징 최신 상태 조회 스크립트 추가(24차)
+- 신규 스크립트: `scripts/staging-latest-status.ps1`
+  - 최신 `deploy-staging.yml` run의 상태/결론/커밋/URL 출력
+  - `deploy` job과 `Verify deployment` step 결론을 함께 요약
+  - `-RequireSuccess` 옵션으로 최신 run 성공 여부를 종료코드로 강제
+  - `-AsJson` 옵션으로 자동화 파이프라인에서 소비 가능한 JSON 출력 지원
+- 운영 문서 반영
+  - `docs/runbook.md`: 배포 체크리스트/절차에 상태 조회 명령 추가
+  - `docs/staging-smoke-checklist.md`: 실행 전 준비 항목에 상태 조회 명령 추가
+  - `infra/aws/README.md`: 리허설 가이드 섹션에 상태 조회 스크립트 추가
+- 효과
+  - 스모크 테스트 시작 전에 최신 배포의 성공 여부와 verify 통과 여부를 빠르게 확인할 수 있어
+    스테이징 수동 검수 진입 판단이 단순해짐
+
 ### API CI 트리거/동시성 정비(23차)
 - `api-ci.yml` 트리거 보강
   - `apps/api/**` 변경 외에 `.github/workflows/api-ci.yml` 변경 시에도 API CI가 실행되도록 path 추가

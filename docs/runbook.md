@@ -30,6 +30,7 @@
 - [ ] GitHub Actions 필수 Secrets 등록 확인
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
 - [ ] GitHub Actions 배포 워크플로 최신 성공 이력 확인
+  - `.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess`
 - [ ] 스모크 테스트 담당자/기기(Android/iOS/웹) 배정
 
 ## 5. 배포 절차
@@ -38,6 +39,7 @@
    - 운영 반영: `develop` push 트리거
    - 리허설/선검증: `Deploy Staging` workflow_dispatch (`enable_awslogs=false` 권장)
    - 자동화 경로: `.\scripts\staging-rehearsal.ps1` 실행 시 preflight + workflow_dispatch + run 완료 대기 + 로그 기록을 일괄 수행
+   - 최신 배포 상태 확인: `.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess`
 3. EC2에서 컨테이너 상태 확인
    - `docker ps`
    - `docker logs <api_container> --tail 200`

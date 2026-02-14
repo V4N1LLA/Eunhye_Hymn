@@ -153,6 +153,14 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 
 로컬 문법/파라미터 검증만 필요하면 `-DryRun` 옵션을 사용한다.
 
+최신 배포 run 상태(특히 deploy/verify 성공 여부) 확인:
+
+```powershell
+.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess
+```
+
+JSON 출력이 필요하면 `-AsJson` 옵션을 사용한다.
+
 주의:
 - `-Ref`에는 branch/tag만 사용할 수 있다 (`workflow_dispatch` 제약).
 - 특정 커밋 SHA 기준 리허설이 필요하면 임시 브랜치를 만든 뒤 해당 브랜치명을 `-Ref`로 전달한다.

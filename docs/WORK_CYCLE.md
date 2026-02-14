@@ -763,3 +763,31 @@
 
 ### 검증
 - `gh workflow view api-ci.yml --yaml`
+
+## 27. 이번 사이클 기록 (2026-02-14, 24차)
+
+### 목표
+- 스테이징 수동 검수 진입 판단 단순화: 최신 배포 run의 핵심 상태를 한 번에 확인하는 조회 스크립트 제공
+
+### 범위
+- 포함: `staging-latest-status.ps1` 신규, runbook/체크리스트/인프라 가이드 문서 반영
+- 제외: 배포 로직/애플리케이션 기능 코드 변경
+
+### 수행 작업
+1. 최신 배포 상태 조회 스크립트 추가
+- `scripts/staging-latest-status.ps1` 신규 추가
+- 최신 `deploy-staging.yml` run의 상태/결론/커밋/URL 및 job 요약 출력
+- `deploy` job의 `Verify deployment` step 결과를 별도 필드로 노출
+- `-RequireSuccess` 옵션으로 최신 run이 성공이 아니면 비정상 종료
+- `-AsJson` 옵션으로 자동화 소비 가능한 JSON 출력 지원
+
+2. 운영 문서 동기화
+- `docs/runbook.md` 배포 체크리스트/절차에 상태 확인 명령 추가
+- `docs/staging-smoke-checklist.md` 실행 전 준비 항목에 상태 확인 명령 추가
+- `infra/aws/README.md` 리허설 가이드 섹션에 상태 확인 명령 추가
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Workflow deploy-staging.yml -AsJson -RequireSuccess`
