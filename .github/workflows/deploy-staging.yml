@@ -180,7 +180,7 @@ jobs:
       - name: Verify deployment
         env:
           STAGING_HOST: ${{ secrets.EC2_HOST }}
-          STAGING_SSH_KEY: ~/.ssh/deploy_key
+          STAGING_SSH_KEY: /home/runner/.ssh/deploy_key
           EXPECTED_IMAGE_TAG: ${{ github.sha }}
         run: |
           chmod +x infra/aws/verify-staging.sh

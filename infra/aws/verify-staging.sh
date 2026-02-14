@@ -15,8 +15,12 @@ trim_text() {
 
 expand_home_path() {
   local path="$1"
+  if [[ "${path}" == "~" ]]; then
+    printf '%s' "${HOME}"
+    return 0
+  fi
   if [[ "${path}" == "~/"* ]]; then
-    printf '%s/%s' "${HOME}" "${path#~/}"
+    printf '%s/%s' "${HOME}" "${path:2}"
     return 0
   fi
   printf '%s' "${path}"
