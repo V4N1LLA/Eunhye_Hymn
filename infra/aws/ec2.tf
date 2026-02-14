@@ -104,18 +104,18 @@ resource "aws_iam_instance_profile" "ec2" {
   role = aws_iam_role.ec2.name
 }
 
-# ── EC2 Instance (t3.micro Free Tier) ───────────────────────
+# ── EC2 Instance (t2.micro Free Tier) ───────────────────────
 
 resource "aws_instance" "app" {
   ami                    = var.ec2_ami != "" ? var.ec2_ami : data.aws_ami.amazon_linux.id
-  instance_type          = "t3.micro"
+  instance_type          = "t2.micro"
   key_name               = var.ec2_key_pair_name
   subnet_id              = aws_subnet.public_a.id
   vpc_security_group_ids = [aws_security_group.ec2.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2.name
 
   root_block_device {
-    volume_size = 30
+    volume_size = 20
     volume_type = "gp3"
   }
 

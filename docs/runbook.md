@@ -15,7 +15,7 @@
 - [ ] 환경 변수 파일 최신화 (`DB_*`, `JWT_*`, `INVITE_CODE`, `S3_*`)
 - [ ] 롤백 기준 버전(이전 이미지 태그) 확인
 - [ ] 사전 점검 스크립트 통과
-  - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn`
+  - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile <profile>]`
 - [ ] GitHub Actions 필수 Secrets 등록 확인
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
 

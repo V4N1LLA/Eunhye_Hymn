@@ -7,6 +7,10 @@ param(
   [string]$JwtSecret,
   [string]$InviteCode,
   [string]$GoogleClientId = "",
+  [string]$AwsProfile = "",
+  [string]$AwsAccessKeyId = "",
+  [string]$AwsSecretAccessKey = "",
+  [string]$AwsRegion = "",
   [switch]$EnableAwsLogs
 )
 
@@ -19,15 +23,24 @@ if (-not $JwtSecret) { throw "JwtSecret is required." }
 if (-not $InviteCode) { throw "InviteCode is required." }
 if (-not (Test-Path $Ec2SshKeyPath)) { throw "EC2 SSH key file not found: $Ec2SshKeyPath" }
 
-$awsAccessKeyId = aws configure get aws_access_key_id
-$awsSecretAccessKey = aws configure get aws_secret_access_key
-$awsRegion = aws configure get region
-if ([string]::IsNullOrWhiteSpace($awsRegion)) {
-  $awsRegion = "ap-northeast-2"
+function Get-AwsProfileArgs {
+  param([string]$Profile)
+  if ([string]::IsNullOrWhiteSpace($Profile)) {
+    return @()
+  }
+  return @("--profile", $Profile)
 }
 
-$account = (aws sts get-caller-identity --query Account --output text).Trim()
-$ecrRegistry = "$account.dkr.ecr.$awsRegion.amazonaws.com"
+function Get-AwsConfigValue {
+  param(
+    [string]$Key,
+    [string]$Profile
+  )
+  if ([string]::IsNullOrWhiteSpace($Profile)) {
+    return (aws configure get $Key).Trim()
+  }
+  return (aws configure get $Key --profile $Profile).Trim()
+}
 
 function Get-TerraformOutputRaw {
   param(
@@ -49,9 +62,38 @@ function Escape-ComposeEnvValue {
   return $Value.Replace('$', '$$')
 }
 
+$awsArgs = Get-AwsProfileArgs -Profile $AwsProfile
+if ([string]::IsNullOrWhiteSpace($AwsAccessKeyId)) {
+  $AwsAccessKeyId = Get-AwsConfigValue -Key "aws_access_key_id" -Profile $AwsProfile
+}
+if ([string]::IsNullOrWhiteSpace($AwsSecretAccessKey)) {
+  $AwsSecretAccessKey = Get-AwsConfigValue -Key "aws_secret_access_key" -Profile $AwsProfile
+}
+if ([string]::IsNullOrWhiteSpace($AwsRegion)) {
+  $AwsRegion = Get-AwsConfigValue -Key "region" -Profile $AwsProfile
+}
+if ([string]::IsNullOrWhiteSpace($AwsRegion)) {
+  $AwsRegion = "ap-northeast-2"
+}
+
+if ([string]::IsNullOrWhiteSpace($AwsAccessKeyId) -or [string]::IsNullOrWhiteSpace($AwsSecretAccessKey)) {
+  throw "AWS access key/secret is empty. Pass -AwsAccessKeyId/-AwsSecretAccessKey or configure aws cli profile."
+}
+
+$account = (aws @awsArgs sts get-caller-identity --query Account --output text).Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($account)) {
+  throw "Failed to resolve AWS account. Check AWS credentials/profile."
+}
+
 $rdsAddress = Get-TerraformOutputRaw -Dir $TerraformDir -Name "rds_address"
 $s3Bucket = Get-TerraformOutputRaw -Dir $TerraformDir -Name "s3_bucket_name"
 $s3PublicUrl = Get-TerraformOutputRaw -Dir $TerraformDir -Name "s3_bucket_url"
+
+try {
+  $ecrRegistry = Get-TerraformOutputRaw -Dir $TerraformDir -Name "ecr_registry"
+} catch {
+  $ecrRegistry = "$account.dkr.ecr.$AwsRegion.amazonaws.com"
+}
 
 $dbPasswordEscaped = Escape-ComposeEnvValue -Value $DbPassword
 $jwtSecretEscaped = Escape-ComposeEnvValue -Value $JwtSecret
@@ -69,7 +111,7 @@ JWT_REFRESH_TTL_SECONDS=604800
 INVITE_CODE=$inviteCodeEscaped
 GOOGLE_CLIENT_ID=$googleClientIdEscaped
 S3_BUCKET=$s3Bucket
-S3_REGION=$awsRegion
+S3_REGION=$AwsRegion
 S3_ENDPOINT=
 S3_PUBLIC_BASE_URL=$s3PublicUrl
 S3_PRESIGN_EXPIRES_MINUTES=15
@@ -77,14 +119,31 @@ SPRING_PROFILES_ACTIVE=prod
 "@
 
 $sshKeyContent = Get-Content $Ec2SshKeyPath -Raw
+if ([string]::IsNullOrWhiteSpace($sshKeyContent)) {
+  throw "EC2 SSH key file is empty: $Ec2SshKeyPath"
+}
 
-gh secret set AWS_ACCESS_KEY_ID --repo $Repo --body $awsAccessKeyId
-gh secret set AWS_SECRET_ACCESS_KEY --repo $Repo --body $awsSecretAccessKey
-gh secret set AWS_REGION --repo $Repo --body $awsRegion
-gh secret set ECR_REGISTRY --repo $Repo --body $ecrRegistry
-gh secret set EC2_HOST --repo $Repo --body $Ec2Host
-gh secret set EC2_SSH_KEY --repo $Repo --body $sshKeyContent
-gh secret set DEPLOY_ENV_FILE --repo $Repo --body $deployEnvFile
-gh secret set ENABLE_AWSLOGS --repo $Repo --body ($(if ($EnableAwsLogs) { "true" } else { "false" }))
+function Set-GhSecret {
+  param(
+    [string]$Name,
+    [string]$Value
+  )
+  if ([string]::IsNullOrWhiteSpace($Value)) {
+    throw "Secret value is empty: $Name"
+  }
+  gh secret set $Name --repo $Repo --body $Value
+  if ($LASTEXITCODE -ne 0) {
+    throw "Failed to set secret: $Name"
+  }
+}
+
+Set-GhSecret -Name "AWS_ACCESS_KEY_ID" -Value $AwsAccessKeyId
+Set-GhSecret -Name "AWS_SECRET_ACCESS_KEY" -Value $AwsSecretAccessKey
+Set-GhSecret -Name "AWS_REGION" -Value $AwsRegion
+Set-GhSecret -Name "ECR_REGISTRY" -Value $ecrRegistry
+Set-GhSecret -Name "EC2_HOST" -Value $Ec2Host
+Set-GhSecret -Name "EC2_SSH_KEY" -Value $sshKeyContent
+Set-GhSecret -Name "DEPLOY_ENV_FILE" -Value $deployEnvFile
+Set-GhSecret -Name "ENABLE_AWSLOGS" -Value ($(if ($EnableAwsLogs) { "true" } else { "false" }))
 
 Write-Host "GitHub staging secrets updated for $Repo"

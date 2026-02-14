@@ -130,10 +130,14 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
   -InviteCode <terraform.tfvars의 invite_code 값>
 ```
 
+옵션:
+- `-AwsProfile <profile>`: 기본 프로필이 아닌 AWS CLI 프로필 사용
+- `-AwsAccessKeyId`/`-AwsSecretAccessKey`/`-AwsRegion`: AWS 자격증명/리전 직접 지정
+
 사전 점검:
 
 ```powershell
-.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn
+.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile eunhye-staging]
 ```
 
 ### DEPLOY_ENV_FILE 내용

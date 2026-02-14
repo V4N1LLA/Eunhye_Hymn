@@ -1,6 +1,7 @@
 param(
   [string]$Repo = "V4N1LLA/Eunhye_Hymn",
   [string]$TerraformDir = "infra/aws",
+  [string]$AwsProfile = "",
   [switch]$SkipTerraformPlan
 )
 
@@ -74,6 +75,14 @@ function Test-AwsPermission {
   Add-Check $Name $false ("failed: " + $result.Output.Split("`n")[0])
 }
 
+function Build-AwsCommand {
+  param([string]$Inner)
+  if ([string]::IsNullOrWhiteSpace($AwsProfile)) {
+    return "aws $Inner"
+  }
+  return "aws --profile $AwsProfile $Inner"
+}
+
 Add-Check "aws cli" (Test-CommandExists "aws") "required"
 Add-Check "terraform cli" (Test-CommandExists "terraform") "required"
 Add-Check "gh cli" (Test-CommandExists "gh") "required"
@@ -83,7 +92,8 @@ if (-not (Test-CommandExists "aws") -or -not (Test-CommandExists "terraform") -o
   exit 1
 }
 
-$identityJson = aws sts get-caller-identity 2>$null
+$identityCommand = Build-AwsCommand "sts get-caller-identity"
+$identityJson = & $env:ComSpec /d /c $identityCommand 2>$null
 if ($LASTEXITCODE -ne 0) {
   Add-Check "aws sts get-caller-identity" $false "failed"
   $checks | Format-Table -AutoSize
@@ -96,9 +106,9 @@ Add-Check "aws identity" $true ("arn=" + $identity.Arn)
 gh auth status 1>$null 2>$null
 Add-Check "gh auth status" ($LASTEXITCODE -eq 0) "github auth"
 
-Test-AwsPermission "aws ec2 describe-availability-zones" "aws ec2 describe-availability-zones --output json"
-Test-AwsPermission "aws ec2 describe-images" "aws ec2 describe-images --owners amazon --query ""Images[0].ImageId"" --output text"
-Test-AwsPermission "aws ec2 describe-key-pairs" "aws ec2 describe-key-pairs --output json"
+Test-AwsPermission "aws ec2 describe-availability-zones" (Build-AwsCommand "ec2 describe-availability-zones --output json")
+Test-AwsPermission "aws ec2 describe-images" (Build-AwsCommand "ec2 describe-images --owners amazon --query ""Images[0].ImageId"" --output text")
+Test-AwsPermission "aws ec2 describe-key-pairs" (Build-AwsCommand "ec2 describe-key-pairs --output json")
 
 $init = Run-CommandCapture "terraform -chdir=$TerraformDir init -backend=false -input=false"
 Add-Check "terraform init (backend=false)" ($init.ExitCode -eq 0) ($(if ($init.ExitCode -eq 0) { "ok" } else { "failed" }))
@@ -111,7 +121,7 @@ if (-not $SkipTerraformPlan) {
   if (-not (Test-Path $tfvarsPath)) {
     Add-Check "terraform plan" $false "missing: $tfvarsPath"
   } else {
-    $plan = Run-CommandCapture "terraform -chdir=$TerraformDir plan -input=false -lock=false -out=tfplan.preflight"
+    $plan = Run-CommandCapture "terraform -chdir=$TerraformDir plan -detailed-exitcode -input=false -lock=false -out=tfplan.preflight"
     if ($plan.ExitCode -eq 0) {
       Add-Check "terraform plan" $true "no changes"
     } elseif ($plan.ExitCode -eq 2) {
