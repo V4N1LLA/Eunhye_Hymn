@@ -791,3 +791,28 @@
 
 ### 검증
 - `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Workflow deploy-staging.yml -AsJson -RequireSuccess`
+
+## 28. 이번 사이클 기록 (2026-02-14, 25차)
+
+### 목표
+- 스테이징 상태 조회 정확도 향상: 배포(push)와 리허설(workflow_dispatch) run을 필터링 조회 가능하도록 스크립트 확장
+
+### 범위
+- 포함: `staging-latest-status.ps1` 옵션 확장(`-Branch`, `-Event`), 운영 문서 안내 보강
+- 제외: 배포 workflow 로직 변경, 애플리케이션 기능 코드 변경
+
+### 수행 작업
+1. 조회 옵션 확장
+- `scripts/staging-latest-status.ps1`에 `-Branch`(기본 `develop`) 옵션 추가
+- `scripts/staging-latest-status.ps1`에 `-Event` 옵션 추가
+- 내부 `gh run list` 호출 시 branch/event 필터를 선택적으로 적용하도록 개선
+
+2. 운영 문서 동기화
+- `docs/runbook.md`에 브랜치/이벤트 필터 옵션 안내 추가
+- `infra/aws/README.md`에 리허설 run 확인 시 `-Branch`, `-Event` 사용 가이드 추가
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess -AsJson`

@@ -4,6 +4,17 @@
 
 ## 2026-02-14
 
+### 스테이징 상태 조회 스크립트 필터 확장(25차)
+- `scripts/staging-latest-status.ps1` 옵션 확장
+  - `-Branch`(기본 `develop`) 추가: 대상 브랜치 기준 최신 run 조회
+  - `-Event` 추가: `push`/`workflow_dispatch` 등 이벤트 유형 필터링 조회 지원
+- 운영 문서 반영
+  - `docs/runbook.md`: 브랜치/이벤트 필터 옵션 안내 추가
+  - `infra/aws/README.md`: 리허설 run 확인 시 `-Branch`, `-Event` 사용 가이드 추가
+- 효과
+  - 자동 배포(push)와 리허설(workflow_dispatch) run을 목적별로 분리 조회할 수 있어,
+    스테이징 상태 확인 결과의 맥락 혼동을 줄임
+
 ### 스테이징 최신 상태 조회 스크립트 추가(24차)
 - 신규 스크립트: `scripts/staging-latest-status.ps1`
   - 최신 `deploy-staging.yml` run의 상태/결론/커밋/URL 출력
