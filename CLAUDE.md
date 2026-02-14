@@ -1,7 +1,7 @@
 ﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-13
+> 마지막 업데이트: 2026-02-14
 
 ---
 
@@ -704,6 +704,9 @@ develop push → GitHub Actions
   - `docs/current-usable-scope.md`
   - `docs/mobile/README.md`
   - `README.md`
+- 스테이징 실가동 체크리스트/런북 동기화
+  - `docs/staging-smoke-checklist.md`
+  - `docs/runbook.md`
 
 ### 미완료 (우선순위순)
 
@@ -714,7 +717,7 @@ develop push → GitHub Actions
 - 단계별 온보딩: `docs/admin/aws-free-tier-onboarding.md`
 
 **2. 운영 문서/절차 고도화**
-- `docs/runbook.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
+- `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
 - 배포 후 스모크 테스트 항목과 점검 결과를 주기적으로 갱신
 
 **3. 기능 백로그**

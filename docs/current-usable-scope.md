@@ -1,10 +1,10 @@
 # 현재 사용 가능 범위 정리
 
-- 작성일: 2026-02-13
+- 작성일: 2026-02-14
 - 기준 브랜치: `develop` (통합/배포 기준)
-- 기준 커밋: `22011b7` (2026-02-13 로컬 확인 시점 `develop` HEAD)
+- 기준 커밋: `7757090` (2026-02-14 로컬 확인 시점 `develop` HEAD)
 - 근거 문서: `README.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
-- 근거 PR: #42, #41, #40, #38, #37, #36, #31
+- 근거 PR: #43, #42, #41, #40, #38, #37, #36, #31
 
 ## 1. 요약
 
@@ -100,6 +100,7 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - [ ] EC2 접근 가능 상태 및 배포 계정 권한 확인
 - [ ] 배포 서버 `.env` 준비 (`infra/aws/docker-compose.prod.yml`의 `env_file: .env` 요구)
 - [ ] 첫 `develop` 배포 후 `GET /api/v1/ping` + 관리자 로그인 + 핵심 API 스모크 테스트
+- [ ] `docs/staging-smoke-checklist.md` 기준 점검 결과 기록 및 `docs/runbook.md`와 동기화
 
 ## 4. 최근 PR 기준 변경 포인트
 
@@ -127,6 +128,9 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
   - Terraform apply 및 리소스 활성화
   - GitHub Secrets 구성
   - 배포/롤백/장애 대응 실동작 검증
+- 운영 문서/절차 실행 검증
+  - `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준 리허설 1회 수행
+  - 리허설 결과를 `docs/changelog-dev.md`에 기록
 - 운영 기능 백로그
   - 감사 로그 고도화(집계 기간 커스텀, 대용량 비동기 export)
 
@@ -156,7 +160,9 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - 소셜 로그인 실사용 검증 시 provider 토큰/클라이언트 설정 필요
 - 모바일은 현재 문서/실행 가이드 기준으로 `flutter run -d chrome` 경로를 우선 지원
 
-## 7. 2026-02-13 실검증 로그 (명령 기반)
+## 7. 검증 로그
+
+### 7.1 2026-02-13 실검증 로그 (명령 기반)
 
 - API 테스트: `./gradlew.bat test --no-daemon --stacktrace` 성공 (58 tests, failed 0, skipped 0)
 - Admin 빌드: `npm run build` 성공
@@ -169,4 +175,8 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
   - 스테이징(`infra/aws/docker-compose.prod.yml`)은 `.env` 파일 준비 전 실행 불가
 
 상세 결과와 Go/No-Go 판단은 `docs/deployment-readiness-audit.md`를 기준으로 한다.
+
+### 7.2 2026-02-14 문서 동기화
+- 스테이징 스모크 체크리스트 문서 추가: `docs/staging-smoke-checklist.md`
+- 운영 런북과 스모크 테스트 절차 동기화: `docs/runbook.md`
 

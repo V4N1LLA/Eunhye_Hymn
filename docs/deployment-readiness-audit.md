@@ -62,6 +62,12 @@
   - 기준 커밋 고정값 문서(`docs/current-usable-scope.md`) 최신화 필요
   - 모바일 배포 범위(현재 웹 실행 기준, 스토어 배포 준비 전) 명시 강화 필요
 
+### 3.1 후속 반영 (2026-02-14)
+- 아래 항목을 문서에 반영 완료:
+  - `docs/data-model.md`: events 인덱스(`V7__events_admin_indexes.sql`) 반영
+  - `docs/current-usable-scope.md`: 기준 커밋 최신화
+  - `docs/mobile/README.md`: 모바일 배포 범위/운영 연계 체크포인트 보강
+
 ## 4. 실배포 전 필수 체크리스트
 
 - [ ] `infra/aws`에 대해 `terraform apply` 완료
