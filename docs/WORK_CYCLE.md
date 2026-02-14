@@ -541,3 +541,23 @@
 
 ### 검증
 - `bash -n infra/aws/deploy.sh`
+
+## 18. 이번 사이클 기록 (2026-02-14, 15차)
+
+### 목표
+- 스테이징 배포 안정성 강화: 동일 EC2 대상 deploy job 동시 실행 차단
+
+### 범위
+- 포함: `deploy-staging.yml`에 deploy job concurrency 제어 추가
+- 제외: deploy 스크립트 로직 변경, 인프라 리소스 변경
+
+### 수행 작업
+1. deploy job 직렬화
+- `deploy` job에 concurrency group(`staging-ec2-deploy`) 추가
+- `cancel-in-progress: false`로 설정해 진행 중 배포를 중단하지 않고 대기 처리
+
+2. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `gh workflow view deploy-staging.yml --yaml`
