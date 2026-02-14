@@ -1,8 +1,11 @@
 package com.eunhyehymn.infrastructure.persistence;
 
 import com.eunhyehymn.domain.model.EventExportJob;
+import com.eunhyehymn.domain.model.EventExportJobStatus;
 import com.eunhyehymn.domain.repository.EventExportJobRepository;
 import com.eunhyehymn.infrastructure.persistence.mapper.EventExportJobMapper;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
@@ -24,5 +27,13 @@ public class EventExportJobRepositoryAdapter implements EventExportJobRepository
     @Override
     public Optional<EventExportJob> findById(UUID id) {
         return jpaRepository.findById(id).map(EventExportJobMapper::toDomain);
+    }
+
+    @Override
+    public long deleteCompletedOrFailedBefore(Instant completedBeforeExclusive) {
+        return jpaRepository.deleteByStatusInAndCompletedAtBefore(
+            List.of(EventExportJobStatus.COMPLETED, EventExportJobStatus.FAILED),
+            completedBeforeExclusive
+        );
     }
 }
