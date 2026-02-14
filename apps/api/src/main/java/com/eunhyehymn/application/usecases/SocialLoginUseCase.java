@@ -14,7 +14,10 @@ import com.eunhyehymn.domain.repository.InviteCodeRepository;
 import com.eunhyehymn.domain.repository.RefreshTokenRepository;
 import com.eunhyehymn.domain.repository.UserRepository;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,9 @@ public class SocialLoginUseCase {
     private final TokenService tokenService;
     private final TokenHashService tokenHashService;
     private final long refreshTokenTtlSeconds;
+    private final Set<String> adminEmails;
+    private final Set<String> adminKakaoSubjects;
+    private final boolean enforceAdminOnly;
 
     public SocialLoginUseCase(
         SocialTokenVerifier socialTokenVerifier,
@@ -36,7 +42,10 @@ public class SocialLoginUseCase {
         RefreshTokenRepository refreshTokenRepository,
         TokenService tokenService,
         TokenHashService tokenHashService,
-        long refreshTokenTtlSeconds
+        long refreshTokenTtlSeconds,
+        Set<String> adminEmails,
+        Set<String> adminKakaoSubjects,
+        boolean enforceAdminOnly
     ) {
         this.socialTokenVerifier = socialTokenVerifier;
         this.authIdentityRepository = authIdentityRepository;
@@ -46,6 +55,11 @@ public class SocialLoginUseCase {
         this.tokenService = tokenService;
         this.tokenHashService = tokenHashService;
         this.refreshTokenTtlSeconds = refreshTokenTtlSeconds;
+        this.adminEmails = adminEmails != null ? Collections.unmodifiableSet(new HashSet<>(adminEmails)) : Set.of();
+        this.adminKakaoSubjects = adminKakaoSubjects != null
+            ? Collections.unmodifiableSet(new HashSet<>(adminKakaoSubjects))
+            : Set.of();
+        this.enforceAdminOnly = enforceAdminOnly;
     }
 
     @Transactional
@@ -53,6 +67,11 @@ public class SocialLoginUseCase {
         // 1. 소셜 토큰 검증 → 사용자 정보 추출
         String normalizedProvider = provider.toUpperCase();
         SocialUserInfo userInfo = socialTokenVerifier.verify(normalizedProvider, token);
+
+        boolean isAdminCandidate = isAdminCandidate(normalizedProvider, userInfo);
+        if (enforceAdminOnly && !isAdminCandidate) {
+            throw new AdminOnlyException("관리자만 로그인할 수 있습니다");
+        }
 
         // 2. AuthIdentity 조회
         Optional<AuthIdentity> existingIdentity = authIdentityRepository
@@ -67,35 +86,43 @@ public class SocialLoginUseCase {
                 .orElseThrow(() -> new IllegalStateException(
                     "AuthIdentity에 연결된 User를 찾을 수 없습니다: " + existingIdentity.get().userId()));
 
+            Role effectiveRole = existing.role();
+            if (isAdminCandidate && existing.role() != Role.ADMIN) {
+                effectiveRole = Role.ADMIN;
+            }
+
             user = new User(
                 existing.id(),
                 existing.displayName(),
-                existing.role(),
+                effectiveRole,
                 existing.status(),
                 existing.createdAt(),
                 now
             );
             userRepository.save(user);
         } else {
-            // 신규 사용자: 초대코드 검증 필수
-            if (inviteCode == null || inviteCode.isBlank()) {
-                throw new InvalidInviteCodeException("초대코드가 필요합니다");
-            }
+            if (!isAdminCandidate) {
+                // 신규 사용자: 초대코드 검증 필수
+                if (inviteCode == null || inviteCode.isBlank()) {
+                    throw new InvalidInviteCodeException("초대코드가 필요합니다");
+                }
 
-            // 초대코드 존재 여부 확인
-            inviteCodeRepository.findByCode(inviteCode)
-                .orElseThrow(() -> new InvalidInviteCodeException("유효하지 않은 초대코드입니다"));
+                // 초대코드 존재 여부 확인
+                inviteCodeRepository.findByCode(inviteCode)
+                    .orElseThrow(() -> new InvalidInviteCodeException("유효하지 않은 초대코드입니다"));
 
-            // 원자적으로 usedCount 증가 (enabled, maxUses, expiresAt 동시 검증)
-            boolean incremented = inviteCodeRepository.incrementUsedCount(inviteCode);
-            if (!incremented) {
-                throw new InvalidInviteCodeException("유효하지 않은 초대코드입니다");
+                // 원자적으로 usedCount 증가 (enabled, maxUses, expiresAt 동시 검증)
+                boolean incremented = inviteCodeRepository.incrementUsedCount(inviteCode);
+                if (!incremented) {
+                    throw new InvalidInviteCodeException("유효하지 않은 초대코드입니다");
+                }
             }
 
             // User 생성
             UUID userId = UUID.randomUUID();
             String displayName = userInfo.displayName() != null ? userInfo.displayName() : normalizedProvider + " User";
-            user = new User(userId, displayName, Role.USER, UserStatus.ACTIVE, now, now);
+            Role role = isAdminCandidate ? Role.ADMIN : Role.USER;
+            user = new User(userId, displayName, role, UserStatus.ACTIVE, now, now);
             userRepository.save(user);
 
             // AuthIdentity 생성
@@ -127,11 +154,33 @@ public class SocialLoginUseCase {
         return new LoginResult(accessToken, refreshToken, existingIdentity.isEmpty());
     }
 
+    private boolean isAdminCandidate(String provider, SocialUserInfo userInfo) {
+        if (userInfo == null) {
+            return false;
+        }
+
+        if (userInfo.email() != null && adminEmails.contains(userInfo.email().trim().toLowerCase())) {
+            return true;
+        }
+
+        if ("KAKAO".equals(provider)) {
+            return adminKakaoSubjects.contains(userInfo.providerSubject());
+        }
+
+        return false;
+    }
+
     public record LoginResult(String accessToken, String refreshToken, boolean newUser) {
     }
 
     public static class InvalidInviteCodeException extends RuntimeException {
         public InvalidInviteCodeException(String message) {
+            super(message);
+        }
+    }
+
+    public static class AdminOnlyException extends RuntimeException {
+        public AdminOnlyException(String message) {
             super(message);
         }
     }

@@ -7,6 +7,9 @@ param(
   [string]$JwtSecret,
   [string]$InviteCode,
   [string]$GoogleClientId = "",
+  [string]$AdminEmails = "",
+  [string]$AdminKakaoSubjects = "",
+  [bool]$AdminEnforceAdminOnly = $false,
   [string]$AwsProfile = "",
   [string]$AwsAccessKeyId = "",
   [string]$AwsSecretAccessKey = "",
@@ -99,6 +102,9 @@ $dbPasswordEscaped = Escape-ComposeEnvValue -Value $DbPassword
 $jwtSecretEscaped = Escape-ComposeEnvValue -Value $JwtSecret
 $inviteCodeEscaped = Escape-ComposeEnvValue -Value $InviteCode
 $googleClientIdEscaped = Escape-ComposeEnvValue -Value $GoogleClientId
+$adminEmailsEscaped = Escape-ComposeEnvValue -Value $AdminEmails
+$adminKakaoSubjectsEscaped = Escape-ComposeEnvValue -Value $AdminKakaoSubjects
+$adminEnforceValue = $(if ($AdminEnforceAdminOnly) { "true" } else { "false" })
 
 $deployEnvFile = @"
 ECR_REGISTRY=$ecrRegistry
@@ -110,6 +116,9 @@ JWT_ACCESS_TTL_SECONDS=3600
 JWT_REFRESH_TTL_SECONDS=604800
 INVITE_CODE=$inviteCodeEscaped
 GOOGLE_CLIENT_ID=$googleClientIdEscaped
+ADMIN_EMAILS=$adminEmailsEscaped
+ADMIN_KAKAO_SUBJECTS=$adminKakaoSubjectsEscaped
+ADMIN_ENFORCE_ADMIN_ONLY=$adminEnforceValue
 S3_BUCKET=$s3Bucket
 S3_REGION=$AwsRegion
 S3_ENDPOINT=

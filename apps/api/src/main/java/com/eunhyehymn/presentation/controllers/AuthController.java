@@ -47,6 +47,8 @@ public class AuthController {
             ));
         } catch (SocialLoginException e) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "social_auth_failed", e.getMessage(), null);
+        } catch (SocialLoginUseCase.AdminOnlyException e) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "admin_only", e.getMessage(), null);
         } catch (SocialLoginUseCase.InvalidInviteCodeException e) {
             throw new ApiException(HttpStatus.FORBIDDEN, "invalid_invite_code", e.getMessage(), null);
         }
