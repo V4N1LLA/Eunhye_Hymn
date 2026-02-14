@@ -4,6 +4,14 @@
 
 ## 2026-02-14
 
+### 스테이징 deploy prune 경합 하드닝(14차)
+- `infra/aws/deploy.sh` 개선
+  - `docker image prune -f`를 `cleanup_unused_images` 함수로 감쌈
+  - `prune operation is already running` 오류 시 재시도(최대 3회) 후 경고 처리
+  - prune 실패를 배포 실패로 전파하지 않도록 non-fatal 처리
+- 효과
+  - 배포 완료 후 이미지 정리 단계의 일시적 경합으로 전체 deploy job이 실패하지 않음
+
 ### 로컬 아티팩트 ignore 정리(13차)
 - 작업 트리 노이즈 제거
   - 루트 `.gitignore`에 `.tmp/` 추가
