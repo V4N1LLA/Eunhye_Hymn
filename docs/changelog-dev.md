@@ -4,6 +4,18 @@
 
 ## 2026-02-14
 
+### 스테이징 상태 조회 스크립트 Markdown 출력 추가(26차)
+- `scripts/staging-latest-status.ps1` 옵션 확장
+  - `-AsMarkdown` 추가: run 요약 + job 상태를 Markdown 테이블 형태로 출력
+  - `-AsJson`과 동시 사용 시 오류 처리(출력 모드 충돌 방지)
+- 운영 문서 반영
+  - `docs/runbook.md`: `-AsMarkdown` 옵션 안내 추가
+  - `docs/staging-smoke-checklist.md`: 실행 전 준비 항목에 Markdown 출력 옵션 안내 추가
+  - `infra/aws/README.md`: 리허설 가이드에 Markdown 출력 옵션 안내 추가
+- 효과
+  - 스테이징 점검 결과를 문서/티켓에 붙여 넣을 때 형식 정리가 쉬워져
+    검수 기록 작성 시간을 줄임
+
 ### 스테이징 상태 조회 스크립트 필터 확장(25차)
 - `scripts/staging-latest-status.ps1` 옵션 확장
   - `-Branch`(기본 `develop`) 추가: 대상 브랜치 기준 최신 run 조회

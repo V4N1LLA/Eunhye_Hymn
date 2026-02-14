@@ -816,3 +816,29 @@
 
 ### 검증
 - `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess -AsJson`
+
+## 29. 이번 사이클 기록 (2026-02-14, 26차)
+
+### 목표
+- 스테이징 점검 기록 작성 효율화: 최신 배포 상태를 문서/티켓에 바로 붙여넣을 수 있는 Markdown 출력 지원
+
+### 범위
+- 포함: `staging-latest-status.ps1`의 `-AsMarkdown` 출력 추가, 관련 운영 문서 옵션 안내 동기화
+- 제외: 배포 workflow 로직 변경, 애플리케이션 기능 변경
+
+### 수행 작업
+1. Markdown 출력 모드 추가
+- `scripts/staging-latest-status.ps1`에 `-AsMarkdown` 옵션 추가
+- run 요약 + job 상태를 Markdown 테이블로 출력하도록 구현
+- `-AsJson`/`-AsMarkdown` 동시 사용 시 충돌 에러 처리 추가
+
+2. 운영 문서 동기화
+- `docs/runbook.md`에 `-AsMarkdown` 사용 안내 추가
+- `docs/staging-smoke-checklist.md`에 기록용 표 출력 안내 추가
+- `infra/aws/README.md`에 Markdown 출력 옵션 안내 추가
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Event push -RequireSuccess -AsMarkdown`

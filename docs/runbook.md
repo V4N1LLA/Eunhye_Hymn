@@ -32,6 +32,7 @@
 - [ ] GitHub Actions 배포 워크플로 최신 성공 이력 확인
   - `.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess`
   - 리허설 run 확인이 필요하면 `-Branch <브랜치>` 또는 `-Event workflow_dispatch` 옵션 사용
+  - 문서/티켓 기록용 표 출력은 `-AsMarkdown` 옵션 사용
 - [ ] 스모크 테스트 담당자/기기(Android/iOS/웹) 배정
 
 ## 5. 배포 절차
