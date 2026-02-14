@@ -4,6 +4,22 @@
 
 ## 2026-02-14
 
+### 감사 로그 대용량 비동기 export(7차)
+- 백엔드 비동기 export job 추가
+  - `POST /api/v1/admin/events/export-jobs`: 작업 생성(202 Accepted)
+  - `GET /api/v1/admin/events/export-jobs/{jobId}`: 상태 조회
+  - `GET /api/v1/admin/events/export-jobs/{jobId}/download`: 완료 작업 다운로드
+  - 신규 테이블: `event_export_jobs` (`V8__event_export_jobs.sql`)
+  - 신규 도메인/유스케이스: `EventExportJob`, `EventExportJobStatus`, `AdminEventExportJobUseCase`
+- 관리자 UI 반영
+  - `apps/admin/src/pages/AdminEventPage.tsx`
+  - 비동기 CSV 요청 버튼, 작업 상태 카드, 완료 후 다운로드 버튼 추가
+  - 최대 50,000건 요청 프리셋(백엔드 상한 100,000) 적용
+- API 테스트 보강
+  - `AdminEventApiTest`에 비동기 export 생성/완료/다운로드 및 요청자 격리 검증 추가
+- 문서 동기화
+  - `docs/events.md`, `docs/api-contract.md`, `docs/usecases/admin-list-events.md`, `docs/current-usable-scope.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
+
 ### 감사 로그 집계 기간 커스텀(6차)
 - 관리자 이벤트 화면 개선
   - `apps/admin/src/pages/AdminEventPage.tsx`

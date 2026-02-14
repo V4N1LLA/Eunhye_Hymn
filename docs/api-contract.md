@@ -167,6 +167,9 @@ Base URL: `/api/v1`
 ### 4.3 감사 로그/분석
 - `GET /admin/events`
 - `GET /admin/events/export` (CSV 다운로드)
+- `POST /admin/events/export-jobs` (비동기 대용량 CSV 작업 생성, 202 Accepted)
+- `GET /admin/events/export-jobs/{jobId}` (작업 상태 조회)
+- `GET /admin/events/export-jobs/{jobId}/download` (완료 작업 다운로드)
 - 지원 쿼리:
   - `eventType`: `HYMN_OPENED` | `PART_PLAYED` | `NOTE_SAVED` | `FAVORITE_TOGGLED`
   - `userId`, `hymnId`: UUID
@@ -214,6 +217,24 @@ Base URL: `/api/v1`
 - `GET /admin/events/export` 응답:
   - `Content-Type: text/csv`
   - `Content-Disposition: attachment; filename="admin-events-*.csv"`
+
+- `POST /admin/events/export-jobs` 응답 `data` 예시:
+```json
+{
+  "id": "job-uuid",
+  "status": "QUEUED",
+  "exportLimit": 50000,
+  "rowCount": null,
+  "fileName": null,
+  "errorMessage": null,
+  "createdAt": "2026-02-14T05:00:00Z",
+  "startedAt": null,
+  "completedAt": null,
+  "statusUrl": "/admin/events/export-jobs/job-uuid",
+  "downloadUrl": "/admin/events/export-jobs/job-uuid/download",
+  "downloadable": false
+}
+```
 
 ## 5. 사용자 개인 영역
 

@@ -1,6 +1,7 @@
 package com.eunhyehymn.common.config;
 
 import com.eunhyehymn.application.usecases.AdminCreateHymnUseCase;
+import com.eunhyehymn.application.usecases.AdminEventExportJobUseCase;
 import com.eunhyehymn.application.usecases.AdminListEventsUseCase;
 import com.eunhyehymn.application.usecases.AdminDeleteHymnUseCase;
 import com.eunhyehymn.application.usecases.AdminListHymnsUseCase;
@@ -16,6 +17,7 @@ import com.eunhyehymn.application.usecases.RecordEventsUseCase;
 import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
 import com.eunhyehymn.domain.repository.AssetRepository;
+import com.eunhyehymn.domain.repository.EventExportJobRepository;
 import com.eunhyehymn.domain.repository.EventRepository;
 import com.eunhyehymn.domain.repository.HymnNoteRepository;
 import com.eunhyehymn.domain.repository.HymnRepository;
@@ -94,6 +96,14 @@ public class UseCaseConfig {
     @Bean
     AdminListEventsUseCase adminListEventsUseCase(EventRepository eventRepository) {
         return new AdminListEventsUseCase(eventRepository);
+    }
+
+    @Bean
+    AdminEventExportJobUseCase adminEventExportJobUseCase(
+        EventRepository eventRepository,
+        EventExportJobRepository eventExportJobRepository
+    ) {
+        return new AdminEventExportJobUseCase(eventRepository, eventExportJobRepository);
     }
 
     @Bean

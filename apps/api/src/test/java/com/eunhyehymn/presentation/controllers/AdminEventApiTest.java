@@ -2,6 +2,7 @@ package com.eunhyehymn.presentation.controllers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,6 +14,7 @@ import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.AuthIdentityJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventEntity;
+import com.eunhyehymn.infrastructure.persistence.EventExportJobJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnEntity;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
@@ -30,6 +32,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +54,7 @@ class AdminEventApiTest {
     @Autowired private HymnNoteJpaRepository hymnNoteJpaRepository;
     @Autowired private UserHymnStateJpaRepository userHymnStateJpaRepository;
     @Autowired private EventJpaRepository eventJpaRepository;
+    @Autowired private EventExportJobJpaRepository eventExportJobJpaRepository;
     @Autowired private AuthIdentityJpaRepository authIdentityJpaRepository;
     @Autowired private RefreshTokenJpaRepository refreshTokenJpaRepository;
     @Autowired private InviteCodeJpaRepository inviteCodeJpaRepository;
@@ -66,6 +70,7 @@ class AdminEventApiTest {
     @BeforeEach
     void setUp() {
         inviteCodeJpaRepository.deleteAll();
+        eventExportJobJpaRepository.deleteAll();
         eventJpaRepository.deleteAll();
         userHymnStateJpaRepository.deleteAll();
         hymnNoteJpaRepository.deleteAll();
@@ -259,6 +264,73 @@ class AdminEventApiTest {
     }
 
     @Test
+    void adminCanCreateAndDownloadAsyncExportJob() throws Exception {
+        Instant now = Instant.now();
+        saveEvent(UUID.randomUUID(), userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, now.minus(2, ChronoUnit.MINUTES));
+        saveEvent(UUID.randomUUID(), userAId, EventType.NOTE_SAVED, hymnAId, null, now.minus(1, ChronoUnit.MINUTES));
+
+        String createResponse = mockMvc.perform(post("/admin/events/export-jobs")
+                .header("Authorization", "Bearer " + adminToken)
+                .param("eventType", "HYMN_OPENED")
+                .param("limit", "5000"))
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.data.id").exists())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        UUID jobId = UUID.fromString(objectMapper.readTree(createResponse).get("data").get("id").asText());
+        JsonNode finalState = waitForJobCompletion(jobId, adminToken);
+
+        assertThat(finalState).isNotNull();
+        assertThat(finalState.get("status").asText()).isEqualTo("COMPLETED");
+        assertThat(finalState.get("rowCount").asLong()).isEqualTo(1L);
+        assertThat(finalState.get("downloadable").asBoolean()).isTrue();
+
+        String csv = mockMvc.perform(get("/admin/events/export-jobs/{jobId}/download", jobId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type", org.hamcrest.Matchers.containsString("text/csv")))
+            .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("attachment;")))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        assertThat(csv).contains("id,userId,eventType,hymnId,part,metadataJson,createdAt");
+        assertThat(csv).contains("HYMN_OPENED");
+        assertThat(csv).doesNotContain("NOTE_SAVED");
+    }
+
+    @Test
+    void asyncExportJobIsVisibleOnlyToRequester() throws Exception {
+        UUID secondAdminId = UUID.randomUUID();
+        userJpaRepository.save(new UserEntity(
+            secondAdminId,
+            "Admin 2",
+            Role.ADMIN,
+            UserStatus.ACTIVE,
+            Instant.now(),
+            Instant.now()
+        ));
+        String secondAdminToken = jwtService.issueAccessToken(secondAdminId.toString(), Role.ADMIN.name());
+
+        String createResponse = mockMvc.perform(post("/admin/events/export-jobs")
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isAccepted())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        UUID jobId = UUID.fromString(objectMapper.readTree(createResponse).get("data").get("id").asText());
+
+        mockMvc.perform(get("/admin/events/export-jobs/{jobId}", jobId)
+                .header("Authorization", "Bearer " + secondAdminToken))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("export_job_not_found"));
+
+        waitForJobCompletion(jobId, adminToken);
+    }
+
+    @Test
     void invalidUserIdReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/admin/events")
                 .header("Authorization", "Bearer " + adminToken)
@@ -277,6 +349,26 @@ class AdminEventApiTest {
                 .param("to", now.minus(1, ChronoUnit.HOURS).toString()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("invalid_range"));
+    }
+
+    private JsonNode waitForJobCompletion(UUID jobId, String token) throws Exception {
+        JsonNode latest = null;
+        for (int attempt = 0; attempt < 40; attempt += 1) {
+            String response = mockMvc.perform(get("/admin/events/export-jobs/{jobId}", jobId)
+                    .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+            latest = objectMapper.readTree(response).get("data");
+            String status = latest.get("status").asText();
+            if ("COMPLETED".equals(status) || "FAILED".equals(status)) {
+                return latest;
+            }
+            TimeUnit.MILLISECONDS.sleep(100);
+        }
+        return latest;
     }
 
     private void saveEvent(

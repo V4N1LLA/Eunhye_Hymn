@@ -63,6 +63,18 @@
 - 필터: `eventType`, `userId`, `hymnId`, `from`, `to`
 - 제한: `limit` (서버 상한 적용)
 
+### 4.4 관리자 감사 로그 비동기 CSV (대용량)
+- `POST /api/v1/admin/events/export-jobs`
+  - 비동기 내보내기 작업 생성(202 Accepted)
+  - 필터: `eventType`, `userId`, `hymnId`, `from`, `to`
+  - `limit`: 기본 20,000 / 최대 100,000
+- `GET /api/v1/admin/events/export-jobs/{jobId}`
+  - 작업 상태 조회
+  - 상태: `QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`
+- `GET /api/v1/admin/events/export-jobs/{jobId}/download`
+  - 완료(`COMPLETED`) 작업 CSV 다운로드
+  - 미완료/실패 작업은 `409` 반환
+
 ## 5. 인덱스/성능 메모
 - 관리자 조회 패턴 최적화를 위해 아래 인덱스를 사용한다.
   - `idx_events_user_created` (`user_id`, `created_at`) - 기존
@@ -72,4 +84,5 @@
 - 운영 시 확인 항목
   - 관리자 이벤트 조회 응답 시간이 증가하면 `EXPLAIN ANALYZE`로 인덱스 사용 여부 확인
   - 이벤트 테이블 급증 시 CSV `limit` 정책과 백필/아카이빙 정책을 함께 점검
+  - 대용량 비동기 export는 `event_export_jobs` 테이블 크기/완료율/실패율을 함께 모니터링
 
