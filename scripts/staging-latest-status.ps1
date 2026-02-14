@@ -1,6 +1,8 @@
 param(
   [string]$Repo = "V4N1LLA/Eunhye_Hymn",
   [string]$Workflow = "deploy-staging.yml",
+  [string]$Branch = "develop",
+  [string]$Event = "",
   [int]$Limit = 1,
   [switch]$Wait,
   [int]$WatchIntervalSeconds = 10,
@@ -78,7 +80,7 @@ if ($Limit -lt 1) {
   throw "Limit must be >= 1"
 }
 
-$runs = Invoke-GhJson -Args @(
+$runListArgs = @(
   "run", "list",
   "--repo", $Repo,
   "--workflow", $Workflow,
@@ -86,8 +88,18 @@ $runs = Invoke-GhJson -Args @(
   "--json", "databaseId,workflowName,event,status,conclusion,createdAt,updatedAt,headBranch,headSha,url"
 )
 
+if (-not [string]::IsNullOrWhiteSpace($Branch)) {
+  $runListArgs += @("--branch", $Branch)
+}
+
+if (-not [string]::IsNullOrWhiteSpace($Event)) {
+  $runListArgs += @("--event", $Event)
+}
+
+$runs = Invoke-GhJson -Args $runListArgs
+
 if ($null -eq $runs -or $runs.Count -eq 0) {
-  throw "No workflow runs found for $Repo / $Workflow"
+  throw "No workflow runs found for $Repo / $Workflow (branch='$Branch', event='$Event')"
 }
 
 $selectedRun = $runs[0]
