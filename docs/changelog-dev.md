@@ -4,6 +4,18 @@
 
 ## 2026-02-14
 
+### 스테이징 상태 조회 스크립트 게이트 강화(27차)
+- `scripts/staging-latest-status.ps1` 옵션 확장
+  - `-RequireDeploySuccess` 추가: `deploy` job 결론이 `success`가 아니면 실패 처리
+  - `-RequireVerifySuccess` 추가: `Verify deployment` step 결론이 `success`가 아니면 실패 처리
+  - `-MaxAgeMinutes` 추가: 최신 run이 허용 시간보다 오래된 경우 실패 처리
+  - run 요약에 `RunAgeMinutes` 추가, Markdown 출력에 `AgeMin` 컬럼 추가
+- 운영 문서 반영
+  - `docs/runbook.md`, `docs/staging-smoke-checklist.md`, `infra/aws/README.md`에 강화된 상태 확인 명령 반영
+- 효과
+  - 스모크 테스트 진입 전에 "성공 여부 + 검증 단계 성공 + 실행 신선도"를 종료코드 기반으로 강제 가능
+  - 오래된 성공 run을 최신 상태로 오인해 검수를 진행하는 리스크 감소
+
 ### 스테이징 상태 조회 스크립트 Markdown 출력 추가(26차)
 - `scripts/staging-latest-status.ps1` 옵션 확장
   - `-AsMarkdown` 추가: run 요약 + job 상태를 Markdown 테이블 형태로 출력

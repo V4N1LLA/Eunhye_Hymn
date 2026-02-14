@@ -156,12 +156,13 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 최신 배포 run 상태(특히 deploy/verify 성공 여부) 확인:
 
 ```powershell
-.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess
+.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120
 ```
 
 JSON 출력이 필요하면 `-AsJson` 옵션을 사용한다.
 리허설/수동 실행 내역 확인 시에는 `-Branch <branch>` 또는 `-Event workflow_dispatch` 옵션을 함께 사용한다.
 문서/티켓 첨부용 표가 필요하면 `-AsMarkdown` 옵션을 사용한다.
+최신 성공 run이 오래되면 `-MaxAgeMinutes <minutes>` 값으로 스모크 진입 전 신선도 기준을 강제한다.
 
 주의:
 - `-Ref`에는 branch/tag만 사용할 수 있다 (`workflow_dispatch` 제약).
