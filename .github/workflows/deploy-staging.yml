@@ -123,6 +123,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     concurrency:
       group: staging-ec2-deploy
       cancel-in-progress: false
@@ -135,6 +136,12 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Ensure remote app directory exists
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ec2-user@${{ secrets.EC2_HOST }} \
+            "mkdir -p /home/ec2-user/app"
 
       - name: Copy compose file and deploy script to EC2
         run: |
@@ -171,125 +178,10 @@ jobs:
              ./deploy.sh"
 
       - name: Verify deployment
+        env:
+          STAGING_HOST: ${{ secrets.EC2_HOST }}
+          STAGING_SSH_KEY: ~/.ssh/deploy_key
+          EXPECTED_IMAGE_TAG: ${{ github.sha }}
         run: |
-          set -euo pipefail
-
-          host="${{ secrets.EC2_HOST }}"
-          image_tag="${{ github.sha }}"
-
-          check_ping() {
-            local url="$1"
-            local max_attempts="$2"
-            local sleep_seconds="$3"
-            local attempt
-            local body
-
-            for attempt in $(seq 1 "${max_attempts}"); do
-              body="$(curl -fsS "${url}" 2>/dev/null || true)"
-              if printf "%s" "${body}" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
-                echo "Ping check passed on attempt ${attempt}"
-                return 0
-              fi
-              echo "Ping check attempt ${attempt}/${max_attempts} failed; retrying in ${sleep_seconds}s"
-              sleep "${sleep_seconds}"
-            done
-
-            echo "::error::Ping check failed after ${max_attempts} attempts (${url})"
-            return 1
-          }
-
-          check_http_status() {
-            local name="$1"
-            local url="$2"
-            local max_attempts="$3"
-            local sleep_seconds="$4"
-            local attempt
-            local code
-
-            for attempt in $(seq 1 "${max_attempts}"); do
-              code="$(curl -s -o /dev/null -w '%{http_code}' "${url}" || true)"
-              if [[ "$name" == "admin-root" && ( "${code}" == "200" || "${code}" == "301" || "${code}" == "302" ) ]]; then
-                echo "${name} check passed with HTTP ${code} on attempt ${attempt}"
-                return 0
-              fi
-              if [[ "$name" == "admin-auth-guard" && ( "${code}" == "401" || "${code}" == "403" ) ]]; then
-                echo "${name} check passed with HTTP ${code} on attempt ${attempt}"
-                return 0
-              fi
-              echo "${name} check attempt ${attempt}/${max_attempts} returned HTTP ${code}; retrying in ${sleep_seconds}s"
-              sleep "${sleep_seconds}"
-            done
-
-            echo "::error::${name} check failed after ${max_attempts} attempts (${url})"
-            return 1
-          }
-
-          check_container_state() {
-            local container_name="$1"
-            local expected_state="$2"
-            local max_attempts="$3"
-            local sleep_seconds="$4"
-            local attempt
-            local state
-
-            for attempt in $(seq 1 "${max_attempts}"); do
-              state="$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-                "ec2-user@${host}" \
-                "docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' '${container_name}'" \
-                2>/dev/null || true)"
-              state="$(printf '%s' "${state}" | xargs || true)"
-
-              if [[ "${expected_state}" == "running-healthy" && "${state}" == "running healthy" ]]; then
-                echo "${container_name} state check passed (${state}) on attempt ${attempt}"
-                return 0
-              fi
-              if [[ "${expected_state}" == "running" && "${state}" == running* ]]; then
-                echo "${container_name} state check passed (${state}) on attempt ${attempt}"
-                return 0
-              fi
-
-              echo "${container_name} state attempt ${attempt}/${max_attempts} returned '${state}'; retrying in ${sleep_seconds}s"
-              sleep "${sleep_seconds}"
-            done
-
-            echo "::error::${container_name} state check failed after ${max_attempts} attempts (expected=${expected_state}, last='${state}')"
-            return 1
-          }
-
-          check_container_image_tag() {
-            local container_name="$1"
-            local expected_tag="$2"
-            local max_attempts="$3"
-            local sleep_seconds="$4"
-            local attempt
-            local image_ref
-
-            for attempt in $(seq 1 "${max_attempts}"); do
-              image_ref="$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-                "ec2-user@${host}" \
-                "docker inspect --format '{{.Config.Image}}' '${container_name}'" \
-                2>/dev/null || true)"
-              image_ref="$(printf '%s' "${image_ref}" | xargs || true)"
-
-              if [[ "${image_ref}" == *":${expected_tag}" ]]; then
-                echo "${container_name} image check passed (${image_ref}) on attempt ${attempt}"
-                return 0
-              fi
-
-              echo "${container_name} image attempt ${attempt}/${max_attempts} returned '${image_ref}'; retrying in ${sleep_seconds}s"
-              sleep "${sleep_seconds}"
-            done
-
-            echo "::error::${container_name} image tag check failed after ${max_attempts} attempts (expected=:${expected_tag}, last='${image_ref}')"
-            return 1
-          }
-
-          echo "Waiting for services to start..."
-          sleep 30
-          check_ping "http://${host}/api/v1/ping" 10 6
-          check_http_status "admin-root" "http://${host}/" 5 4
-          check_http_status "admin-auth-guard" "http://${host}/api/v1/admin/hymns" 5 4
-          check_container_state "eunhye-api" "running-healthy" 10 6
-          check_container_state "eunhye-nginx" "running" 5 4
-          check_container_image_tag "eunhye-api" "${image_tag}" 10 6
-          check_container_image_tag "eunhye-nginx" "${image_tag}" 5 4
+          chmod +x infra/aws/verify-staging.sh
+          infra/aws/verify-staging.sh

@@ -5,12 +5,14 @@ on:
     paths:
       - ".github/workflows/**"
       - "infra/aws/deploy.sh"
+      - "infra/aws/verify-staging.sh"
   push:
     branches:
       - develop
     paths:
       - ".github/workflows/**"
       - "infra/aws/deploy.sh"
+      - "infra/aws/verify-staging.sh"
 
 jobs:
   actionlint:
@@ -25,4 +27,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate deploy script syntax
-        run: bash -n infra/aws/deploy.sh
+        run: |
+          bash -n infra/aws/deploy.sh
+          bash -n infra/aws/verify-staging.sh

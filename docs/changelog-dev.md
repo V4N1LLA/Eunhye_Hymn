@@ -4,6 +4,20 @@
 
 ## 2026-02-14
 
+### 스테이징 검증 스크립트 분리/하드닝(20차)
+- `deploy-staging.yml` 검증 단계 리팩토링
+  - 인라인 verify 로직을 `infra/aws/verify-staging.sh`로 분리
+  - 워크플로우는 `STAGING_HOST`, `STAGING_SSH_KEY`, `EXPECTED_IMAGE_TAG`를 주입해 스크립트를 호출
+- `deploy-staging.yml` 배포 안정성 보강
+  - `deploy` job에 `timeout-minutes: 30` 추가
+  - 배포 전 원격 `/home/ec2-user/app` 디렉터리를 `mkdir -p`로 보장
+- `workflow-lint.yml` 검증 범위 확장
+  - path filter에 `infra/aws/verify-staging.sh` 추가
+  - `bash -n infra/aws/verify-staging.sh` 문법 검증 추가
+- 효과
+  - 배포 검증 로직을 단일 스크립트로 재사용 가능하게 정리해 변경 추적성과 유지보수성을 높이고,
+    신규/재생성 EC2에서도 경로 누락으로 인한 배포 실패 가능성을 낮춤
+
 ### 스테이징 SHA 고정 배포(19차)
 - `docker-compose.prod.yml` 이미지 태그 전략 변경
   - API/Admin 이미지를 `:latest` 고정 대신 `${IMAGE_TAG:-latest}`로 사용

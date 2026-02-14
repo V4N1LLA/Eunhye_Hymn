@@ -661,3 +661,33 @@
 
 ### 검증
 - `gh api repos/V4N1LLA/Eunhye_Hymn/contents/.github/workflows/deploy-staging.yml?ref=ci/staging-deploy-sha-tag --jq .sha`
+
+## 23. 이번 사이클 기록 (2026-02-14, 20차)
+
+### 목표
+- 스테이징 배포 검증 유지보수성 강화: workflow 인라인 검증 스크립트를 분리해 재사용성과 변경 안정성 확보
+
+### 범위
+- 포함: verify 스크립트 분리, deploy workflow 하드닝(타임아웃/원격 디렉터리 보장), workflow lint 대상 확장, 문서 동기화
+- 제외: 애플리케이션 기능 코드 변경, 배포 대상/인프라 리소스 변경
+
+### 수행 작업
+1. verify 단계 스크립트 분리
+- `infra/aws/verify-staging.sh` 신규 추가
+- 기존 `deploy-staging.yml` 인라인 함수(`check_ping`, `check_http_status`, `check_container_state`, `check_container_image_tag`)를 스크립트로 이관
+- 워크플로우는 `STAGING_HOST`, `STAGING_SSH_KEY`, `EXPECTED_IMAGE_TAG` 환경 변수로 스크립트를 실행하도록 변경
+
+2. deploy 단계 하드닝
+- `deploy` job에 `timeout-minutes: 30` 추가
+- 파일 전송 전에 `mkdir -p /home/ec2-user/app`를 수행해 원격 배포 디렉터리 부재로 인한 실패를 예방
+
+3. lint 검증 범위 확장
+- `.github/workflows/workflow-lint.yml` path filter에 `infra/aws/verify-staging.sh` 추가
+- `bash -n infra/aws/verify-staging.sh` 문법 검증 추가
+
+4. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `bash -n infra/aws/deploy.sh`
+- `bash -n infra/aws/verify-staging.sh`
