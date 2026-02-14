@@ -4,6 +4,14 @@
 
 ## 2026-02-14
 
+### 스테이징 준비도 동기화 + preflight 하드닝(5차)
+- `scripts/staging-preflight.ps1` 개선
+  - `aws sts get-caller-identity` 실패 시 즉시 예외 종료 대신 원인(자격증명/프로필/응답) 표준 출력
+  - 자격증명 미설정 환경에서도 preflight 결과를 표 형태로 확인 가능
+- 상태 문서 최신화
+  - `docs/current-usable-scope.md`: 기준 커밋/근거 PR/실리허설 결과/남은 과제 동기화
+  - `docs/deployment-readiness-audit.md`: 2026-02-14 리허설/롤백/복구 실행 결과 반영
+
 ### 스테이징 실가동 리허설 실행(4차)
 - 요청된 사이클 1~3 실제 수행
   - 1) `develop` 리허설 배포 성공: run `22010284332`

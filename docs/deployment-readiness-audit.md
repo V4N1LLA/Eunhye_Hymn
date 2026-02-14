@@ -8,7 +8,7 @@
 
 - 로컬 개발/검증: **가능**
 - 스테이징 자동배포 파이프라인: **코드 구성 완료 (조건부 가능)**
-- 스테이징 실가동: **미완료** (인프라 생성/시크릿/접근 검증 필요)
+- 스테이징 실가동: **조건부 가능** (배포/롤백/복구 리허설 성공, 수동 스모크 정례화 필요)
 - 프로덕션 배포: **준비 전**
 - 모바일 스토어 배포(Android/iOS): **준비 전**
 
@@ -108,10 +108,29 @@
   - 사전 점검 스크립트 추가: `scripts/staging-preflight.ps1`
   - Secrets 동기화 스크립트 추가: `scripts/staging-sync-secrets.ps1`
 
+### 4.2 2026-02-14 진행 업데이트 (기록)
+
+- 완료:
+  - 스테이징 리허설 실행 성공 (`workflow_dispatch`)
+    - `22010284332` (`develop`)
+  - 롤백 리허설 실행 성공 (임시 브랜치 기준)
+    - `22010387328` (`tmp/staging-rollback-6fef282`)
+  - 최신 develop 재배포(복구) 성공
+    - `22010470389` (`develop`)
+  - 리허설 증빙 문서화 완료
+    - `docs/staging-rehearsal-log.md`
+    - `docs/staging-smoke-checklist.md`
+- 보강:
+  - `scripts/staging-rehearsal.ps1`에 SHA ref 가드 추가
+    - `workflow_dispatch` branch/tag 제약을 명확히 안내
+- 잔여:
+  - 운영 PC 기준 preflight 무스킵 통과 상태 유지 (`aws` 자격증명 + `terraform.tfvars`)
+  - Admin/Mobile 런타임 수동 스모크 정기 수행
+
 ## 5. 현재 판단 (Go/No-Go)
 
 - 로컬 데모/개발: **Go**
-- 스테이징 실운영 검증: **Conditional Go** (체크리스트 완료 후)
+- 스테이징 실운영 검증: **Conditional Go** (배포/롤백 자동 리허설은 통과, Admin/Mobile 수동 스모크 정례화 필요)
 - 프로덕션 공개 배포: **No-Go**
 - 모바일 앱스토어 배포: **No-Go**
 

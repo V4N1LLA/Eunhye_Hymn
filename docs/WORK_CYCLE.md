@@ -221,3 +221,31 @@
 - `gh run view 22010284332 --json conclusion,jobs,url`
 - `gh run view 22010387328 --json conclusion,jobs,url`
 - `gh run view 22010470389 --json conclusion,jobs,url`
+
+## 8. 이번 사이클 기록 (2026-02-14, 5차)
+
+### 목표
+- 다음 우선순위 작업 수행: preflight 실행성 개선 + 준비도 문서 상태 최신화
+
+### 범위
+- 포함: preflight 스크립트 오류 처리 보강, 상태 문서 동기화
+- 제외: 애플리케이션 기능 개발
+
+### 수행 작업
+1. 환경 보정
+- 로컬 `aws`/`terraform` CLI 설치
+- preflight 무스킵 실행 시도
+
+2. preflight 하드닝
+- `scripts/staging-preflight.ps1`에서 `aws sts get-caller-identity` 실패 처리 개선
+- 자격증명/프로필 문제를 표 형태로 명시해 즉시 원인 파악 가능하게 수정
+
+3. 문서 동기화
+- `docs/current-usable-scope.md`: 기준 커밋/근거 PR/스테이징 실행 상태 최신화
+- `docs/deployment-readiness-audit.md`: 2026-02-14 리허설/롤백/복구 결과 반영
+- `docs/changelog-dev.md`, `CLAUDE.md` 업데이트
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn`
+- `aws sts get-caller-identity` (현재 환경: credential 미설정 확인)
+- `rg -n "22010284332|22010387328|22010470389|Conditional Go|preflight" docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md CLAUDE.md`

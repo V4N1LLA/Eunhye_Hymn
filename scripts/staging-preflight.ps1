@@ -93,14 +93,30 @@ if (-not (Test-CommandExists "aws") -or -not (Test-CommandExists "terraform") -o
 }
 
 $identityCommand = Build-AwsCommand "sts get-caller-identity"
-$identityJson = & $env:ComSpec /d /c $identityCommand 2>$null
-if ($LASTEXITCODE -ne 0) {
-  Add-Check "aws sts get-caller-identity" $false "failed"
+$identityResult = Run-CommandCapture $identityCommand
+if ($identityResult.ExitCode -ne 0) {
+  $identityDetail = "failed"
+  if ($identityResult.Output -match "Unable to locate credentials|NoCredentialProviders") {
+    $identityDetail = "credentials missing (run aws configure or aws configure sso)"
+  } elseif ($identityResult.Output -match "The config profile .* could not be found") {
+    $identityDetail = "aws profile not found"
+  } elseif (-not [string]::IsNullOrWhiteSpace($identityResult.Output)) {
+    $identityDetail = "failed: " + $identityResult.Output.Split("`n")[0]
+  }
+
+  Add-Check "aws sts get-caller-identity" $false $identityDetail
   $checks | Format-Table -AutoSize
   exit 1
 }
 
-$identity = $identityJson | ConvertFrom-Json
+try {
+  $identity = $identityResult.Output | ConvertFrom-Json
+} catch {
+  Add-Check "aws sts get-caller-identity" $false "failed: invalid json response"
+  $checks | Format-Table -AutoSize
+  exit 1
+}
+
 Add-Check "aws identity" $true ("arn=" + $identity.Arn)
 
 gh auth status 1>$null 2>$null

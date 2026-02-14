@@ -717,6 +717,8 @@ develop push → GitHub Actions
   - `22010284332` (develop)
   - `22010387328` (rollback rehearsal)
   - `22010470389` (develop restore)
+- preflight 스크립트 실패 원인 가시성 보강
+  - `scripts/staging-preflight.ps1` (`aws sts get-caller-identity` 실패 원인 상세 출력)
 
 ### 미완료 (우선순위순)
 
@@ -724,6 +726,7 @@ develop push → GitHub Actions
 - Terraform 실제 적용 및 AWS 리소스 활성화
 - GitHub Actions Secrets/권한 상태 주기 점검 및 preflight 통과 환경 유지
 - EC2 접근 권한/배포 계정 권한 점검 및 운영 체크리스트 정기 실행
+- Admin/Mobile 런타임 수동 스모크 정례 실행
 - 단계별 온보딩: `docs/admin/aws-free-tier-onboarding.md`
 - 보조 스크립트:
   - `scripts/staging-preflight.ps1`

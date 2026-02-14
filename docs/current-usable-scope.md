@@ -2,9 +2,9 @@
 
 - 작성일: 2026-02-14
 - 기준 브랜치: `develop` (통합/배포 기준)
-- 기준 커밋: `7757090` (2026-02-14 로컬 확인 시점 `develop` HEAD)
+- 기준 커밋: `630edd4` (2026-02-14 03:51 UTC 기준 `develop` HEAD)
 - 근거 문서: `README.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
-- 근거 PR: #43, #42, #41, #40, #38, #37, #36, #31
+- 근거 PR: #49, #48, #47, #46, #45, #43, #42, #41, #40, #38, #37, #36, #31
 
 ## 1. 요약
 
@@ -13,7 +13,8 @@
 - 로컬 기능: 관리자 웹(Admin) + 백엔드 API + 모바일 앱(MVP + 모바일 고도화 3건) 사용 가능
 - 배포 기능: AWS 스테이징 자동 배포 파이프라인 코드 구성 완료
 - CI 기능: API/Admin/Mobile 검증 워크플로우 구성 완료
-- 현재 우선 과제: 스테이징 실배포 전환(Terraform 적용, Secrets 설정, EC2 권한/접근 확인)
+- 스테이징 리허설/롤백/복구 자동 실행 증빙 확보(run `22010284332`, `22010387328`, `22010470389`)
+- 현재 우선 과제: 운영 PC 기준 preflight 무스킵 통과 환경 유지 + Admin/Mobile 수동 스모크 정례화
 - 모바일 배포 상태: 현재 저장소 기준 웹 실행(`-d chrome`) 중심이며, 앱스토어 배포(Android/iOS)는 별도 준비가 필요
 
 ## 2. 지금 바로 검증 가능한 범위 (로컬)
@@ -93,14 +94,15 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - `apps/admin/nginx.conf`
 - `apps/api/Dockerfile`
 
-실제 동작을 위해 아래 선행 조건이 필요하다.
+실행 상태(2026-02-14 기준):
 
-- [ ] AWS 리소스 생성(Terraform)
-- [ ] GitHub Secrets 설정(`AWS_*`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`, 선택: `ENABLE_AWSLOGS`)
-- [ ] EC2 접근 가능 상태 및 배포 계정 권한 확인
-- [ ] 배포 서버 `.env` 준비 (`infra/aws/docker-compose.prod.yml`의 `env_file: .env` 요구)
-- [ ] 첫 `develop` 배포 후 `GET /api/v1/ping` + 관리자 로그인 + 핵심 API 스모크 테스트
-- [ ] `docs/staging-smoke-checklist.md` 기준 점검 결과 기록 및 `docs/runbook.md`와 동기화
+- [x] AWS 리소스 생성(Terraform)
+- [x] GitHub Secrets 설정(`AWS_*`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`, 선택: `ENABLE_AWSLOGS`)
+- [x] EC2 접근 가능 상태 및 배포 계정 권한 확인
+- [x] 배포 서버 `.env` 준비 (`DEPLOY_ENV_FILE` 기반)
+- [x] `develop` 배포 후 헬스체크 통과 (`deploy` verify 단계 성공)
+- [x] `docs/staging-smoke-checklist.md` 및 `docs/staging-rehearsal-log.md`에 결과 기록
+- [ ] Admin/Mobile 런타임 수동 스모크(실기기/실계정) 주기 실행
 
 실행 상태 확인:
 - 사전 점검: `scripts/staging-preflight.ps1`
@@ -130,12 +132,11 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 ## 5. 미완료 범위 (우선순위)
 
 - 스테이징 실가동 전환
-  - Terraform apply 및 리소스 활성화
-  - GitHub Secrets 구성
-  - 배포/롤백/장애 대응 실동작 검증
+  - 운영 PC 기준 `staging-preflight.ps1` 무스킵 통과 상태 유지 (`aws` 자격증명 + `infra/aws/terraform.tfvars`)
+  - 배포/롤백/장애 대응 리허설의 정기 반복 및 증빙 누적
 - 운영 문서/절차 실행 검증
-  - `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준 리허설 1회 수행
-  - 리허설 결과를 `docs/changelog-dev.md`에 기록
+  - `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준 Admin/Mobile 수동 스모크 실행
+  - 리허설/스모크 결과를 `docs/changelog-dev.md`에 주기 반영
 - 운영 기능 백로그
   - 감사 로그 고도화(집계 기간 커스텀, 대용량 비동기 export)
 
@@ -184,4 +185,12 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 ### 7.2 2026-02-14 문서 동기화
 - 스테이징 스모크 체크리스트 문서 추가: `docs/staging-smoke-checklist.md`
 - 운영 런북과 스모크 테스트 절차 동기화: `docs/runbook.md`
+
+### 7.3 2026-02-14 실리허설/롤백 검증 로그
+- `scripts/staging-rehearsal.ps1 -Ref develop -SkipPreflight`
+  - run: `22010284332` (success)
+- rollback rehearsal (`tmp/staging-rollback-6fef282`)
+  - run: `22010387328` (success)
+- develop restore rehearsal
+  - run: `22010470389` (success)
 
