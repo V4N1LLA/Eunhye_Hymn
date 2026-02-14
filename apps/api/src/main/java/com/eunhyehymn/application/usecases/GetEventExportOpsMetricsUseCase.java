@@ -7,7 +7,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class GetEventExportOpsMetricsUseCase {
@@ -61,10 +60,22 @@ public class GetEventExportOpsMetricsUseCase {
     }
 
     private JobMetrics summarizeJobs(List<EventExportJobRepository.MetricsRow> rows) {
-        long queued = rows.stream().filter(row -> row.status() == EventExportJobStatus.QUEUED).count();
-        long running = rows.stream().filter(row -> row.status() == EventExportJobStatus.RUNNING).count();
-        long completed = rows.stream().filter(row -> row.status() == EventExportJobStatus.COMPLETED).count();
-        long failed = rows.stream().filter(row -> row.status() == EventExportJobStatus.FAILED).count();
+        long queued = 0;
+        long running = 0;
+        long completed = 0;
+        long failed = 0;
+        for (EventExportJobRepository.MetricsRow row : rows) {
+            EventExportJobStatus status = row.status();
+            if (status == EventExportJobStatus.QUEUED) {
+                queued += 1;
+            } else if (status == EventExportJobStatus.RUNNING) {
+                running += 1;
+            } else if (status == EventExportJobStatus.COMPLETED) {
+                completed += 1;
+            } else if (status == EventExportJobStatus.FAILED) {
+                failed += 1;
+            }
+        }
         long finished = completed + failed;
         double failureRatePercent = finished == 0 ? 0.0 : roundTo2((failed * 100.0) / finished);
 
@@ -72,7 +83,7 @@ public class GetEventExportOpsMetricsUseCase {
     }
 
     private ProcessingMetrics summarizeProcessing(List<EventExportJobRepository.MetricsRow> rows) {
-        List<Double> durationsSeconds = new ArrayList<>();
+        List<Long> durationsSeconds = new ArrayList<>();
         for (EventExportJobRepository.MetricsRow row : rows) {
             if (row.startedAt() == null || row.completedAt() == null) {
                 continue;
@@ -81,25 +92,25 @@ public class GetEventExportOpsMetricsUseCase {
             if (seconds < 0) {
                 continue;
             }
-            durationsSeconds.add((double) seconds);
+            durationsSeconds.add(seconds);
         }
 
         if (durationsSeconds.isEmpty()) {
             return new ProcessingMetrics(0, 0.0, 0.0);
         }
 
-        double sumSeconds = durationsSeconds.stream().mapToDouble(Double::doubleValue).sum();
+        durationsSeconds.sort(Long::compareTo);
+        double sumSeconds = durationsSeconds.stream().mapToLong(Long::longValue).sum();
         double averageSeconds = roundTo2(sumSeconds / durationsSeconds.size());
         double p95Seconds = roundTo2(percentile(durationsSeconds, 0.95));
 
         return new ProcessingMetrics(durationsSeconds.size(), averageSeconds, p95Seconds);
     }
 
-    private double percentile(List<Double> values, double percentile) {
-        List<Double> sorted = values.stream().sorted(Comparator.naturalOrder()).toList();
-        int rank = (int) Math.ceil(percentile * sorted.size());
+    private double percentile(List<Long> sortedValues, double percentile) {
+        int rank = (int) Math.ceil(percentile * sortedValues.size());
         int index = Math.max(rank - 1, 0);
-        return sorted.get(index);
+        return sortedValues.get(index);
     }
 
     private double roundTo2(double value) {

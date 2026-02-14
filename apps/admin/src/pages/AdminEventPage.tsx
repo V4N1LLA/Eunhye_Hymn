@@ -21,8 +21,7 @@ const EVENT_TYPE_OPTIONS: Array<{ label: string; value: "all" | EventType }> = [
   { label: "즐겨찾기", value: "FAVORITE_TOGGLED" },
 ];
 
-const SUMMARY_DAY_PRESETS = [1, 7, 30, 60, 90];
-const OPS_METRIC_DAY_PRESETS = [1, 7, 30, 60, 90];
+const DAY_PRESETS = [1, 7, 30, 60, 90];
 const MIN_SUMMARY_DAYS = 1;
 const MAX_SUMMARY_DAYS = 90;
 const SIZE_OPTIONS = [20, 50, 100, 200];
@@ -273,7 +272,7 @@ export default function AdminEventPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {OPS_METRIC_DAY_PRESETS.map((days) => (
+            {DAY_PRESETS.map((days) => (
               <button
                 key={days}
                 type="button"
@@ -401,7 +400,7 @@ export default function AdminEventPage() {
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-xs text-gray-500">집계 기간 프리셋</span>
-          {SUMMARY_DAY_PRESETS.map((days) => (
+          {DAY_PRESETS.map((days) => (
             <button
               key={days}
               type="button"
