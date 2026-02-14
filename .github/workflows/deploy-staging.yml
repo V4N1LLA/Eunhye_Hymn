@@ -221,8 +221,42 @@ jobs:
             return 1
           }
 
+          check_container_state() {
+            local container_name="$1"
+            local expected_state="$2"
+            local max_attempts="$3"
+            local sleep_seconds="$4"
+            local attempt
+            local state
+
+            for attempt in $(seq 1 "${max_attempts}"); do
+              state="$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+                "ec2-user@${host}" \
+                "docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' '${container_name}'" \
+                2>/dev/null || true)"
+              state="$(printf '%s' "${state}" | xargs || true)"
+
+              if [[ "${expected_state}" == "running-healthy" && "${state}" == "running healthy" ]]; then
+                echo "${container_name} state check passed (${state}) on attempt ${attempt}"
+                return 0
+              fi
+              if [[ "${expected_state}" == "running" && "${state}" == running* ]]; then
+                echo "${container_name} state check passed (${state}) on attempt ${attempt}"
+                return 0
+              fi
+
+              echo "${container_name} state attempt ${attempt}/${max_attempts} returned '${state}'; retrying in ${sleep_seconds}s"
+              sleep "${sleep_seconds}"
+            done
+
+            echo "::error::${container_name} state check failed after ${max_attempts} attempts (expected=${expected_state}, last='${state}')"
+            return 1
+          }
+
           echo "Waiting for services to start..."
           sleep 30
           check_ping "http://${host}/api/v1/ping" 10 6
           check_http_status "admin-root" "http://${host}/" 5 4
           check_http_status "admin-auth-guard" "http://${host}/api/v1/admin/hymns" 5 4
+          check_container_state "eunhye-api" "running-healthy" 10 6
+          check_container_state "eunhye-nginx" "running" 5 4

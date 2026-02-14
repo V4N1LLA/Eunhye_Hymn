@@ -611,3 +611,27 @@
 
 ### 검증
 - `gh api repos/V4N1LLA/Eunhye_Hymn/contents/.github/workflows/deploy-staging.yml?ref=chore/staging-smoke-verify-steps --jq .sha`
+
+## 21. 이번 사이클 기록 (2026-02-14, 18차)
+
+### 목표
+- 스테이징 배포 완료 기준 고도화: 외부 HTTP 응답뿐 아니라 EC2 컨테이너 런타임 상태까지 자동 검증
+
+### 범위
+- 포함: `deploy-staging.yml` verify 단계에 원격 컨테이너 상태 체크 추가, 문서 동기화
+- 제외: 애플리케이션 기능 코드 변경
+
+### 수행 작업
+1. 원격 컨테이너 상태 체크 추가
+- `ssh + docker inspect`로 `eunhye-api`가 `running healthy`인지 재시도 기반 검증
+- `eunhye-nginx`가 `running`인지 재시도 기반 검증
+
+2. 실패 신호 명확화
+- 상태 검증 재시도 소진 시 `::error::`로 즉시 실패 처리
+- 마지막 관측 상태를 로그에 남겨 장애 분석 단서 보강
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `gh api repos/V4N1LLA/Eunhye_Hymn/contents/.github/workflows/deploy-staging.yml?ref=ci/staging-verify-container-health --jq .sha`
