@@ -9,6 +9,7 @@ import com.eunhyehymn.application.usecases.AdminListUsersUseCase;
 import com.eunhyehymn.application.usecases.AdminUpdateHymnUseCase;
 import com.eunhyehymn.application.usecases.AdminUpdateUserUseCase;
 import com.eunhyehymn.application.usecases.CleanupEventExportJobsUseCase;
+import com.eunhyehymn.application.usecases.GetEventExportOpsMetricsUseCase;
 import com.eunhyehymn.application.usecases.GetFavoriteUseCase;
 import com.eunhyehymn.application.usecases.GetHistoryUseCase;
 import com.eunhyehymn.application.usecases.GetHymnDetailUseCase;
@@ -18,6 +19,7 @@ import com.eunhyehymn.application.usecases.RecordEventsUseCase;
 import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
 import com.eunhyehymn.domain.repository.AssetRepository;
+import com.eunhyehymn.domain.repository.EventExportJobCleanupRunRepository;
 import com.eunhyehymn.domain.repository.EventExportJobRepository;
 import com.eunhyehymn.domain.repository.EventRepository;
 import com.eunhyehymn.domain.repository.HymnNoteRepository;
@@ -114,6 +116,14 @@ public class UseCaseConfig {
         @Value("${events.export.jobs.retention-days:7}") int retentionDays
     ) {
         return new CleanupEventExportJobsUseCase(eventExportJobRepository, retentionDays);
+    }
+
+    @Bean
+    GetEventExportOpsMetricsUseCase getEventExportOpsMetricsUseCase(
+        EventExportJobRepository eventExportJobRepository,
+        EventExportJobCleanupRunRepository eventExportJobCleanupRunRepository
+    ) {
+        return new GetEventExportOpsMetricsUseCase(eventExportJobRepository, eventExportJobCleanupRunRepository);
     }
 
     @Bean

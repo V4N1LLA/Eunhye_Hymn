@@ -138,7 +138,8 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
   - `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준 Admin/Mobile 수동 스모크 실행
   - 리허설/스모크 결과를 `docs/changelog-dev.md`에 주기 반영
 - 운영 기능 백로그
-  - 비동기 export 운영 모니터링 지표(실패율/처리시간/정리량) 정례화
+  - 비동기 export 운영 모니터링 지표(실패율/처리시간/정리량) 정례화 완료
+  - 후속 과제: 지표 임계치 기반 알림/대시보드 연동 설계
 
 ## 6. 빠른 사용 체크리스트
 

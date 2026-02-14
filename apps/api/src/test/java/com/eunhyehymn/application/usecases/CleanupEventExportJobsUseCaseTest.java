@@ -6,6 +6,7 @@ import com.eunhyehymn.domain.model.EventExportJob;
 import com.eunhyehymn.domain.repository.EventExportJobRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,11 @@ class CleanupEventExportJobsUseCaseTest {
         @Override
         public Optional<EventExportJob> findById(UUID id) {
             return Optional.empty();
+        }
+
+        @Override
+        public List<MetricsRow> findMetricsRows(Instant fromInclusive, Instant toExclusive) {
+            return List.of();
         }
 
         @Override

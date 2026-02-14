@@ -8,12 +8,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.eunhyehymn.domain.model.EventType;
+import com.eunhyehymn.domain.model.EventExportJobStatus;
 import com.eunhyehymn.domain.model.PartType;
 import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.AuthIdentityJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventEntity;
+import com.eunhyehymn.infrastructure.persistence.EventExportJobCleanupRunEntity;
+import com.eunhyehymn.infrastructure.persistence.EventExportJobCleanupRunJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventExportJobJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnEntity;
@@ -54,6 +57,7 @@ class AdminEventApiTest {
     @Autowired private HymnNoteJpaRepository hymnNoteJpaRepository;
     @Autowired private UserHymnStateJpaRepository userHymnStateJpaRepository;
     @Autowired private EventJpaRepository eventJpaRepository;
+    @Autowired private EventExportJobCleanupRunJpaRepository eventExportJobCleanupRunJpaRepository;
     @Autowired private EventExportJobJpaRepository eventExportJobJpaRepository;
     @Autowired private AuthIdentityJpaRepository authIdentityJpaRepository;
     @Autowired private RefreshTokenJpaRepository refreshTokenJpaRepository;
@@ -70,6 +74,7 @@ class AdminEventApiTest {
     @BeforeEach
     void setUp() {
         inviteCodeJpaRepository.deleteAll();
+        eventExportJobCleanupRunJpaRepository.deleteAll();
         eventExportJobJpaRepository.deleteAll();
         eventJpaRepository.deleteAll();
         userHymnStateJpaRepository.deleteAll();
@@ -331,6 +336,59 @@ class AdminEventApiTest {
     }
 
     @Test
+    void adminCanGetAsyncExportOpsMetrics() throws Exception {
+        Instant now = Instant.now();
+        saveExportJob(
+            EventExportJobStatus.COMPLETED,
+            now.minus(2, ChronoUnit.HOURS),
+            now.minus(2, ChronoUnit.HOURS).plusSeconds(10),
+            now.minus(2, ChronoUnit.HOURS).plusSeconds(20)
+        );
+        saveExportJob(
+            EventExportJobStatus.FAILED,
+            now.minus(90, ChronoUnit.MINUTES),
+            now.minus(90, ChronoUnit.MINUTES).plusSeconds(5),
+            now.minus(90, ChronoUnit.MINUTES).plusSeconds(35)
+        );
+        saveExportJob(
+            EventExportJobStatus.RUNNING,
+            now.minus(1, ChronoUnit.HOURS),
+            now.minus(1, ChronoUnit.HOURS).plusSeconds(5),
+            null
+        );
+        saveExportJob(
+            EventExportJobStatus.QUEUED,
+            now.minus(30, ChronoUnit.MINUTES),
+            null,
+            null
+        );
+        saveExportJob(
+            EventExportJobStatus.COMPLETED,
+            now.minus(20, ChronoUnit.DAYS),
+            now.minus(20, ChronoUnit.DAYS).plusSeconds(5),
+            now.minus(20, ChronoUnit.DAYS).plusSeconds(30)
+        );
+
+        saveCleanupRun(now.minus(1, ChronoUnit.DAYS), 4L);
+        saveCleanupRun(now.minus(12, ChronoUnit.DAYS), 20L);
+
+        mockMvc.perform(get("/admin/events/export-jobs/metrics")
+                .header("Authorization", "Bearer " + adminToken)
+                .param("days", "7"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.windowDays").value(7))
+            .andExpect(jsonPath("$.data.jobs.total").value(4))
+            .andExpect(jsonPath("$.data.jobs.completed").value(1))
+            .andExpect(jsonPath("$.data.jobs.failed").value(1))
+            .andExpect(jsonPath("$.data.jobs.failureRatePercent").value(50.0))
+            .andExpect(jsonPath("$.data.processing.measuredJobs").value(2))
+            .andExpect(jsonPath("$.data.processing.averageSeconds").value(20.0))
+            .andExpect(jsonPath("$.data.processing.p95Seconds").value(30.0))
+            .andExpect(jsonPath("$.data.cleanup.runCount").value(1))
+            .andExpect(jsonPath("$.data.cleanup.deletedJobs").value(4));
+    }
+
+    @Test
     void invalidUserIdReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/admin/events")
                 .header("Authorization", "Bearer " + adminToken)
@@ -387,6 +445,41 @@ class AdminEventApiTest {
             part,
             "{\"source\":\"test\"}",
             createdAt
+        ));
+    }
+
+    private void saveExportJob(
+        EventExportJobStatus status,
+        Instant createdAt,
+        Instant startedAt,
+        Instant completedAt
+    ) {
+        eventExportJobJpaRepository.save(new com.eunhyehymn.infrastructure.persistence.EventExportJobEntity(
+            UUID.randomUUID(),
+            adminId,
+            EventType.HYMN_OPENED,
+            userAId,
+            hymnAId,
+            null,
+            null,
+            10_000,
+            status,
+            status == EventExportJobStatus.COMPLETED ? 10L : null,
+            status == EventExportJobStatus.COMPLETED ? "test.csv" : null,
+            status == EventExportJobStatus.COMPLETED ? "id,userId\n" : null,
+            status == EventExportJobStatus.FAILED ? "test failure" : null,
+            createdAt,
+            startedAt,
+            completedAt
+        ));
+    }
+
+    private void saveCleanupRun(Instant executedAt, long deletedCount) {
+        eventExportJobCleanupRunJpaRepository.save(new EventExportJobCleanupRunEntity(
+            UUID.randomUUID(),
+            executedAt,
+            7,
+            deletedCount
         ));
     }
 }

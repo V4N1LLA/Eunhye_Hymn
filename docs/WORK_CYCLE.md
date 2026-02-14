@@ -359,3 +359,37 @@
 - `./gradlew.bat test --tests "com.eunhyehymn.application.usecases.CleanupEventExportJobsUseCaseTest" --tests "com.eunhyehymn.application.usecases.CleanupEventExportJobsUseCaseIntegrationTest" --no-daemon --stacktrace` (`apps/api`)
 - `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
 - `npx tsc --noEmit` + `npm run build` (`apps/admin`)
+
+## 12. 이번 사이클 기록 (2026-02-14, 9차)
+
+### 목표
+- 기능 백로그 완료: 비동기 export 운영 지표(실패율/처리시간/정리량) 정례화
+
+### 범위
+- 포함: 운영 지표 API/저장소/정리 이력 저장, Admin UI 지표 카드, 테스트/문서 동기화
+- 제외: 지표 기반 알림(CloudWatch/SNS) 자동 연동
+
+### 수행 작업
+1. 백엔드 운영 지표 조회 기능 추가
+- `GetEventExportOpsMetricsUseCase` 추가
+- `GET /admin/events/export-jobs/metrics` 엔드포인트 추가
+- 작업 상태별 집계, 실패율, 평균/95퍼센타일 처리시간 계산
+
+2. 정리량 집계 이력 저장 추가
+- `V9__event_export_job_cleanup_runs.sql` 추가
+- `EventExportJobCleanupRun` 도메인/저장소/어댑터 추가
+- `EventExportJobCleanupScheduler`가 실행 시 정리 결과를 이력 테이블에 저장
+
+3. 관리자 UI 운영 지표 카드 추가
+- `apps/admin/src/api/adminEvents.ts`: 운영 지표 API 클라이언트 추가
+- `apps/admin/src/pages/AdminEventPage.tsx`: 기간 프리셋(1/7/30/60/90일) 기반 지표 카드 추가
+
+4. 테스트 및 문서 동기화
+- 단위 테스트: `GetEventExportOpsMetricsUseCaseTest`
+- 통합 테스트: `AdminEventApiTest` 운영 지표 검증 케이스 추가
+- 문서: `docs/events.md`, `docs/api-contract.md`, `docs/current-usable-scope.md`, `docs/changelog-dev.md`, `CLAUDE.md`
+
+### 검증
+- `./gradlew.bat test --tests "com.eunhyehymn.application.usecases.GetEventExportOpsMetricsUseCaseTest" --tests "com.eunhyehymn.presentation.controllers.AdminEventApiTest" --no-daemon --stacktrace` (`apps/api`)
+- `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
+- `npx tsc --noEmit` + `npm run build` (`apps/admin`)
