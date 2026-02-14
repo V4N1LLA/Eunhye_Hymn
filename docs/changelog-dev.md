@@ -4,6 +4,13 @@
 
 ## 2026-02-14
 
+### 로컬 아티팩트 ignore 정리(13차)
+- 작업 트리 노이즈 제거
+  - 루트 `.gitignore`에 `.tmp/` 추가
+  - `infra/aws/.gitignore`에 `tfplan*` 추가
+- 효과
+  - 로컬 임시파일/terraform plan 파일이 기본 `git status` 결과를 오염시키지 않음
+
 ### 기준 범위 문서 최신화(12차)
 - `docs/current-usable-scope.md` 기준점 정합성 업데이트
   - 기준 커밋을 최신 `develop` HEAD(`5b08dc0`)로 갱신
