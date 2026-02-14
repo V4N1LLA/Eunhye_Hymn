@@ -2,9 +2,9 @@
 
 - 작성일: 2026-02-14
 - 기준 브랜치: `develop` (통합/배포 기준)
-- 기준 커밋: `389c752` (2026-02-14 05:11 UTC 기준 `develop` HEAD)
+- 기준 커밋: `5b08dc0` (2026-02-14 16:58 +09:00 기준 `develop` HEAD)
 - 근거 문서: `README.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
-- 근거 PR: #52, #49, #48, #47, #46, #45, #43, #42, #41, #40, #38, #37, #36, #31
+- 근거 PR: #56, #55, #54, #53, #52, #49, #48, #47, #46, #45, #43, #42, #41, #40, #38, #37, #36, #31
 
 ## 1. 요약
 
@@ -110,6 +110,34 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - IAM 권한 샘플: `infra/aws/terraform-deployer-iam-policy.json`
 
 ## 4. 최근 PR 기준 변경 포인트
+
+### PR #56 (export-csv-security-hardening)
+- 동기/비동기 CSV 내보내기 수식 주입 방어(`=`, `+`, `-`, `@`) 적용
+- `CsvUtils` 공통 유틸 도입 및 통합 테스트 보강
+
+### PR #55 (event-export-reliability-cycle)
+- 비동기 export 내구성 강화
+  - 원자적 claim(`QUEUED` -> `RUNNING`) 도입
+  - stale `RUNNING` 복구 + `QUEUED` 재디스패치 스케줄러 추가
+- export 정합성/성능/운영가드 보강
+  - `to` 미지정 시 snapshot 상한 고정
+  - 정렬 안정화(`createdAt DESC, id DESC`)
+  - 정리 쿼리 인덱스(`V10`) 추가
+  - 임계치 기반 운영 경고 스케줄러 추가
+
+### PR #54 (event-export-ops-metrics)
+- 비동기 export 운영 지표 API/관리자 UI 반영
+- 정리 실행 이력 저장 테이블(`V9`) 및 지표 집계 파이프라인 추가
+
+### PR #53 (event-export-job-retention)
+- 비동기 export 결과 정리 배치 추가
+- `CleanupEventExportJobsUseCase` + `EventExportJobCleanupScheduler` 도입
+- 보관 정책 설정값(`EVENT_EXPORT_JOB_RETENTION_DAYS`, `EVENT_EXPORT_JOB_CLEANUP_*`) 추가
+
+### PR #52 (admin-events-async-export)
+- 관리자 감사 로그 비동기 대용량 CSV export 작업 API 추가
+- `event_export_jobs` 테이블(`V8`) 및 작업 상태 조회/다운로드 엔드포인트 추가
+- Admin 이벤트 화면에 비동기 CSV 요청/상태/다운로드 UX 반영
 
 ### PR #38 (mobile-offline-cache-sync)
 - 목록/상세/메모/즐겨찾기/히스토리 캐시 fallback, 오프라인 동기화 큐
