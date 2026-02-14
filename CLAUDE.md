@@ -20,7 +20,7 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (27 UseCase)
+│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (28 UseCase)
 │   │   └── Dockerfile    # Multi-stage (JDK build → JRE run + curl for healthcheck)
 │   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 8페이지 완료
 │   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
@@ -133,6 +133,9 @@ cd apps/mobile
 | `S3_ENDPOINT` | S3 엔드포인트 오버라이드 | - | (빈 문자열) |
 | `S3_PUBLIC_BASE_URL` | 에셋 공개 URL 베이스 | - | (빈 문자열) |
 | `S3_PRESIGN_EXPIRES_MINUTES` | presigned URL 만료 | - | `15` |
+| `EVENT_EXPORT_JOB_RETENTION_DAYS` | 비동기 export 결과 보관 일수 | - | `7` |
+| `EVENT_EXPORT_JOB_CLEANUP_CRON` | 비동기 export 정리 스케줄(cron) | - | `0 15 3 * * *` |
+| `EVENT_EXPORT_JOB_CLEANUP_ZONE` | 비동기 export 정리 스케줄 타임존 | - | `UTC` |
 
 ---
 
@@ -157,12 +160,12 @@ com.eunhyehymn/
 │   └── repository/     # Repository 인터페이스
 ├── application/
 │   ├── ports/          # 외부 서비스 인터페이스 (SocialTokenVerifier)
-│   └── usecases/       # 비즈니스 로직 Use Cases (27개)
+│   └── usecases/       # 비즈니스 로직 Use Cases (28개)
 ├── presentation/
 │   ├── controllers/    # REST 컨트롤러 (11개)
 │   └── dto/            # Request/Response DTOs
 ├── infrastructure/
-│   ├── persistence/    # JPA Repository Adapters (9개)
+│   ├── persistence/    # JPA Repository Adapters (10개)
 │   ├── security/       # JWT, Social Login, Security Config
 │   └── storage/        # S3 Storage Service
 └── common/
@@ -290,7 +293,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (27개)
+## 8. Use Cases (28개)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -317,6 +320,7 @@ com.eunhyehymn/
 | `AdminUpdateUserUseCase` | `update(userId, role, status)` | 사용자 역할/상태 변경 |
 | `AdminListEventsUseCase` | `execute(query)` | 관리자 이벤트 로그 조회 + 이벤트 타입 집계 |
 | `AdminEventExportJobUseCase` | `create/get/process/getDownload` | 관리자 비동기 대용량 CSV 작업 생성/상태/처리/다운로드 |
+| `CleanupEventExportJobsUseCase` | `cleanup(now)` | 완료/실패 비동기 export 작업 보관기한 정리 |
 | `AdminCreateInviteCodeUseCase` | `create(code, createdBy, ...)` | 초대코드 생성 (중복 검사) |
 | `AdminListInviteCodesUseCase` | `listAll()` | 전체 초대코드 목록 |
 | `AdminRevokeInviteCodeUseCase` | `revoke(code)` | 초대코드 비활성화 (enabled=false) |
@@ -403,6 +407,8 @@ com.eunhyehymn/
 | `SocialLoginApiTest` | 소셜 로그인 API (Google/Kakao, 초대코드 검증, 기존 사용자) |
 | `FlywayRepositoryIntegrationTest` | DB 마이그레이션 통합 |
 | `GetHistoryUseCaseTest` | 히스토리 Use Case 단위 |
+| `CleanupEventExportJobsUseCaseTest` | 비동기 export 정리 Use Case 단위 |
+| `CleanupEventExportJobsUseCaseIntegrationTest` | 비동기 export 정리 정책 통합 |
 | `AdminUserApiTest` | 사용자 관리 API (목록, 역할/상태 변경, 권한 검사) |
 | `AdminEventApiTest` | 관리자 이벤트 API (로그 조회, 집계, 페이지네이션, 동기/비동기 CSV export, 접근 제어 검증) |
 | `AdminInviteCodeApiTest` | 초대코드 관리 API (생성, 목록, 비활성화, 검증) |
@@ -652,15 +658,16 @@ develop push → GitHub Actions
 
 ### 완료
 
-**백엔드 API (27 UseCase, 11 Controller)**
+**백엔드 API (28 UseCase, 11 Controller)**
 - 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
 - S3 에셋 관리 (presign/confirm/삭제)
 - JWT 인증 + 소셜 로그인 (Google/Kakao) + 토큰 회전
 - DB 기반 초대코드 관리 (CRUD + 검증 + 원자적 사용 횟수 증가)
 - 사용자 관리 (역할/상태 변경)
 - 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
+- 비동기 export 결과 정리 배치 (완료/실패 작업 기본 7일 보관 후 정리)
 - DB 스키마 Flyway 마이그레이션 (V1~V8)
-- 테스트 12개 파일 전체 통과 (SocialLoginApiTest 포함)
+- 테스트 14개 파일 전체 통과 (SocialLoginApiTest 포함)
 
 **Admin 프론트엔드 (8페이지)**
 - 찬양 목록/생성/수정/삭제 + 검색/필터 + 활성화 토글
@@ -746,7 +753,7 @@ develop push → GitHub Actions
 - 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`에 주기적으로 갱신
 
 **3. 기능 백로그**
-- 비동기 export 결과 보관 정책(만료/정리) 및 운영 지표(실패율/처리시간) 정례화
+- 비동기 export 운영 지표(실패율/처리시간/정리량) 정례화
 
 **4. 모바일 배포 패키징**
 - 현재 저장소 기준 실행은 `flutter run -d chrome` 중심

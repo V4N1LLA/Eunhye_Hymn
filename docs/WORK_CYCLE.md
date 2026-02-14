@@ -317,3 +317,45 @@
 - `./gradlew.bat test --tests "com.eunhyehymn.presentation.controllers.AdminEventApiTest" --no-daemon --stacktrace` (`apps/api`)
 - `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
 - `npm ci` + `npx tsc --noEmit` + `npm run build` (`apps/admin`)
+
+## 11. 이번 사이클 기록 (2026-02-14, 8차)
+
+### 목표
+- 기능 백로그 완료: 비동기 export 결과 보관 정책(만료/정리) 배치 도입
+
+### 범위
+- 포함: 백엔드 정리 유스케이스/스케줄러, 테스트 보강, 문서 동기화
+- 제외: 운영 대시보드/알람 지표 자동 수집
+
+### 수행 작업
+1. 백엔드 정리 정책 구현
+- `CleanupEventExportJobsUseCase` 추가
+  - 완료/실패 상태 작업을 보관 일수 기준으로 삭제
+  - 기본 보관 일수 `7`일(최소 `1`일)
+- 저장소 삭제 메서드 추가
+  - `EventExportJobRepository.deleteCompletedOrFailedBefore(...)`
+  - `EventExportJobJpaRepository.deleteByStatusInAndCompletedAtBefore(...)`
+- 스케줄러 추가
+  - `EventExportJobCleanupScheduler`
+  - 기본 실행: 매일 03:15 UTC (`events.export.jobs.cleanup-cron`)
+
+2. 설정 추가
+- `application.yml`
+  - `events.export.jobs.retention-days`
+  - `events.export.jobs.cleanup-cron`
+  - `events.export.jobs.cleanup-zone`
+- `application-test.yml`
+  - 테스트 환경에서 스케줄러 비활성화 (`spring.task.scheduling.enabled=false`)
+
+3. 테스트 보강
+- 단위 테스트: `CleanupEventExportJobsUseCaseTest`
+- 통합 테스트: `CleanupEventExportJobsUseCaseIntegrationTest`
+- 전체 API 테스트 시 격리 이슈를 막기 위해 integration test에 `tearDown` 정리 추가
+
+4. 문서 동기화
+- `docs/events.md`, `docs/current-usable-scope.md`, `docs/changelog-dev.md`, `CLAUDE.md`
+
+### 검증
+- `./gradlew.bat test --tests "com.eunhyehymn.application.usecases.CleanupEventExportJobsUseCaseTest" --tests "com.eunhyehymn.application.usecases.CleanupEventExportJobsUseCaseIntegrationTest" --no-daemon --stacktrace` (`apps/api`)
+- `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
+- `npx tsc --noEmit` + `npm run build` (`apps/admin`)

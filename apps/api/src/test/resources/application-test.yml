@@ -12,9 +12,17 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  task:
+    scheduling:
+      enabled: false
 
 security:
   jwt:
     secret: test-secret
     access-token-ttl-seconds: 3600
     refresh-token-ttl-seconds: 1209600
+
+events:
+  export:
+    jobs:
+      retention-days: 7

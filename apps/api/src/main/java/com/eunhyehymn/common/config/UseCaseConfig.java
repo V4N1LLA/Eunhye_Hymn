@@ -8,6 +8,7 @@ import com.eunhyehymn.application.usecases.AdminListHymnsUseCase;
 import com.eunhyehymn.application.usecases.AdminListUsersUseCase;
 import com.eunhyehymn.application.usecases.AdminUpdateHymnUseCase;
 import com.eunhyehymn.application.usecases.AdminUpdateUserUseCase;
+import com.eunhyehymn.application.usecases.CleanupEventExportJobsUseCase;
 import com.eunhyehymn.application.usecases.GetFavoriteUseCase;
 import com.eunhyehymn.application.usecases.GetHistoryUseCase;
 import com.eunhyehymn.application.usecases.GetHymnDetailUseCase;
@@ -23,6 +24,7 @@ import com.eunhyehymn.domain.repository.HymnNoteRepository;
 import com.eunhyehymn.domain.repository.HymnRepository;
 import com.eunhyehymn.domain.repository.UserHymnStateRepository;
 import com.eunhyehymn.domain.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -104,6 +106,14 @@ public class UseCaseConfig {
         EventExportJobRepository eventExportJobRepository
     ) {
         return new AdminEventExportJobUseCase(eventRepository, eventExportJobRepository);
+    }
+
+    @Bean
+    CleanupEventExportJobsUseCase cleanupEventExportJobsUseCase(
+        EventExportJobRepository eventExportJobRepository,
+        @Value("${events.export.jobs.retention-days:7}") int retentionDays
+    ) {
+        return new CleanupEventExportJobsUseCase(eventExportJobRepository, retentionDays);
     }
 
     @Bean

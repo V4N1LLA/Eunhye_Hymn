@@ -75,6 +75,16 @@
   - 완료(`COMPLETED`) 작업 CSV 다운로드
   - 미완료/실패 작업은 `409` 반환
 
+### 4.5 비동기 export 결과 정리 정책
+- 완료(`COMPLETED`) 또는 실패(`FAILED`) 상태의 작업은 스케줄러가 주기적으로 정리한다.
+- 기본 정책
+  - 보관 일수: 7일
+  - 정리 스케줄: 매일 03:15 UTC
+- 설정 값
+  - `EVENT_EXPORT_JOB_RETENTION_DAYS` (기본 7)
+  - `EVENT_EXPORT_JOB_CLEANUP_CRON` (기본 `0 15 3 * * *`)
+  - `EVENT_EXPORT_JOB_CLEANUP_ZONE` (기본 `UTC`)
+
 ## 5. 인덱스/성능 메모
 - 관리자 조회 패턴 최적화를 위해 아래 인덱스를 사용한다.
   - `idx_events_user_created` (`user_id`, `created_at`) - 기존
@@ -84,5 +94,5 @@
 - 운영 시 확인 항목
   - 관리자 이벤트 조회 응답 시간이 증가하면 `EXPLAIN ANALYZE`로 인덱스 사용 여부 확인
   - 이벤트 테이블 급증 시 CSV `limit` 정책과 백필/아카이빙 정책을 함께 점검
-  - 대용량 비동기 export는 `event_export_jobs` 테이블 크기/완료율/실패율을 함께 모니터링
+  - 대용량 비동기 export는 `event_export_jobs` 테이블 크기/완료율/실패율과 정리 삭제량을 함께 모니터링
 

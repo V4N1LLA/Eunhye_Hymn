@@ -4,6 +4,22 @@
 
 ## 2026-02-14
 
+### 비동기 export 결과 정리 배치(8차)
+- 백엔드 정리 정책 추가
+  - `CleanupEventExportJobsUseCase` 추가 (완료/실패 작업 보관 기한 기준 삭제)
+  - `EventExportJobCleanupScheduler` 추가 (기본 매일 03:15 UTC 실행)
+  - 저장소 삭제 메서드 추가: 완료/실패 + `completed_at` 기준 일괄 삭제
+- 설정 추가
+  - `EVENT_EXPORT_JOB_RETENTION_DAYS` (기본 7)
+  - `EVENT_EXPORT_JOB_CLEANUP_CRON` (기본 `0 15 3 * * *`)
+  - `EVENT_EXPORT_JOB_CLEANUP_ZONE` (기본 `UTC`)
+- 테스트 보강
+  - `CleanupEventExportJobsUseCaseTest` (정리 기준 계산/정규화 단위 테스트)
+  - `CleanupEventExportJobsUseCaseIntegrationTest` (완료/실패만 삭제되는 통합 테스트)
+  - 테스트 격리를 위한 cleanup integration test `tearDown` 추가
+- 문서 동기화
+  - `docs/events.md`, `docs/current-usable-scope.md`, `docs/WORK_CYCLE.md`, `CLAUDE.md`
+
 ### 감사 로그 대용량 비동기 export(7차)
 - 백엔드 비동기 export job 추가
   - `POST /api/v1/admin/events/export-jobs`: 작업 생성(202 Accepted)

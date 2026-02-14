@@ -45,3 +45,10 @@ storage:
     endpoint: ${S3_ENDPOINT:}
     public-base-url: ${S3_PUBLIC_BASE_URL:}
     presign-expires-minutes: ${S3_PRESIGN_EXPIRES_MINUTES:15}
+
+events:
+  export:
+    jobs:
+      retention-days: ${EVENT_EXPORT_JOB_RETENTION_DAYS:7}
+      cleanup-cron: ${EVENT_EXPORT_JOB_CLEANUP_CRON:0 15 3 * * *}
+      cleanup-zone: ${EVENT_EXPORT_JOB_CLEANUP_ZONE:UTC}
