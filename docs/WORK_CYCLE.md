@@ -437,3 +437,34 @@
 ### 검증
 - `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
 - `npm run build` (`apps/admin`)
+
+## 14. 이번 사이클 기록 (2026-02-14, 11차)
+
+### 목표
+- 보안 리스크 완화: CSV export 수식 주입(Spreadsheet Formula Injection) 방어
+
+### 범위
+- 포함: 백엔드 CSV 셀 이스케이프 공통화, 동기/비동기 경로 검증 테스트, 문서 동기화
+- 제외: 파일 포맷 변경(xlsx 전환), 외부 AV/콘텐츠 스캐너 연동
+
+### 수행 작업
+1. 공통 CSV 보안 유틸 도입
+- `CsvUtils.toSafeCsvCell(...)` 추가
+- 수식 시작 문자열(`=`, `+`, `-`, `@`) 및 선행 공백 우회 케이스를 방어하도록 prefix 처리
+
+2. 동기/비동기 export 적용
+- `AdminEventController` 동기 CSV 경로 적용
+- `AdminEventExportJobUseCase` 비동기 CSV 경로 적용
+
+3. 테스트 확장
+- `CsvUtilsTest` 신규
+- `AdminEventApiTest`에 동기/비동기 CSV 수식 이스케이프 통합 테스트 추가
+
+4. 문서 동기화
+- `docs/events.md`
+- `docs/changelog-dev.md`
+
+### 검증
+- `./gradlew.bat test --tests "com.eunhyehymn.common.util.CsvUtilsTest" --tests "com.eunhyehymn.presentation.controllers.AdminEventApiTest" --no-daemon --stacktrace` (`apps/api`)
+- `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
+- `npm run build` (`apps/admin`)
