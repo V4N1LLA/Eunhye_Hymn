@@ -714,3 +714,28 @@
 
 ### 검증
 - `bash -n infra/aws/verify-staging.sh`
+
+## 25. 이번 사이클 기록 (2026-02-14, 22차)
+
+### 목표
+- API 테스트 캐시 안정화: Gradle 캐시 restore 400 경고 노이즈를 줄이고 워크플로우 간 캐시 설정 일관성 확보
+
+### 범위
+- 포함: `deploy-staging.yml`/`api-ci.yml`의 API 테스트 캐시 설정 통일, 문서 동기화
+- 제외: 애플리케이션 기능 코드 변경, 테스트 시나리오 변경
+
+### 수행 작업
+1. 배포 파이프라인 캐시 전략 변경
+- `deploy-staging.yml`의 `test-api` job에서 `gradle/actions/setup-gradle@v3` 제거
+- `actions/setup-java@v4`에 `cache: gradle` + `cache-dependency-path` 설정 추가
+
+2. API CI 캐시 전략 통일
+- `api-ci.yml`도 동일한 `setup-java` 내장 Gradle 캐시 방식으로 변경
+- `cache-dependency-path`를 `apps/api` Gradle 파일/Wrapper 기준으로 명시
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `gh workflow view api-ci.yml --yaml`
+- `gh workflow view deploy-staging.yml --yaml`
