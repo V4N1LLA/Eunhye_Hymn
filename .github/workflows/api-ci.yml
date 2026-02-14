@@ -24,8 +24,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Gradle 캐시 설정
-        uses: gradle/actions/setup-gradle@v3
+          cache: gradle
+          cache-dependency-path: |
+            apps/api/**/*.gradle*
+            apps/api/**/gradle-wrapper.properties
       - name: Gradle Wrapper 실행 권한 부여
         run: chmod +x gradlew
       - name: 테스트 실행

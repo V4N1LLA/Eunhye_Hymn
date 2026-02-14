@@ -4,6 +4,16 @@
 
 ## 2026-02-14
 
+### API Gradle 캐시 안정화(22차)
+- `deploy-staging.yml`의 API 테스트 단계 캐시 전략 변경
+  - `gradle/actions/setup-gradle@v3` 대신 `actions/setup-java@v4`의 `cache: gradle` 사용
+  - `cache-dependency-path`를 `apps/api` Gradle 파일/Wrapper 기준으로 명시
+- `api-ci.yml`의 API CI 테스트 단계 캐시 전략 동일화
+  - 배포 파이프라인과 동일하게 `setup-java` 내장 Gradle 캐시로 통일
+- 효과
+  - `setup-gradle` restore 시 간헐적으로 발생하던 캐시 400 경고 노이즈를 줄이고,
+    API 테스트 캐시 설정을 두 워크플로우에서 동일하게 유지
+
 ### 스테이징 verify SSH 키 경로 hotfix(21차)
 - `infra/aws/verify-staging.sh` 경로 정규화 수정
   - `~`/`~/...` 입력을 `HOME` 기준 절대 경로로 정확히 치환하도록 `expand_home_path` 로직 보정
