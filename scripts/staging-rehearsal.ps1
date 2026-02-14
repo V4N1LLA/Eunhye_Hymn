@@ -31,6 +31,14 @@ function Invoke-CommandStrict {
   }
 }
 
+function Test-CommitShaRef {
+  param([string]$Value)
+  if ([string]::IsNullOrWhiteSpace($Value)) {
+    return $false
+  }
+  return $Value -match "^[0-9a-fA-F]{40}$"
+}
+
 function Ensure-LogFile {
   param([string]$Path)
   if (Test-Path $Path) {
@@ -98,6 +106,10 @@ if (-not $SkipPreflight) {
 
 $triggeredAfter = (Get-Date).ToUniversalTime()
 $enableValue = if ($EnableAwsLogs) { "true" } else { "false" }
+
+if (Test-CommitShaRef -Value $Ref) {
+  throw "Ref must be a branch or tag for workflow_dispatch. Commit SHA is not accepted: $Ref"
+}
 
 if ($DryRun) {
   Write-Host "[DryRun] Repo: $Repo"

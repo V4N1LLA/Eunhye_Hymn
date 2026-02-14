@@ -50,6 +50,8 @@
 
 ## 6. 롤백 절차
 1. 최근 배포 커밋/이미지 태그 확인
+   - `deploy-staging.yml`의 `workflow_dispatch`는 branch/tag ref만 지원한다. 커밋 SHA로 롤백 리허설이 필요하면 임시 브랜치를 만들어 실행한다.
+   - 예시: `git branch tmp/staging-rollback-<sha12> <commit_sha>` → `git push origin tmp/staging-rollback-<sha12>`
 2. 이전 안정 태그로 `deploy.sh` 재실행
 3. `curl http://<EC2_HOST>/api/v1/ping` 및 핵심 화면 재확인
 4. 원인/영향/복구 시각 기록 및 공유

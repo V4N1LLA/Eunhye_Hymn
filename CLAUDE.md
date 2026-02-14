@@ -713,13 +713,17 @@ develop push → GitHub Actions
   - `docs/runbook.md`
 - 스테이징 리허설 실행 로그 문서 추가
   - `docs/staging-rehearsal-log.md`
+- 2026-02-14 실리허설/롤백/복구 실행 기록 반영
+  - `22010284332` (develop)
+  - `22010387328` (rollback rehearsal)
+  - `22010470389` (develop restore)
 
 ### 미완료 (우선순위순)
 
 **1. 스테이징 실가동 전환**
 - Terraform 실제 적용 및 AWS 리소스 활성화
-- GitHub Actions Secrets 설정 완료 및 첫 자동 배포 검증
-- EC2 접근 권한/배포 계정 권한 점검 및 운영 체크리스트 실행
+- GitHub Actions Secrets/권한 상태 주기 점검 및 preflight 통과 환경 유지
+- EC2 접근 권한/배포 계정 권한 점검 및 운영 체크리스트 정기 실행
 - 단계별 온보딩: `docs/admin/aws-free-tier-onboarding.md`
 - 보조 스크립트:
   - `scripts/staging-preflight.ps1`
