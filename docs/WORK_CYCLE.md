@@ -278,3 +278,42 @@
 - `./gradlew.bat test --tests "com.eunhyehymn.presentation.controllers.AdminEventApiTest" --no-daemon --stacktrace` (`apps/api`)
 - `npm ci` + `npx tsc --noEmit` + `npm run build` (`apps/admin`)
 - `rg -n "summaryDays|1~90|대용량 비동기 export" docs/events.md docs/current-usable-scope.md CLAUDE.md docs/changelog-dev.md`
+
+## 10. 이번 사이클 기록 (2026-02-14, 7차)
+
+### 목표
+- 기능 백로그 완료: 관리자 감사 로그 대용량 비동기 export 구현
+
+### 범위
+- 포함: 비동기 export API/DB/UI 구현, 통합 테스트, 문서 동기화
+- 제외: 비동기 export 결과 만료/자동 정리 배치
+
+### 수행 작업
+1. 백엔드 비동기 export job 도입
+- `apps/api/src/main/resources/db/migration/V8__event_export_jobs.sql`
+- `EventExportJob`/`EventExportJobStatus` 도메인 모델 및 저장소 추가
+- `AdminEventExportJobUseCase`로 작업 생성/처리/다운로드 검증 구현
+- `AdminEventController`에 아래 엔드포인트 추가
+  - `POST /admin/events/export-jobs`
+  - `GET /admin/events/export-jobs/{jobId}`
+  - `GET /admin/events/export-jobs/{jobId}/download`
+
+2. 관리자 UI 연동
+- `apps/admin/src/api/adminEvents.ts`
+  - 비동기 작업 생성/조회/다운로드 API 추가
+- `apps/admin/src/pages/AdminEventPage.tsx`
+  - "비동기 CSV 요청" 버튼 추가
+  - 작업 상태(QUEUED/RUNNING/COMPLETED/FAILED) 카드 + 완료 다운로드 버튼 추가
+
+3. 테스트 및 안정화
+- `AdminEventApiTest`에 비동기 export 통합 테스트 추가
+- 테스트 간 백그라운드 레이스를 방지하도록 요청자 격리 테스트 종료 전에 작업 완료 대기 처리
+
+4. 문서 동기화
+- `docs/events.md`, `docs/api-contract.md`, `docs/usecases/admin-list-events.md`
+- `docs/current-usable-scope.md`, `docs/changelog-dev.md`, `CLAUDE.md`
+
+### 검증
+- `./gradlew.bat test --tests "com.eunhyehymn.presentation.controllers.AdminEventApiTest" --no-daemon --stacktrace` (`apps/api`)
+- `./gradlew.bat test --no-daemon --stacktrace` (`apps/api`)
+- `npm ci` + `npx tsc --noEmit` + `npm run build` (`apps/admin`)

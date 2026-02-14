@@ -1,22 +1,31 @@
 package com.eunhyehymn.presentation.controllers;
 
+import com.eunhyehymn.application.usecases.AdminEventExportJobUseCase;
 import com.eunhyehymn.application.usecases.AdminListEventsUseCase;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.common.response.ApiResponse;
 import com.eunhyehymn.domain.model.Event;
+import com.eunhyehymn.domain.model.EventExportJob;
+import com.eunhyehymn.domain.model.EventExportJobStatus;
 import com.eunhyehymn.domain.model.EventType;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,9 +35,17 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 public class AdminEventController {
     private final AdminListEventsUseCase adminListEventsUseCase;
+    private final AdminEventExportJobUseCase adminEventExportJobUseCase;
+    private final TaskExecutor eventExportTaskExecutor;
 
-    public AdminEventController(AdminListEventsUseCase adminListEventsUseCase) {
+    public AdminEventController(
+        AdminListEventsUseCase adminListEventsUseCase,
+        AdminEventExportJobUseCase adminEventExportJobUseCase,
+        @Qualifier("eventExportTaskExecutor") TaskExecutor eventExportTaskExecutor
+    ) {
         this.adminListEventsUseCase = adminListEventsUseCase;
+        this.adminEventExportJobUseCase = adminEventExportJobUseCase;
+        this.eventExportTaskExecutor = eventExportTaskExecutor;
     }
 
     @GetMapping
@@ -80,6 +97,61 @@ public class AdminEventController {
         return ApiResponse.success(new EventListResponse(items, summary, pagination));
     }
 
+    @PostMapping("/export-jobs")
+    public ResponseEntity<ApiResponse<EventExportJobResponse>> createExportJob(
+        @RequestParam(required = false) String eventType,
+        @RequestParam(required = false) String userId,
+        @RequestParam(required = false) String hymnId,
+        @RequestParam(required = false) String from,
+        @RequestParam(required = false) String to,
+        @RequestParam(required = false) Integer limit,
+        Authentication authentication
+    ) {
+        QueryContext context = resolveQueryContext(eventType, userId, hymnId, from, to, null, null, null, null);
+        UUID requestedBy = UUID.fromString(authentication.getName());
+
+        EventExportJob job = adminEventExportJobUseCase.create(new AdminEventExportJobUseCase.CreateCommand(
+            requestedBy,
+            context.eventType(),
+            context.userId(),
+            context.hymnId(),
+            context.fromInclusive(),
+            context.toExclusive(),
+            limit
+        ));
+
+        eventExportTaskExecutor.execute(() -> adminEventExportJobUseCase.process(job.id()));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(URI.create("/admin/events/export-jobs/" + job.id()));
+        return new ResponseEntity<>(ApiResponse.success(toExportJobResponse(job)), headers, HttpStatus.ACCEPTED);
+    }
+
+    @GetMapping("/export-jobs/{jobId}")
+    public ApiResponse<EventExportJobResponse> getExportJob(
+        @PathVariable UUID jobId,
+        Authentication authentication
+    ) {
+        EventExportJob job = adminEventExportJobUseCase.get(jobId, UUID.fromString(authentication.getName()));
+        return ApiResponse.success(toExportJobResponse(job));
+    }
+
+    @GetMapping("/export-jobs/{jobId}/download")
+    public ResponseEntity<String> downloadExportJob(
+        @PathVariable UUID jobId,
+        Authentication authentication
+    ) {
+        AdminEventExportJobUseCase.DownloadResult result = adminEventExportJobUseCase.getDownload(
+            jobId,
+            UUID.fromString(authentication.getName())
+        );
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(new MediaType("text", "csv", StandardCharsets.UTF_8));
+        headers.setContentDisposition(ContentDisposition.attachment().filename(result.fileName()).build());
+        return new ResponseEntity<>(result.csvContent(), headers, HttpStatus.OK);
+    }
+
     @GetMapping("/export")
     public ResponseEntity<String> exportCsv(
         @RequestParam(required = false) String eventType,
@@ -109,6 +181,25 @@ public class AdminEventController {
         headers.setContentDisposition(ContentDisposition.attachment().filename(filename).build());
 
         return new ResponseEntity<>(csv, headers, HttpStatus.OK);
+    }
+
+    private EventExportJobResponse toExportJobResponse(EventExportJob job) {
+        String statusUrl = "/admin/events/export-jobs/" + job.id();
+        String downloadUrl = statusUrl + "/download";
+        return new EventExportJobResponse(
+            job.id(),
+            job.status().name(),
+            job.exportLimit(),
+            job.rowCount(),
+            job.fileName(),
+            job.errorMessage(),
+            job.createdAt(),
+            job.startedAt(),
+            job.completedAt(),
+            statusUrl,
+            downloadUrl,
+            job.status() == EventExportJobStatus.COMPLETED
+        );
     }
 
     private QueryContext resolveQueryContext(
@@ -260,6 +351,22 @@ public class AdminEventController {
         long totalPages,
         boolean hasPrevious,
         boolean hasNext
+    ) {
+    }
+
+    public record EventExportJobResponse(
+        UUID id,
+        String status,
+        int exportLimit,
+        Long rowCount,
+        String fileName,
+        String errorMessage,
+        Instant createdAt,
+        Instant startedAt,
+        Instant completedAt,
+        String statusUrl,
+        String downloadUrl,
+        boolean downloadable
     ) {
     }
 

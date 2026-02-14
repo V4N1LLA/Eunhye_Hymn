@@ -20,7 +20,7 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (26 UseCase)
+│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (27 UseCase)
 │   │   └── Dockerfile    # Multi-stage (JDK build → JRE run + curl for healthcheck)
 │   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 8페이지 완료
 │   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
@@ -157,7 +157,7 @@ com.eunhyehymn/
 │   └── repository/     # Repository 인터페이스
 ├── application/
 │   ├── ports/          # 외부 서비스 인터페이스 (SocialTokenVerifier)
-│   └── usecases/       # 비즈니스 로직 Use Cases (26개)
+│   └── usecases/       # 비즈니스 로직 Use Cases (27개)
 ├── presentation/
 │   ├── controllers/    # REST 컨트롤러 (11개)
 │   └── dto/            # Request/Response DTOs
@@ -260,6 +260,9 @@ com.eunhyehymn/
 |--------|------|------|------|
 | GET | `/admin/events` | ADMIN | 이벤트 로그 조회 + 최근 N일 이벤트 타입 집계 (`summaryDays` 1~90) |
 | GET | `/admin/events/export` | ADMIN | 이벤트 로그 CSV 내보내기 |
+| POST | `/admin/events/export-jobs` | ADMIN | 비동기 대용량 CSV 작업 생성 (202 Accepted) |
+| GET | `/admin/events/export-jobs/{jobId}` | ADMIN | 비동기 CSV 작업 상태 조회 |
+| GET | `/admin/events/export-jobs/{jobId}/download` | ADMIN | 완료된 비동기 CSV 다운로드 |
 
 ### 7.8 사용자 개인 (`MeController`)
 
@@ -287,7 +290,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (26개)
+## 8. Use Cases (27개)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -313,6 +316,7 @@ com.eunhyehymn/
 | `AdminListUsersUseCase` | `listAll()` | 전체 사용자 목록 조회 |
 | `AdminUpdateUserUseCase` | `update(userId, role, status)` | 사용자 역할/상태 변경 |
 | `AdminListEventsUseCase` | `execute(query)` | 관리자 이벤트 로그 조회 + 이벤트 타입 집계 |
+| `AdminEventExportJobUseCase` | `create/get/process/getDownload` | 관리자 비동기 대용량 CSV 작업 생성/상태/처리/다운로드 |
 | `AdminCreateInviteCodeUseCase` | `create(code, createdBy, ...)` | 초대코드 생성 (중복 검사) |
 | `AdminListInviteCodesUseCase` | `listAll()` | 전체 초대코드 목록 |
 | `AdminRevokeInviteCodeUseCase` | `revoke(code)` | 초대코드 비활성화 (enabled=false) |
@@ -333,6 +337,7 @@ com.eunhyehymn/
 | `V5__asset_type_png_midi.sql` | assets.type PDF → PNG, AUDIO → MIDI 변환 |
 | `V6__invite_codes.sql` | invite_codes 테이블 생성 (code PK, created_by FK, max_uses, used_count, enabled, expires_at) |
 | `V7__events_admin_indexes.sql` | 관리자 이벤트 조회/CSV 최적화 인덱스 3개 추가 |
+| `V8__event_export_jobs.sql` | 비동기 대용량 CSV 작업 테이블(event_export_jobs) 추가 |
 
 ### 주요 인덱스
 - `idx_refresh_tokens_user_id` ON refresh_tokens(user_id)
@@ -399,7 +404,7 @@ com.eunhyehymn/
 | `FlywayRepositoryIntegrationTest` | DB 마이그레이션 통합 |
 | `GetHistoryUseCaseTest` | 히스토리 Use Case 단위 |
 | `AdminUserApiTest` | 사용자 관리 API (목록, 역할/상태 변경, 권한 검사) |
-| `AdminEventApiTest` | 관리자 이벤트 API (로그 조회, 집계, 페이지네이션, CSV export, 검증) |
+| `AdminEventApiTest` | 관리자 이벤트 API (로그 조회, 집계, 페이지네이션, 동기/비동기 CSV export, 접근 제어 검증) |
 | `AdminInviteCodeApiTest` | 초대코드 관리 API (생성, 목록, 비활성화, 검증) |
 
 - **테스트 DB**: H2 인메모리 (test 프로필)
@@ -647,14 +652,14 @@ develop push → GitHub Actions
 
 ### 완료
 
-**백엔드 API (26 UseCase, 11 Controller)**
+**백엔드 API (27 UseCase, 11 Controller)**
 - 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
 - S3 에셋 관리 (presign/confirm/삭제)
 - JWT 인증 + 소셜 로그인 (Google/Kakao) + 토큰 회전
 - DB 기반 초대코드 관리 (CRUD + 검증 + 원자적 사용 횟수 증가)
 - 사용자 관리 (역할/상태 변경)
 - 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
-- DB 스키마 Flyway 마이그레이션 (V1~V7)
+- DB 스키마 Flyway 마이그레이션 (V1~V8)
 - 테스트 12개 파일 전체 통과 (SocialLoginApiTest 포함)
 
 **Admin 프론트엔드 (8페이지)**
@@ -662,7 +667,7 @@ develop push → GitHub Actions
 - 에셋 업로드 3단계 (presign/upload/confirm) + 삭제
 - 사용자 관리 (역할/상태 변경, 검색/필터)
 - 초대코드 관리 (생성/비활성화/만료일 설정)
-- 감사 로그/분석 화면 (`GET /admin/events`) - 필터/페이지네이션 조회 + 집계 기간(1~90일) 커스텀 + CSV 내보내기
+- 감사 로그/분석 화면 (`GET /admin/events`) - 필터/페이지네이션 조회 + 집계 기간(1~90일) 커스텀 + 동기 CSV 내보내기 + 비동기 대용량 CSV 작업/다운로드
 - 소셜 로그인 UI (Google/Kakao) + 초대코드 입력 플로우
 - Access Token 자동 갱신 (401 → refresh → 재시도, mutex 패턴)
 - 인증 컨텍스트 (`loginWithSocial`, `setTokensAndUser`), 공통 API 클라이언트, 사이드바 레이아웃
@@ -741,7 +746,7 @@ develop push → GitHub Actions
 - 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`에 주기적으로 갱신
 
 **3. 기능 백로그**
-- 감사 로그 고도화(대용량 비동기 export)
+- 비동기 export 결과 보관 정책(만료/정리) 및 운영 지표(실패율/처리시간) 정례화
 
 **4. 모바일 배포 패키징**
 - 현재 저장소 기준 실행은 `flutter run -d chrome` 중심

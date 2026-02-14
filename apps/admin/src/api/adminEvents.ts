@@ -1,4 +1,4 @@
-import { apiFetchRaw, apiGet } from "./client";
+import { apiFetchRaw, apiGet, apiPost } from "./client";
 
 export type EventType = "HYMN_OPENED" | "PART_PLAYED" | "NOTE_SAVED" | "FAVORITE_TOGGLED";
 
@@ -81,6 +81,32 @@ export interface ExportAdminEventsCsvResult {
   filename: string;
 }
 
+export type EventExportJobStatus = "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED";
+
+export interface AdminEventExportJob {
+  id: string;
+  status: EventExportJobStatus;
+  exportLimit: number;
+  rowCount: number | null;
+  fileName: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  statusUrl: string;
+  downloadUrl: string;
+  downloadable: boolean;
+}
+
+export interface CreateAdminEventExportJobParams {
+  eventType?: EventType;
+  userId?: string;
+  hymnId?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+}
+
 export async function exportAdminEventsCsv(
   params: ExportAdminEventsCsvParams = {},
 ): Promise<ExportAdminEventsCsvResult> {
@@ -107,6 +133,44 @@ export async function exportAdminEventsCsv(
   const disposition = response.headers.get("Content-Disposition") ?? "";
   const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
   const filename = match?.[1] ?? "admin-events.csv";
+
+  return { blob, filename };
+}
+
+export function createAdminEventExportJob(
+  params: CreateAdminEventExportJobParams = {},
+): Promise<AdminEventExportJob> {
+  const query = new URLSearchParams();
+  if (params.eventType) query.set("eventType", params.eventType);
+  if (params.userId) query.set("userId", params.userId);
+  if (params.hymnId) query.set("hymnId", params.hymnId);
+  if (params.from) query.set("from", params.from);
+  if (params.to) query.set("to", params.to);
+  if (params.limit != null) query.set("limit", String(params.limit));
+
+  const suffix = query.toString();
+  const path = suffix ? `/admin/events/export-jobs?${suffix}` : "/admin/events/export-jobs";
+  return apiPost<AdminEventExportJob>(path);
+}
+
+export function getAdminEventExportJob(jobId: string): Promise<AdminEventExportJob> {
+  return apiGet<AdminEventExportJob>(`/admin/events/export-jobs/${jobId}`);
+}
+
+export async function downloadAdminEventExportJobCsv(jobId: string): Promise<ExportAdminEventsCsvResult> {
+  const response = await apiFetchRaw({ method: "GET", path: `/admin/events/export-jobs/${jobId}/download` });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { message?: string } }
+      | null;
+    throw new Error(payload?.error?.message ?? "비동기 CSV 다운로드에 실패했습니다.");
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+  const filename = match?.[1] ?? "admin-events-async.csv";
 
   return { blob, filename };
 }

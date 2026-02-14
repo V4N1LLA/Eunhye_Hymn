@@ -14,6 +14,9 @@
 ## API
 - `GET /api/v1/admin/events`
 - `GET /api/v1/admin/events/export` (CSV 다운로드)
+- `POST /api/v1/admin/events/export-jobs` (비동기 대용량 CSV 작업 생성)
+- `GET /api/v1/admin/events/export-jobs/{jobId}` (작업 상태 조회)
+- `GET /api/v1/admin/events/export-jobs/{jobId}/download` (완료 작업 CSV 다운로드)
 
 ## 주요 파라미터
 - `eventType`: `HYMN_OPENED`, `PART_PLAYED`, `NOTE_SAVED`, `FAVORITE_TOGGLED`
@@ -22,6 +25,7 @@
 - `page`, `size`: 페이지네이션 (기본 1/50, 최대 size 200)
 - `limit`: 하위 호환 조회 개수 파라미터
 - `summaryDays`: 집계 일수(기본 7, 최대 90)
+- `export-jobs limit`: 기본 20,000, 최대 100,000
 
 ## 응답 예시
 ```json

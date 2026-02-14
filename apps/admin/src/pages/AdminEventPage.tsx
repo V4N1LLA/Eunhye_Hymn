@@ -1,6 +1,10 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  createAdminEventExportJob,
+  downloadAdminEventExportJobCsv,
   exportAdminEventsCsv,
+  getAdminEventExportJob,
+  type AdminEventExportJob,
   listAdminEvents,
   type AdminEventItem,
   type AdminEventSummary,
@@ -19,6 +23,8 @@ const SUMMARY_DAY_PRESETS = [1, 7, 30, 60, 90];
 const MIN_SUMMARY_DAYS = 1;
 const MAX_SUMMARY_DAYS = 90;
 const SIZE_OPTIONS = [20, 50, 100, 200];
+const ASYNC_EXPORT_LIMIT = 50_000;
+const ASYNC_EXPORT_POLL_INTERVAL_MS = 2_000;
 
 function toIsoUtc(localDateTime: string): string | undefined {
   if (!localDateTime) {
@@ -50,6 +56,19 @@ function clampSummaryDays(days: number): number {
   return Math.min(Math.max(days, MIN_SUMMARY_DAYS), MAX_SUMMARY_DAYS);
 }
 
+function formatAsyncJobStatus(status: AdminEventExportJob["status"]): string {
+  if (status === "QUEUED") {
+    return "대기 중";
+  }
+  if (status === "RUNNING") {
+    return "처리 중";
+  }
+  if (status === "COMPLETED") {
+    return "완료";
+  }
+  return "실패";
+}
+
 export default function AdminEventPage() {
   const [eventType, setEventType] = useState<"all" | EventType>("all");
   const [userId, setUserId] = useState("");
@@ -72,6 +91,9 @@ export default function AdminEventPage() {
   });
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [creatingAsyncJob, setCreatingAsyncJob] = useState(false);
+  const [downloadingAsyncJob, setDownloadingAsyncJob] = useState(false);
+  const [asyncJob, setAsyncJob] = useState<AdminEventExportJob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isSummaryWindowFromDateFilter = Boolean(fromLocal || toLocal);
 
@@ -111,6 +133,39 @@ export default function AdminEventPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  useEffect(() => {
+    if (!asyncJob || (asyncJob.status !== "QUEUED" && asyncJob.status !== "RUNNING")) {
+      return;
+    }
+
+    let cancelled = false;
+    const pollStatus = async () => {
+      if (cancelled) {
+        return;
+      }
+      try {
+        const latest = await getAdminEventExportJob(asyncJob.id);
+        if (!cancelled) {
+          setAsyncJob(latest);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "비동기 내보내기 상태를 확인하지 못했습니다.");
+        }
+      }
+    };
+
+    void pollStatus();
+    const timer = window.setInterval(() => {
+      void pollStatus();
+    }, ASYNC_EXPORT_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [asyncJob?.id, asyncJob?.status]);
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setPage(1);
@@ -134,6 +189,45 @@ export default function AdminEventPage() {
       setError(err instanceof Error ? err.message : "CSV 내보내기에 실패했습니다.");
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleCreateAsyncExportJob = async () => {
+    setCreatingAsyncJob(true);
+    setError(null);
+    try {
+      const job = await createAdminEventExportJob({
+        eventType: eventType === "all" ? undefined : eventType,
+        userId: userId.trim() || undefined,
+        hymnId: hymnId.trim() || undefined,
+        from: toIsoUtc(fromLocal),
+        to: toIsoUtc(toLocal),
+        limit: ASYNC_EXPORT_LIMIT,
+      });
+      setAsyncJob(job);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "비동기 내보내기 요청에 실패했습니다.");
+    } finally {
+      setCreatingAsyncJob(false);
+    }
+  };
+
+  const handleDownloadAsyncExport = async () => {
+    if (!asyncJob || !asyncJob.downloadable) {
+      return;
+    }
+
+    setDownloadingAsyncJob(true);
+    setError(null);
+    try {
+      const result = await downloadAdminEventExportJobCsv(asyncJob.id);
+      triggerDownload(result.blob, result.filename);
+      const refreshed = await getAdminEventExportJob(asyncJob.id);
+      setAsyncJob(refreshed);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "비동기 CSV 다운로드에 실패했습니다.");
+    } finally {
+      setDownloadingAsyncJob(false);
     }
   };
 
@@ -232,6 +326,15 @@ export default function AdminEventPage() {
         <div className="mt-3 flex justify-end gap-2">
           <button
             type="button"
+            onClick={handleCreateAsyncExportJob}
+            className="border border-emerald-600 text-emerald-700 px-4 py-2 rounded hover:bg-emerald-50 disabled:opacity-60"
+            disabled={loading || creatingAsyncJob}
+            title={`필터 조건 기준 최대 ${ASYNC_EXPORT_LIMIT.toLocaleString("ko-KR")}건 비동기 내보내기`}
+          >
+            {creatingAsyncJob ? "요청 중..." : "비동기 CSV 요청"}
+          </button>
+          <button
+            type="button"
             onClick={handleExportCsv}
             className="border border-indigo-600 text-indigo-700 px-4 py-2 rounded hover:bg-indigo-50 disabled:opacity-60"
             disabled={loading || exporting}
@@ -249,6 +352,48 @@ export default function AdminEventPage() {
       </form>
 
       {error && <p className="text-red-600 mb-4">{error}</p>}
+
+      {asyncJob && (
+        <div className="bg-white rounded-lg shadow p-4 mb-4 border border-emerald-100">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm text-gray-500">비동기 내보내기 작업</p>
+              <p className="text-xs text-gray-500 break-all">jobId: {asyncJob.id}</p>
+            </div>
+            <span
+              className={`px-2 py-1 text-xs rounded-full font-medium ${
+                asyncJob.status === "COMPLETED"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : asyncJob.status === "FAILED"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {formatAsyncJobStatus(asyncJob.status)}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+            <div>요청 상한: {asyncJob.exportLimit.toLocaleString("ko-KR")}건</div>
+            <div>완료 건수: {(asyncJob.rowCount ?? 0).toLocaleString("ko-KR")}건</div>
+            <div>요청 시각: {formatDateTime(asyncJob.createdAt)}</div>
+            <div>완료 시각: {asyncJob.completedAt ? formatDateTime(asyncJob.completedAt) : "-"}</div>
+          </div>
+          {asyncJob.errorMessage && <p className="mt-2 text-sm text-red-600">{asyncJob.errorMessage}</p>}
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+            {(asyncJob.status === "QUEUED" || asyncJob.status === "RUNNING") && (
+              <span className="text-xs text-gray-500">2초 간격으로 상태를 자동 갱신합니다.</span>
+            )}
+            <button
+              type="button"
+              onClick={handleDownloadAsyncExport}
+              disabled={!asyncJob.downloadable || downloadingAsyncJob}
+              className="border border-emerald-600 text-emerald-700 px-3 py-1.5 rounded hover:bg-emerald-50 disabled:opacity-50"
+            >
+              {downloadingAsyncJob ? "다운로드 중..." : "비동기 CSV 다운로드"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {summary && (
         <div className="bg-white rounded-lg shadow p-4 mb-4">

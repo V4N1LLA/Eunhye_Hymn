@@ -27,7 +27,7 @@
 - 에셋 관리: Presign -> 업로드 -> Confirm 3단계, 에셋 삭제
 - 사용자 관리: 사용자 목록, 역할/상태 변경
 - 초대코드 관리: 생성/비활성화/만료일 설정 및 표시
-- 감사 로그/분석: 이벤트 로그 필터/페이지네이션 조회, 이벤트 타입별 집계(최근 N일, `summaryDays` 1~90 커스텀), CSV 내보내기
+- 감사 로그/분석: 이벤트 로그 필터/페이지네이션 조회, 이벤트 타입별 집계(최근 N일, `summaryDays` 1~90 커스텀), 동기 CSV 내보내기 + 비동기 대용량 CSV 작업(요청/상태/다운로드)
 - 인증: Google/Kakao 소셜 로그인 UI, Dev 로그인
 - 토큰: 401 발생 시 Access Token 자동 갱신 후 재시도
 
@@ -51,7 +51,7 @@
 - 에셋: 관리자 Presign/Confirm/Delete (AssetType: `PNG`, `MIDI`)
 - 사용자/초대코드 관리자 기능
 - 관리자 감사 로그: `GET /admin/events` 조회/필터/페이지네이션 + 최근 N일 이벤트 타입 집계(`summaryDays` 1~90)
-- 관리자 감사 로그 내보내기: `GET /admin/events/export` CSV 다운로드
+- 관리자 감사 로그 내보내기: `GET /admin/events/export`(동기 CSV), `POST /admin/events/export-jobs` + `GET /admin/events/export-jobs/{jobId}` + `GET /admin/events/export-jobs/{jobId}/download`(비동기 대용량 CSV)
 - 멤버 기능: 즐겨찾기, 메모, 히스토리, 이벤트 기록
 
 엔드포인트 기준은 `CLAUDE.md` 7장과 현재 컨트롤러/유즈케이스 구현 상태를 따른다.
@@ -138,7 +138,7 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
   - `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준 Admin/Mobile 수동 스모크 실행
   - 리허설/스모크 결과를 `docs/changelog-dev.md`에 주기 반영
 - 운영 기능 백로그
-  - 감사 로그 고도화(대용량 비동기 export)
+  - 비동기 export 결과 보관 정책(만료/정리) 및 운영 모니터링 지표 정례화
 
 ## 6. 빠른 사용 체크리스트
 
