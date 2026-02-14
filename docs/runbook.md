@@ -14,6 +14,7 @@
 - `docs/staging-smoke-checklist.md`
 - `docs/staging-rehearsal-log.md`
 - `docs/deployment-readiness-audit.md`
+- `docs/staging-admin-login.md`
 - `infra/aws/README.md`
 - `docs/SECRETS_MANAGEMENT.md`
 
