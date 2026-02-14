@@ -105,9 +105,9 @@ jobs:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${ECR_REGISTRY}/eunhye-hymn/api:${IMAGE_TAG} -t ${ECR_REGISTRY}/eunhye-hymn/api:latest .
-          docker push ${ECR_REGISTRY}/eunhye-hymn/api:${IMAGE_TAG}
-          docker push ${ECR_REGISTRY}/eunhye-hymn/api:latest
+          docker build -t "${ECR_REGISTRY}/eunhye-hymn/api:${IMAGE_TAG}" -t "${ECR_REGISTRY}/eunhye-hymn/api:latest" .
+          docker push "${ECR_REGISTRY}/eunhye-hymn/api:${IMAGE_TAG}"
+          docker push "${ECR_REGISTRY}/eunhye-hymn/api:latest"
 
       - name: Build and push Admin image
         working-directory: apps/admin
@@ -115,9 +115,9 @@ jobs:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${ECR_REGISTRY}/eunhye-hymn/admin:${IMAGE_TAG} -t ${ECR_REGISTRY}/eunhye-hymn/admin:latest .
-          docker push ${ECR_REGISTRY}/eunhye-hymn/admin:${IMAGE_TAG}
-          docker push ${ECR_REGISTRY}/eunhye-hymn/admin:latest
+          docker build -t "${ECR_REGISTRY}/eunhye-hymn/admin:${IMAGE_TAG}" -t "${ECR_REGISTRY}/eunhye-hymn/admin:latest" .
+          docker push "${ECR_REGISTRY}/eunhye-hymn/admin:${IMAGE_TAG}"
+          docker push "${ECR_REGISTRY}/eunhye-hymn/admin:latest"
 
   # ── 4. Deploy to EC2 ─────────────────────────────────────────
   deploy:

@@ -561,3 +561,28 @@
 
 ### 검증
 - `gh workflow view deploy-staging.yml --yaml`
+
+## 19. 이번 사이클 기록 (2026-02-14, 16차)
+
+### 목표
+- CI 누락 방지: workflow/배포 스크립트 변경에도 자동 검증이 항상 실행되도록 보강
+
+### 범위
+- 포함: workflow lint 파이프라인 추가, 문서 동기화
+- 제외: 애플리케이션 기능 코드 변경
+
+### 수행 작업
+1. workflow lint 파이프라인 추가
+- `.github/workflows/workflow-lint.yml` 신규 추가
+- `rhysd/actionlint`로 GitHub Actions YAML/표현식 lint 수행
+- `bash -n infra/aws/deploy.sh`로 배포 스크립트 문법 검증 수행
+- lint 기준을 통과하도록 `deploy-staging.yml`의 Docker build/push 태그 변수를 quote 처리(SC2086 대응)
+
+2. 트리거 경로 최적화
+- `.github/workflows/**` 또는 `infra/aws/deploy.sh` 변경 시에만 실행되도록 path filter 적용
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `gh api repos/V4N1LLA/Eunhye_Hymn/contents/.github/workflows/workflow-lint.yml?ref=ci/workflow-lint --jq .sha`
