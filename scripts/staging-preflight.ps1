@@ -97,7 +97,7 @@ $identityResult = Run-CommandCapture $identityCommand
 if ($identityResult.ExitCode -ne 0) {
   $identityDetail = "failed"
   if ($identityResult.Output -match "Unable to locate credentials|NoCredentialProviders") {
-    $identityDetail = "credentials missing (run aws configure or aws configure sso)"
+    $identityDetail = "credentials missing (run aws configure / aws configure sso / aws login)"
   } elseif ($identityResult.Output -match "The config profile .* could not be found") {
     $identityDetail = "aws profile not found"
   } elseif (-not [string]::IsNullOrWhiteSpace($identityResult.Output)) {
