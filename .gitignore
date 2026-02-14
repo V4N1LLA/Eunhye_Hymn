@@ -77,6 +77,7 @@ apps/api/bin/
 # Claude Code
 .claude/
 .codex/
+.tmp/
 
 # Local Flutter bootstrap artifacts
 tools/flutter/

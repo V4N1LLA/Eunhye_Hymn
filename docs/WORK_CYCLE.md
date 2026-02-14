@@ -494,3 +494,25 @@
 
 ### 검증
 - `rg -n "기준 커밋|근거 PR|PR #56|PR #55|PR #54|PR #53" docs/current-usable-scope.md`
+
+## 16. 이번 사이클 기록 (2026-02-14, 13차)
+
+### 목표
+- 작업 생산성 개선: 로컬 임시 아티팩트가 `git status`를 오염시키지 않도록 ignore 정리
+
+### 범위
+- 포함: `.tmp/`, `infra/aws/tfplan*` ignore 규칙 추가
+- 제외: 임시파일 실삭제, Terraform 실행 로직 변경
+
+### 수행 작업
+1. 루트 ignore 보강
+- `.gitignore`에 `.tmp/` 추가
+
+2. AWS 인프라 ignore 보강
+- `infra/aws/.gitignore`에 `tfplan*` 추가
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `git status -sb`에서 `.tmp/`, `infra/aws/tfplan*` 미노출 확인
