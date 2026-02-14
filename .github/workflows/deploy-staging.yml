@@ -123,6 +123,9 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    concurrency:
+      group: staging-ec2-deploy
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 

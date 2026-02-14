@@ -4,6 +4,13 @@
 
 ## 2026-02-14
 
+### 스테이징 deploy 직렬화 가드(15차)
+- `deploy-staging.yml` 개선
+  - `deploy` job에 GitHub Actions concurrency group(`staging-ec2-deploy`) 추가
+  - `cancel-in-progress: false`로 설정해 동시 배포를 취소 대신 직렬 대기
+- 효과
+  - 동일 EC2 대상 deploy job이 겹쳐 실행되지 않아 compose/prune 경합 가능성을 사전에 차단
+
 ### 스테이징 deploy prune 경합 하드닝(14차)
 - `infra/aws/deploy.sh` 개선
   - `docker image prune -f`를 `cleanup_unused_images` 함수로 감쌈
