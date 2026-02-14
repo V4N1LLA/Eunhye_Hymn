@@ -585,4 +585,4 @@
 - `docs/changelog-dev.md` 업데이트
 
 ### 검증
-- `gh workflow view workflow-lint.yml --ref ci/workflow-lint --yaml`
+- `gh api repos/V4N1LLA/Eunhye_Hymn/contents/.github/workflows/workflow-lint.yml?ref=ci/workflow-lint --jq .sha`
