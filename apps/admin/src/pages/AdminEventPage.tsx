@@ -15,7 +15,9 @@ const EVENT_TYPE_OPTIONS: Array<{ label: string; value: "all" | EventType }> = [
   { label: "즐겨찾기", value: "FAVORITE_TOGGLED" },
 ];
 
-const SUMMARY_DAY_OPTIONS = [1, 7, 30];
+const SUMMARY_DAY_PRESETS = [1, 7, 30, 60, 90];
+const MIN_SUMMARY_DAYS = 1;
+const MAX_SUMMARY_DAYS = 90;
 const SIZE_OPTIONS = [20, 50, 100, 200];
 
 function toIsoUtc(localDateTime: string): string | undefined {
@@ -44,6 +46,10 @@ function triggerDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+function clampSummaryDays(days: number): number {
+  return Math.min(Math.max(days, MIN_SUMMARY_DAYS), MAX_SUMMARY_DAYS);
+}
+
 export default function AdminEventPage() {
   const [eventType, setEventType] = useState<"all" | EventType>("all");
   const [userId, setUserId] = useState("");
@@ -67,6 +73,7 @@ export default function AdminEventPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isSummaryWindowFromDateFilter = Boolean(fromLocal || toLocal);
 
   const maxSummaryCount = useMemo(() => {
     if (!summary || summary.byType.length === 0) {
@@ -184,16 +191,43 @@ export default function AdminEventPage() {
                 <option key={option} value={option}>{`${option}건`}</option>
               ))}
             </select>
-            <select
+            <input
+              type="number"
+              min={MIN_SUMMARY_DAYS}
+              max={MAX_SUMMARY_DAYS}
               value={summaryDays}
-              onChange={(e) => setSummaryDays(Number(e.target.value))}
+              onChange={(e) => {
+                const parsed = Number.parseInt(e.target.value, 10);
+                if (Number.isNaN(parsed)) {
+                  setSummaryDays(MIN_SUMMARY_DAYS);
+                  return;
+                }
+                setSummaryDays(clampSummaryDays(parsed));
+              }}
+              onBlur={() => setSummaryDays((prev) => clampSummaryDays(prev))}
               className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              {SUMMARY_DAY_OPTIONS.map((days) => (
-                <option key={days} value={days}>{`최근 ${days}일`}</option>
-              ))}
-            </select>
+              title="집계 기간(일)"
+              placeholder="집계 기간(일)"
+            />
           </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-gray-500">집계 기간 프리셋</span>
+          {SUMMARY_DAY_PRESETS.map((days) => (
+            <button
+              key={days}
+              type="button"
+              onClick={() => setSummaryDays(days)}
+              className={`px-2 py-1 text-xs rounded border ${
+                summaryDays === days
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {`${days}일`}
+            </button>
+          ))}
+          <span className="text-xs text-gray-500">허용 범위: 1~90일</span>
         </div>
         <div className="mt-3 flex justify-end gap-2">
           <button
@@ -219,7 +253,9 @@ export default function AdminEventPage() {
       {summary && (
         <div className="bg-white rounded-lg shadow p-4 mb-4">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h2 className="text-lg font-semibold">최근 {summaryDays}일 이벤트 집계</h2>
+            <h2 className="text-lg font-semibold">
+              {isSummaryWindowFromDateFilter ? "지정 기간 이벤트 집계" : `최근 ${summaryDays}일 이벤트 집계`}
+            </h2>
             <div className="text-sm text-gray-500">
               {formatDateTime(summary.fromInclusive)} ~ {formatDateTime(summary.toExclusive)}
             </div>

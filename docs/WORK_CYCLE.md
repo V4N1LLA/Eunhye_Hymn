@@ -249,3 +249,32 @@
 - `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn`
 - `aws sts get-caller-identity` (현재 환경: credential 미설정 확인)
 - `rg -n "22010284332|22010387328|22010470389|Conditional Go|preflight" docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md CLAUDE.md`
+
+## 9. 이번 사이클 기록 (2026-02-14, 6차)
+
+### 목표
+- 기능 백로그 일부 완료: 관리자 감사 로그 집계 기간 커스텀(1~90일)
+
+### 범위
+- 포함: Admin UI 입력 확장, API 통합 테스트 추가, 문서/백로그 동기화
+- 제외: 대용량 비동기 export 구현
+
+### 수행 작업
+1. Admin UI 개선
+- `apps/admin/src/pages/AdminEventPage.tsx`
+- 집계 기간 입력을 숫자 입력(1~90)으로 전환하고 프리셋 버튼(1/7/30/60/90) 추가
+- 날짜 필터 존재 시 집계 제목을 "지정 기간 이벤트 집계"로 표기
+
+2. API 검증 보강
+- `apps/api/src/test/java/com/eunhyehymn/presentation/controllers/AdminEventApiTest.java`
+- `summaryDays=45` 집계 반영 통합 테스트 추가
+
+3. 문서 동기화
+- `docs/events.md`: `summaryDays` 커스텀 범위 명시
+- `docs/current-usable-scope.md`, `CLAUDE.md`: 기능/백로그 상태 갱신
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `./gradlew.bat test --tests "com.eunhyehymn.presentation.controllers.AdminEventApiTest" --no-daemon --stacktrace` (`apps/api`)
+- `npm ci` + `npx tsc --noEmit` + `npm run build` (`apps/admin`)
+- `rg -n "summaryDays|1~90|대용량 비동기 export" docs/events.md docs/current-usable-scope.md CLAUDE.md docs/changelog-dev.md`

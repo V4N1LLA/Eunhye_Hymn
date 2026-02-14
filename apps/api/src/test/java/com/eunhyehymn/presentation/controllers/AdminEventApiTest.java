@@ -187,6 +187,35 @@ class AdminEventApiTest {
     }
 
     @Test
+    void summarySupportsCustomSummaryDaysWindow() throws Exception {
+        Instant now = Instant.now();
+        saveEvent(UUID.randomUUID(), userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, now.minus(40, ChronoUnit.DAYS));
+        saveEvent(UUID.randomUUID(), userAId, EventType.NOTE_SAVED, hymnAId, null, now.minus(20, ChronoUnit.DAYS));
+
+        String within30Days = mockMvc.perform(get("/admin/events")
+                .header("Authorization", "Bearer " + adminToken)
+                .param("summaryDays", "30"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        String within45Days = mockMvc.perform(get("/admin/events")
+                .header("Authorization", "Bearer " + adminToken)
+                .param("summaryDays", "45"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        long total30 = objectMapper.readTree(within30Days).get("data").get("summary").get("total").asLong();
+        long total45 = objectMapper.readTree(within45Days).get("data").get("summary").get("total").asLong();
+
+        assertThat(total30).isEqualTo(1L);
+        assertThat(total45).isEqualTo(2L);
+    }
+
+    @Test
     void adminCanNavigateWithPagination() throws Exception {
         Instant now = Instant.now();
         saveEvent(UUID.randomUUID(), userAId, EventType.HYMN_OPENED, hymnAId, PartType.ALL, now.minus(3, ChronoUnit.MINUTES));

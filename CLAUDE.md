@@ -258,7 +258,7 @@ com.eunhyehymn/
 
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
-| GET | `/admin/events` | ADMIN | 이벤트 로그 조회 + 최근 N일 이벤트 타입 집계 |
+| GET | `/admin/events` | ADMIN | 이벤트 로그 조회 + 최근 N일 이벤트 타입 집계 (`summaryDays` 1~90) |
 | GET | `/admin/events/export` | ADMIN | 이벤트 로그 CSV 내보내기 |
 
 ### 7.8 사용자 개인 (`MeController`)
@@ -438,7 +438,7 @@ com.eunhyehymn/
 | `src/pages/AdminAssetUploadPage.tsx` | 에셋 업로드 3단계 UI (Tailwind 스타일, hymnId/onConfirmed props 지원) |
 | `src/pages/UserListPage.tsx` | 사용자 목록 테이블 + 역할/상태 변경 + 검색/필터 |
 | `src/pages/InviteCodePage.tsx` | 초대코드 목록 + 생성/비활성화 + **만료일 설정 및 표시** |
-| `src/pages/AdminEventPage.tsx` | 감사 로그 필터/페이지네이션 조회 + 최근 N일 집계 + CSV 내보내기 |
+| `src/pages/AdminEventPage.tsx` | 감사 로그 필터/페이지네이션 조회 + 집계 기간(1~90일) 커스텀 + CSV 내보내기 |
 | `src/App.tsx` | BrowserRouter 라우팅 설정 |
 
 ### 라우팅 구조
@@ -662,7 +662,7 @@ develop push → GitHub Actions
 - 에셋 업로드 3단계 (presign/upload/confirm) + 삭제
 - 사용자 관리 (역할/상태 변경, 검색/필터)
 - 초대코드 관리 (생성/비활성화/만료일 설정)
-- 감사 로그/분석 화면 (`GET /admin/events`) - 필터/페이지네이션 조회 + 최근 N일 집계 + CSV 내보내기
+- 감사 로그/분석 화면 (`GET /admin/events`) - 필터/페이지네이션 조회 + 집계 기간(1~90일) 커스텀 + CSV 내보내기
 - 소셜 로그인 UI (Google/Kakao) + 초대코드 입력 플로우
 - Access Token 자동 갱신 (401 → refresh → 재시도, mutex 패턴)
 - 인증 컨텍스트 (`loginWithSocial`, `setTokensAndUser`), 공통 API 클라이언트, 사이드바 레이아웃
@@ -741,7 +741,7 @@ develop push → GitHub Actions
 - 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`에 주기적으로 갱신
 
 **3. 기능 백로그**
-- 감사 로그 고도화(집계 기간 커스텀, 대용량 비동기 export)
+- 감사 로그 고도화(대용량 비동기 export)
 
 **4. 모바일 배포 패키징**
 - 현재 저장소 기준 실행은 `flutter run -d chrome` 중심

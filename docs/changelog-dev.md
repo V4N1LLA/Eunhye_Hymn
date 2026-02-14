@@ -4,6 +4,18 @@
 
 ## 2026-02-14
 
+### 감사 로그 집계 기간 커스텀(6차)
+- 관리자 이벤트 화면 개선
+  - `apps/admin/src/pages/AdminEventPage.tsx`
+  - 집계 기간 입력을 고정 select(1/7/30)에서 숫자 입력(1~90일) + 프리셋(1/7/30/60/90)으로 확장
+  - `from/to` 필터 사용 시 집계 제목을 "지정 기간 이벤트 집계"로 표시
+- API 검증 강화
+  - `apps/api/src/test/java/com/eunhyehymn/presentation/controllers/AdminEventApiTest.java`
+  - `summaryDays=45` 같은 비프리셋 값이 실제 집계에 반영되는 통합 테스트 추가
+- 문서 동기화
+  - `docs/events.md`, `docs/current-usable-scope.md`, `CLAUDE.md`
+  - 백로그 항목에서 "집계 기간 커스텀" 완료 반영
+
 ### 스테이징 준비도 동기화 + preflight 하드닝(5차)
 - `scripts/staging-preflight.ps1` 개선
   - `aws sts get-caller-identity` 실패 시 즉시 예외 종료 대신 원인(자격증명/프로필/응답) 표준 출력
