@@ -8,6 +8,7 @@
 
 - [ ] GitHub Actions 배포 워크플로가 정상 완료되었는지 확인
   - `.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess`
+  - 기록용 표가 필요하면 `-AsMarkdown` 옵션 사용
 - [ ] 점검 대상 커밋 SHA/배포 시각/담당자 확정
 - [ ] 자동 리허설 로그(`docs/staging-rehearsal-log.md`) 최신 행 확인
 - [ ] 관리자 계정 및 모바일 테스트 계정 준비

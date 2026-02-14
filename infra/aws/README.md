@@ -161,6 +161,7 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 
 JSON 출력이 필요하면 `-AsJson` 옵션을 사용한다.
 리허설/수동 실행 내역 확인 시에는 `-Branch <branch>` 또는 `-Event workflow_dispatch` 옵션을 함께 사용한다.
+문서/티켓 첨부용 표가 필요하면 `-AsMarkdown` 옵션을 사용한다.
 
 주의:
 - `-Ref`에는 branch/tag만 사용할 수 있다 (`workflow_dispatch` 제약).

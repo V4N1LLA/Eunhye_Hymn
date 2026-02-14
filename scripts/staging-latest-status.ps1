@@ -7,6 +7,7 @@ param(
   [switch]$Wait,
   [int]$WatchIntervalSeconds = 10,
   [switch]$RequireSuccess,
+  [switch]$AsMarkdown,
   [switch]$AsJson
 )
 
@@ -80,6 +81,13 @@ if ($Limit -lt 1) {
   throw "Limit must be >= 1"
 }
 
+$outputModeCount = 0
+if ($AsJson) { $outputModeCount++ }
+if ($AsMarkdown) { $outputModeCount++ }
+if ($outputModeCount -gt 1) {
+  throw "Use only one output mode: -AsJson or -AsMarkdown"
+}
+
 $runListArgs = @(
   "run", "list",
   "--repo", $Repo,
@@ -150,6 +158,16 @@ if ($AsJson) {
     summary = $summary
     jobs = $jobTable
   } | ConvertTo-Json -Depth 6
+} elseif ($AsMarkdown) {
+  Write-Output "| RunId | Event | Branch | HeadSha | Conclusion | Deploy | Verify | URL |"
+  Write-Output "|---|---|---|---|---|---|---|---|"
+  Write-Output "| $($summary.RunId) | $($summary.Event) | $($summary.Branch) | $($summary.HeadSha) | $($summary.Conclusion) | $($summary.DeployJobConclusion) | $($summary.VerifyStepConclusion) | $($summary.Url) |"
+  Write-Output ""
+  Write-Output "| Job | Status | Conclusion | DurationSec |"
+  Write-Output "|---|---|---|---|"
+  foreach ($job in $jobTable) {
+    Write-Output "| $($job.Job) | $($job.Status) | $($job.Conclusion) | $($job.DurationSec) |"
+  }
 } else {
   Write-Host "== Latest Staging Deploy Run =="
   $summary | Format-List
