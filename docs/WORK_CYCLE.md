@@ -870,3 +870,29 @@
 - `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Event push -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120 -AsJson`
 - `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Event push -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120 -AsMarkdown`
 - `powershell -File scripts/staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Event push -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 1 -AsJson` (expected non-zero exit)
+
+## 31. Cycle record (2026-02-14, login guidance patch)
+
+### Goal
+- Remove staging login confusion by clarifying token input semantics for social login.
+
+### Scope
+- Included: Admin login UI label/help updates for Google/Kakao token types, hide dev login on non-localhost.
+- Excluded: auth API logic changes, deployment workflow changes.
+
+### Work
+1. Token input clarification
+- `apps/admin/src/pages/LoginPage.tsx`
+- Provider-specific token label/help:
+  - Google -> `ID Token`
+  - Kakao -> `Access Token` (without `Bearer ` prefix)
+
+2. Dev login visibility guard
+- `apps/admin/src/pages/LoginPage.tsx`
+- Dev login section is rendered only for `localhost` and `127.0.0.1`.
+
+3. Documentation sync
+- `docs/changelog-dev.md` updated.
+
+### Validation
+- `cd apps/admin && npm ci && npx tsc --noEmit && npm run build`

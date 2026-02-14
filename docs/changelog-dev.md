@@ -4,6 +4,14 @@
 
 ## 2026-02-14
 
+### Login token input clarification for staging
+- `apps/admin/src/pages/LoginPage.tsx`
+  - Login token label is now provider-specific:
+    - Google: `ID Token`
+    - Kakao: `Access Token`
+  - Added token guidance text to prevent Kakao ID-token misuse.
+  - Dev login section is now shown only on localhost (`localhost`, `127.0.0.1`) to avoid staging confusion.
+
 ### 스테이징 상태 조회 스크립트 게이트 강화(27차)
 - `scripts/staging-latest-status.ps1` 옵션 확장
   - `-RequireDeploySuccess` 추가: `deploy` job 결론이 `success`가 아니면 실패 처리
