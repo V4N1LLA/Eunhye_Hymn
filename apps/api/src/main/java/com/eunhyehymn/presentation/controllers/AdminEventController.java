@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,11 +31,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/admin/events")
 @Validated
 public class AdminEventController {
+    private static final Logger logger = LoggerFactory.getLogger(AdminEventController.class);
     private final AdminListEventsUseCase adminListEventsUseCase;
     private final AdminEventExportJobUseCase adminEventExportJobUseCase;
     private final GetEventExportOpsMetricsUseCase getEventExportOpsMetricsUseCase;
@@ -124,7 +128,12 @@ public class AdminEventController {
             limit
         ));
 
-        eventExportTaskExecutor.execute(() -> adminEventExportJobUseCase.process(job.id()));
+        try {
+            eventExportTaskExecutor.execute(() -> adminEventExportJobUseCase.process(job.id()));
+        } catch (TaskRejectedException ex) {
+            // Keep the job in QUEUED so recovery scheduler can pick it up later.
+            logger.warn("event export dispatch rejected for jobId={}", job.id(), ex);
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(URI.create("/admin/events/export-jobs/" + job.id()));

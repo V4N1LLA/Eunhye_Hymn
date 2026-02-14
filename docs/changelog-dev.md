@@ -4,6 +4,27 @@
 
 ## 2026-02-14
 
+### 비동기 export 안정화/운영 사이클(10차)
+- 내구성 복구 경로 추가
+  - `EventExportJobRepository.claimQueued(...)` 도입으로 작업 실행 claim을 원자화
+  - `EventExportJobRecoveryScheduler` 추가: stale `RUNNING` 재큐잉 + `QUEUED` 재디스패치
+  - 큐 포화 시 요청 실패 대신 `QUEUED` 유지(후속 복구 사이클에서 재처리)
+- 결과 일관성 강화
+  - `POST /admin/events/export-jobs`에서 `to` 미지정 시 생성 시각 snapshot 고정
+  - 이벤트 조회 정렬을 `createdAt DESC, id DESC`로 안정화
+- 성능 보강
+  - `V10__event_export_jobs_cleanup_index.sql` 추가
+  - 정리 쿼리 최적화 인덱스: `idx_event_export_jobs_status_completed_at`
+- 운영 알림 베이스라인 추가
+  - `EventExportJobOpsAlertScheduler` 추가
+  - 실패율/p95/queued 임계치 초과 시 WARN 로그 출력
+- 테스트 확장
+  - `AdminEventExportJobUseCaseTest` 신규(스냅샷/claim-fail/배치 제한)
+  - `EventExportJobRecoverySchedulerTest` 신규(재디스패치/queue rejection)
+  - `EventExportJobOpsAlertSchedulerTest` 신규(설정 기반 평가 호출)
+  - `AdminEventControllerTest` 신규(queue rejection 시 202 유지)
+  - `AdminEventApiTest` 보강(미완료 다운로드 `409`, snapshot 결과, 안정 정렬)
+
 ### 비동기 export 운영 지표 정례화(9차)
 - 백엔드 운영 지표 API 추가
   - `GET /api/v1/admin/events/export-jobs/metrics`

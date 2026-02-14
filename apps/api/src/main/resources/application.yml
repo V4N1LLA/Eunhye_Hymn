@@ -52,3 +52,16 @@ events:
       retention-days: ${EVENT_EXPORT_JOB_RETENTION_DAYS:7}
       cleanup-cron: ${EVENT_EXPORT_JOB_CLEANUP_CRON:0 15 3 * * *}
       cleanup-zone: ${EVENT_EXPORT_JOB_CLEANUP_ZONE:UTC}
+      recovery:
+        stale-running-minutes: ${EVENT_EXPORT_JOB_RECOVERY_STALE_RUNNING_MINUTES:15}
+        dispatch-batch-size: ${EVENT_EXPORT_JOB_RECOVERY_DISPATCH_BATCH_SIZE:20}
+        cron: ${EVENT_EXPORT_JOB_RECOVERY_CRON:0/30 * * * * *}
+        zone: ${EVENT_EXPORT_JOB_RECOVERY_ZONE:UTC}
+      alert:
+        window-days: ${EVENT_EXPORT_JOB_ALERT_WINDOW_DAYS:1}
+        min-finished-jobs: ${EVENT_EXPORT_JOB_ALERT_MIN_FINISHED_JOBS:5}
+        max-queued-jobs: ${EVENT_EXPORT_JOB_ALERT_MAX_QUEUED_JOBS:20}
+        max-failure-rate-percent: ${EVENT_EXPORT_JOB_ALERT_MAX_FAILURE_RATE_PERCENT:20}
+        max-p95-seconds: ${EVENT_EXPORT_JOB_ALERT_MAX_P95_SECONDS:120}
+        cron: ${EVENT_EXPORT_JOB_ALERT_CRON:0 */10 * * * *}
+        zone: ${EVENT_EXPORT_JOB_ALERT_ZONE:UTC}

@@ -12,6 +12,12 @@ public interface EventExportJobRepository {
 
     Optional<EventExportJob> findById(UUID id);
 
+    Optional<EventExportJob> claimQueued(UUID id, Instant startedAt);
+
+    List<UUID> findQueuedJobIds(int limit);
+
+    long requeueStaleRunningJobs(Instant staleBeforeExclusive);
+
     List<MetricsRow> findMetricsRows(Instant fromInclusive, Instant toExclusive);
 
     long deleteCompletedOrFailedBefore(Instant completedBeforeExclusive);
