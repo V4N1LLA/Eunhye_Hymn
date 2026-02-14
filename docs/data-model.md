@@ -74,6 +74,9 @@
 - `metadata_json` (text, nullable)
 - `created_at` (timestamp)
 - INDEX(`user_id`, `created_at`)
+- INDEX(`created_at` DESC)
+- INDEX(`event_type`, `created_at` DESC)
+- INDEX(`hymn_id`, `created_at` DESC)
 
 ## 2. 메모
 - MVP에서는 태그를 콤마 구분 문자열로 저장한다.
