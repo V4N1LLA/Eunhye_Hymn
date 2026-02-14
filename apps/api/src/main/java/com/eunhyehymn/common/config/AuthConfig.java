@@ -3,6 +3,7 @@ package com.eunhyehymn.common.config;
 import com.eunhyehymn.application.ports.SocialTokenVerifier;
 import com.eunhyehymn.application.ports.TokenHashService;
 import com.eunhyehymn.application.ports.TokenService;
+import com.eunhyehymn.application.usecases.AdminPasswordLoginUseCase;
 import com.eunhyehymn.application.usecases.DevLoginUseCase;
 import com.eunhyehymn.application.usecases.LogoutUseCase;
 import com.eunhyehymn.application.usecases.RefreshTokenUseCase;
@@ -136,6 +137,29 @@ public class AuthConfig {
             splitCsv(adminEmails).stream().map(s -> s.toLowerCase()).collect(Collectors.toUnmodifiableSet()),
             splitCsv(adminKakaoSubjects),
             enforceAdminOnly
+        );
+    }
+
+    @Bean
+    AdminPasswordLoginUseCase adminPasswordLoginUseCase(
+        AuthIdentityRepository authIdentityRepository,
+        UserRepository userRepository,
+        RefreshTokenRepository refreshTokenRepository,
+        TokenService tokenService,
+        TokenHashService tokenHashService,
+        @Value("${security.jwt.refresh-token-ttl-seconds}") long refreshTokenTtlSeconds,
+        @Value("${security.admin.login-id:}") String loginId,
+        @Value("${security.admin.login-password:}") String loginPassword
+    ) {
+        return new AdminPasswordLoginUseCase(
+            authIdentityRepository,
+            userRepository,
+            refreshTokenRepository,
+            tokenService,
+            tokenHashService,
+            refreshTokenTtlSeconds,
+            loginId,
+            loginPassword
         );
     }
 }

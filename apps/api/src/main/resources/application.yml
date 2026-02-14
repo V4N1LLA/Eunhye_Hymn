@@ -39,6 +39,9 @@ security:
     emails: ${ADMIN_EMAILS:}
     kakao-subjects: ${ADMIN_KAKAO_SUBJECTS:}
     enforce-admin-only: ${ADMIN_ENFORCE_ADMIN_ONLY:false}
+    # Admin web ID/password login (staging/ops only)
+    login-id: ${ADMIN_LOGIN_ID:}
+    login-password: ${ADMIN_LOGIN_PASSWORD:}
   social:
     google:
       client-id: ${GOOGLE_CLIENT_ID:}

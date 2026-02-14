@@ -10,6 +10,8 @@ param(
   [string]$AdminEmails = "",
   [string]$AdminKakaoSubjects = "",
   [bool]$AdminEnforceAdminOnly = $false,
+  [string]$AdminLoginId = "",
+  [string]$AdminLoginPassword = "",
   [string]$AwsProfile = "",
   [string]$AwsAccessKeyId = "",
   [string]$AwsSecretAccessKey = "",
@@ -105,6 +107,8 @@ $googleClientIdEscaped = Escape-ComposeEnvValue -Value $GoogleClientId
 $adminEmailsEscaped = Escape-ComposeEnvValue -Value $AdminEmails
 $adminKakaoSubjectsEscaped = Escape-ComposeEnvValue -Value $AdminKakaoSubjects
 $adminEnforceValue = $(if ($AdminEnforceAdminOnly) { "true" } else { "false" })
+$adminLoginIdEscaped = Escape-ComposeEnvValue -Value $AdminLoginId
+$adminLoginPasswordEscaped = Escape-ComposeEnvValue -Value $AdminLoginPassword
 
 $deployEnvFile = @"
 ECR_REGISTRY=$ecrRegistry
@@ -119,6 +123,8 @@ GOOGLE_CLIENT_ID=$googleClientIdEscaped
 ADMIN_EMAILS=$adminEmailsEscaped
 ADMIN_KAKAO_SUBJECTS=$adminKakaoSubjectsEscaped
 ADMIN_ENFORCE_ADMIN_ONLY=$adminEnforceValue
+ADMIN_LOGIN_ID=$adminLoginIdEscaped
+ADMIN_LOGIN_PASSWORD=$adminLoginPasswordEscaped
 S3_BUCKET=$s3Bucket
 S3_REGION=$AwsRegion
 S3_ENDPOINT=

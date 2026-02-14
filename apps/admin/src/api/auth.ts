@@ -23,6 +23,11 @@ export interface SocialLoginResponse {
   newUser: boolean;
 }
 
+export interface AdminPasswordLoginRequest {
+  loginId: string;
+  password: string;
+}
+
 const PUBLIC_AUTH_OPTIONS = {
   includeAuth: false,
   unauthorized: "throw",
@@ -30,6 +35,10 @@ const PUBLIC_AUTH_OPTIONS = {
 
 export function socialLogin(req: SocialLoginRequest): Promise<SocialLoginResponse> {
   return apiPost<SocialLoginResponse>("/auth/social", req, PUBLIC_AUTH_OPTIONS);
+}
+
+export function adminPasswordLogin(req: AdminPasswordLoginRequest): Promise<SocialLoginResponse> {
+  return apiPost<SocialLoginResponse>("/auth/admin/login", req, PUBLIC_AUTH_OPTIONS);
 }
 
 export function validateInviteCode(code: string): Promise<{ valid: boolean }> {
