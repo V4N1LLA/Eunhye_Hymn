@@ -13,6 +13,15 @@ trim_text() {
   printf '%s' "$1" | xargs || true
 }
 
+expand_home_path() {
+  local path="$1"
+  if [[ "${path}" == "~/"* ]]; then
+    printf '%s/%s' "${HOME}" "${path#~/}"
+    return 0
+  fi
+  printf '%s' "${path}"
+}
+
 remote_ssh() {
   ssh -i "${STAGING_SSH_KEY}" -o StrictHostKeyChecking=no "ec2-user@${STAGING_HOST}" "$@"
 }
@@ -119,6 +128,12 @@ main() {
   require_env STAGING_HOST
   require_env STAGING_SSH_KEY
   require_env EXPECTED_IMAGE_TAG
+
+  STAGING_SSH_KEY="$(expand_home_path "${STAGING_SSH_KEY}")"
+  if [ ! -f "${STAGING_SSH_KEY}" ]; then
+    echo "ERROR: STAGING_SSH_KEY does not exist (${STAGING_SSH_KEY})"
+    exit 1
+  fi
 
   local ping_url="${PING_URL:-http://${STAGING_HOST}/api/v1/ping}"
   local admin_root_url="${ADMIN_ROOT_URL:-http://${STAGING_HOST}/}"
