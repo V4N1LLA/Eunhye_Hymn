@@ -7,7 +7,7 @@ x-default-logging: &default-logging
 services:
   # ── Spring Boot API ──────────────────────────────────────────
   api:
-    image: ${ECR_REGISTRY}/eunhye-hymn/api:latest
+    image: ${ECR_REGISTRY}/eunhye-hymn/api:${IMAGE_TAG:-latest}
     container_name: eunhye-api
     restart: unless-stopped
     env_file: .env
@@ -23,7 +23,7 @@ services:
 
   # ── Nginx (Admin + API Proxy) ────────────────────────────────
   nginx:
-    image: ${ECR_REGISTRY}/eunhye-hymn/admin:latest
+    image: ${ECR_REGISTRY}/eunhye-hymn/admin:${IMAGE_TAG:-latest}
     container_name: eunhye-nginx
     restart: unless-stopped
     ports:

@@ -157,12 +157,14 @@ jobs:
       - name: Run deploy script
         env:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ github.sha }}
           ENABLE_AWSLOGS: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_awslogs || secrets.ENABLE_AWSLOGS }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ec2-user@${{ secrets.EC2_HOST }} \
             "cd /home/ec2-user/app && \
              export ECR_REGISTRY=${ECR_REGISTRY} && \
+             export IMAGE_TAG=${IMAGE_TAG} && \
              export AWS_REGION=${{ env.AWS_REGION }} && \
              export ENABLE_AWSLOGS=${ENABLE_AWSLOGS} && \
              chmod +x deploy.sh && \
@@ -173,6 +175,7 @@ jobs:
           set -euo pipefail
 
           host="${{ secrets.EC2_HOST }}"
+          image_tag="${{ github.sha }}"
 
           check_ping() {
             local url="$1"
@@ -253,6 +256,34 @@ jobs:
             return 1
           }
 
+          check_container_image_tag() {
+            local container_name="$1"
+            local expected_tag="$2"
+            local max_attempts="$3"
+            local sleep_seconds="$4"
+            local attempt
+            local image_ref
+
+            for attempt in $(seq 1 "${max_attempts}"); do
+              image_ref="$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+                "ec2-user@${host}" \
+                "docker inspect --format '{{.Config.Image}}' '${container_name}'" \
+                2>/dev/null || true)"
+              image_ref="$(printf '%s' "${image_ref}" | xargs || true)"
+
+              if [[ "${image_ref}" == *":${expected_tag}" ]]; then
+                echo "${container_name} image check passed (${image_ref}) on attempt ${attempt}"
+                return 0
+              fi
+
+              echo "${container_name} image attempt ${attempt}/${max_attempts} returned '${image_ref}'; retrying in ${sleep_seconds}s"
+              sleep "${sleep_seconds}"
+            done
+
+            echo "::error::${container_name} image tag check failed after ${max_attempts} attempts (expected=:${expected_tag}, last='${image_ref}')"
+            return 1
+          }
+
           echo "Waiting for services to start..."
           sleep 30
           check_ping "http://${host}/api/v1/ping" 10 6
@@ -260,3 +291,5 @@ jobs:
           check_http_status "admin-auth-guard" "http://${host}/api/v1/admin/hymns" 5 4
           check_container_state "eunhye-api" "running-healthy" 10 6
           check_container_state "eunhye-nginx" "running" 5 4
+          check_container_image_tag "eunhye-api" "${image_tag}" 10 6
+          check_container_image_tag "eunhye-nginx" "${image_tag}" 5 4
