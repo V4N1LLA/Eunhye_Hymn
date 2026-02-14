@@ -516,3 +516,28 @@
 
 ### 검증
 - `git status -sb`에서 `.tmp/`, `infra/aws/tfplan*` 미노출 확인
+
+## 17. 이번 사이클 기록 (2026-02-14, 14차)
+
+### 목표
+- 스테이징 배포 안정성 강화: `docker image prune` 동시 실행 충돌로 deploy 실패하는 케이스 차단
+
+### 범위
+- 포함: `infra/aws/deploy.sh` cleanup 단계 재시도/경고 처리
+- 제외: Docker prune 정책 자체 변경, ECR lifecycle 설정 변경
+
+### 수행 작업
+1. prune cleanup 함수화
+- `cleanup_unused_images` 함수 추가
+- `docker image prune -f`를 함수 호출로 대체
+
+2. 경합 에러 하드닝
+- `prune operation is already running` 감지 시 5초 간격 최대 3회 재시도
+- 재시도 후에도 경합이면 경고 출력 후 배포는 성공 처리
+- 기타 prune 오류도 경고로 기록하고 배포 진행(정리 단계 non-fatal)
+
+3. 변경 이력 문서 동기화
+- `docs/changelog-dev.md` 업데이트
+
+### 검증
+- `bash -n infra/aws/deploy.sh`

@@ -30,6 +30,39 @@ is_true() {
   esac
 }
 
+cleanup_unused_images() {
+  local max_attempts=3
+  local attempt=1
+  local prune_output=""
+  local prune_exit=0
+
+  while [ "${attempt}" -le "${max_attempts}" ]; do
+    set +e
+    prune_output="$(docker image prune -f 2>&1)"
+    prune_exit=$?
+    set -e
+
+    if [ "${prune_exit}" -eq 0 ]; then
+      echo "${prune_output}"
+      return 0
+    fi
+
+    if echo "${prune_output}" | grep -qi "prune operation is already running"; then
+      echo "WARNING: docker image prune is already running (attempt ${attempt}/${max_attempts}); retrying..."
+      attempt=$((attempt + 1))
+      sleep 5
+      continue
+    fi
+
+    echo "WARNING: docker image prune failed but deployment will continue."
+    echo "${prune_output}"
+    return 0
+  done
+
+  echo "WARNING: docker image prune skipped after concurrent prune retries."
+  return 0
+}
+
 has_awslogs_driver() {
   docker info --format '{{range .Plugins.Log}}{{println .}}{{end}}' 2>/dev/null | grep -qx 'awslogs'
 }
@@ -89,7 +122,7 @@ fi
 
 # ── 4. Cleanup old images ───────────────────────────────────
 echo "[4/4] Cleaning up unused images..."
-docker image prune -f
+cleanup_unused_images
 
 echo "=== Deploy complete ==="
 docker compose "${COMPOSE_ARGS[@]}" ps
