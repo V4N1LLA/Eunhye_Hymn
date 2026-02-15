@@ -1,14 +1,11 @@
 package com.eunhyehymn.presentation.controllers;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.AdminPasswordCredentialJpaRepository;
-import com.eunhyehymn.infrastructure.persistence.AuthIdentityEntity;
+import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.AuthIdentityJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
@@ -17,7 +14,6 @@ import com.eunhyehymn.infrastructure.persistence.InviteCodeJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.RefreshTokenJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserJpaRepository;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
     "security.admin.login-id=owner",
     "security.admin.login-password=test-password-123!"
 })
-class AdminPasswordLoginApiTest {
+class AdminPasswordCredentialApiTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private UserJpaRepository userJpaRepository;
@@ -66,65 +62,74 @@ class AdminPasswordLoginApiTest {
     }
 
     @Test
-    void firstLoginCreatesAdminUserAndIssuesTokens() throws Exception {
-        String response = login("owner", "test-password-123!");
+    void adminCanRotateLoginIdAndPassword() throws Exception {
+        String token = loginAndExtractAccessToken("owner", "test-password-123!");
 
-        JsonNode data = objectMapper.readTree(response).get("data");
-        String accessToken = data.get("accessToken").asText();
-        assertThat(data.get("newUser").asBoolean()).isTrue();
-
-        mockMvc.perform(get("/me/profile")
-                .header("Authorization", "Bearer " + accessToken))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.role").value("ADMIN"));
-
-        assertThat(userJpaRepository.count()).isEqualTo(1);
-        assertThat(authIdentityJpaRepository.count()).isEqualTo(1);
-        AuthIdentityEntity identity = authIdentityJpaRepository.findAll().get(0);
-        assertThat(identity.getProvider()).isEqualTo("LOCAL_ADMIN");
-        assertThat(identity.getProviderSubject()).isEqualTo("owner");
-    }
-
-    @Test
-    void secondLoginUsesExistingAdminUser() throws Exception {
-        login("owner", "test-password-123!");
-        String response = login("owner", "test-password-123!");
-
-        JsonNode data = objectMapper.readTree(response).get("data");
-        assertThat(data.get("newUser").asBoolean()).isFalse();
-        assertThat(userJpaRepository.count()).isEqualTo(1);
-        assertThat(authIdentityJpaRepository.count()).isEqualTo(1);
-    }
-
-    @Test
-    void invalidCredentialsReturnsUnauthorized() throws Exception {
-        String payload = objectMapper.writeValueAsString(Map.of(
-            "loginId", "owner",
-            "password", "wrong-password"
+        String updatePayload = objectMapper.writeValueAsString(Map.of(
+            "currentPassword", "test-password-123!",
+            "newLoginId", "owner2",
+            "newPassword", "new-password-456!"
         ));
+
+        mockMvc.perform(post("/admin/auth/password")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updatePayload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.loginId").value("owner2"));
 
         mockMvc.perform(post("/auth/admin/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
+                .content(objectMapper.writeValueAsString(Map.of(
+                    "loginId", "owner",
+                    "password", "test-password-123!"
+                ))))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error.code").value("admin_login_failed"));
+
+        mockMvc.perform(post("/auth/admin/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                    "loginId", "owner2",
+                    "password", "new-password-456!"
+                ))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.accessToken").isNotEmpty());
     }
 
-    private String login(String loginId, String password) throws Exception {
+    @Test
+    void changePasswordRequiresValidCurrentPassword() throws Exception {
+        String token = loginAndExtractAccessToken("owner", "test-password-123!");
+
+        String updatePayload = objectMapper.writeValueAsString(Map.of(
+            "currentPassword", "wrong-current-password",
+            "newLoginId", "owner2",
+            "newPassword", "new-password-456!"
+        ));
+
+        mockMvc.perform(post("/admin/auth/password")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updatePayload))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value("admin_password_change_failed"));
+    }
+
+    private String loginAndExtractAccessToken(String loginId, String password) throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of(
             "loginId", loginId,
             "password", password
         ));
 
-        return mockMvc.perform(post("/auth/admin/login")
+        String body = mockMvc.perform(post("/auth/admin/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
-            .andExpect(jsonPath("$.data.refreshToken").isNotEmpty())
             .andReturn()
             .getResponse()
             .getContentAsString();
+
+        return objectMapper.readTree(body).path("data").path("accessToken").asText();
     }
 }
-

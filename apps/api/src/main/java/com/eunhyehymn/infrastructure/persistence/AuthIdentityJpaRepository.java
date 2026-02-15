@@ -9,4 +9,6 @@ public interface AuthIdentityJpaRepository extends JpaRepository<AuthIdentityEnt
     Optional<AuthIdentityEntity> findByProviderAndProviderSubject(String provider, String providerSubject);
 
     List<AuthIdentityEntity> findByUserIdIn(List<UUID> userIds);
+
+    Optional<AuthIdentityEntity> findByUserIdAndProvider(UUID userId, String provider);
 }

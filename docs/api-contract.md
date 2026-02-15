@@ -57,7 +57,43 @@ Base URL: `/api/v1`
 - 요청 `data`: `{ "refreshToken": "jwt-refresh" }`
 - 응답 `data`: `null`
 
-### 1.5 DEV 로그인 (개발 환경 전용)
+### 1.5 Admin ID/PW 로그인
+- `POST /auth/admin/login`
+- 요청 `data` 예시:
+```json
+{
+  "loginId": "owner",
+  "password": "your-admin-password"
+}
+```
+- 응답 `data` 예시:
+```json
+{
+  "accessToken": "jwt-access",
+  "refreshToken": "jwt-refresh",
+  "newUser": false
+}
+```
+
+### 1.6 Admin ID/PW 변경 (관리자 토큰 필요)
+- `POST /admin/auth/password`
+- 요청 `data` 예시:
+```json
+{
+  "currentPassword": "current-password",
+  "newLoginId": "owner2",
+  "newPassword": "new-password-456!"
+}
+```
+- 응답 `data` 예시:
+```json
+{
+  "loginId": "owner2",
+  "updatedAt": "2026-02-15T14:00:00Z"
+}
+```
+
+### 1.7 DEV 로그인 (개발 환경 전용)
 - `POST /auth/dev/login`
 - 요청 `data` 예시:
 ```json

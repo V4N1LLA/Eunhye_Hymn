@@ -28,6 +28,17 @@ export interface AdminPasswordLoginRequest {
   password: string;
 }
 
+export interface AdminPasswordChangeRequest {
+  currentPassword: string;
+  newLoginId: string;
+  newPassword: string;
+}
+
+export interface AdminPasswordChangeResponse {
+  loginId: string;
+  updatedAt: string;
+}
+
 const PUBLIC_AUTH_OPTIONS = {
   includeAuth: false,
   unauthorized: "throw",
@@ -39,6 +50,10 @@ export function socialLogin(req: SocialLoginRequest): Promise<SocialLoginRespons
 
 export function adminPasswordLogin(req: AdminPasswordLoginRequest): Promise<SocialLoginResponse> {
   return apiPost<SocialLoginResponse>("/auth/admin/login", req, PUBLIC_AUTH_OPTIONS);
+}
+
+export function changeAdminPasswordCredential(req: AdminPasswordChangeRequest): Promise<AdminPasswordChangeResponse> {
+  return apiPost<AdminPasswordChangeResponse>("/admin/auth/password", req);
 }
 
 export function validateInviteCode(code: string): Promise<{ valid: boolean }> {

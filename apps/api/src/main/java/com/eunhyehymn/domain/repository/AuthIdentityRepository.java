@@ -13,4 +13,6 @@ public interface AuthIdentityRepository {
     Optional<AuthIdentity> findByProviderAndProviderSubject(String provider, String providerSubject);
 
     List<AuthIdentity> findByUserIdIn(List<UUID> userIds);
+
+    Optional<AuthIdentity> findByUserIdAndProvider(UUID userId, String provider);
 }
