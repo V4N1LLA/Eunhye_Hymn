@@ -897,3 +897,30 @@
 ### Validation
 - `cd apps/admin && npm ci && npx tsc --noEmit && npm run build`
 
+## 32. 이번 사이클 기록 (2026-02-15, staging feedback checklist)
+
+### 목표
+- 스테이징 수동 검수 단계에서 피드백 품질과 재현 속도를 높이기 위한 표준 체크리스트를 추가한다.
+
+### 범위
+- 포함: 피드백 루프 체크리스트 문서 신설, README/CLAUDE 동기화
+- 제외: 애플리케이션 기능 코드 변경, 배포 워크플로 변경
+
+### 수행 작업
+1. 스테이징 피드백 체크리스트 추가
+- `docs/staging-feedback-checklist.md` 신규 추가
+- 작은 배포 단위, 고정 검증 시나리오, 심각도 기반 처리 규칙, 사이클 종료 기준을 명시
+- 이슈 전달용 표준 템플릿(`환경/재현절차/기대결과/실제결과/로그/심각도/완료기준`) 포함
+
+2. 문서 진입점 동기화
+- `README.md` 문서 목록에 `docs/staging-feedback-checklist.md` 링크 추가
+
+3. 작업 기준 문서 동기화
+- `CLAUDE.md` 마지막 업데이트 날짜를 `2026-02-15`로 갱신
+- 문서/준비도 점검 항목에 새 체크리스트 반영
+- 운영 문서/절차 고도화 항목에 새 체크리스트 반영
+
+### 검증
+- `rg -n "staging-feedback-checklist" README.md CLAUDE.md docs/WORK_CYCLE.md docs/staging-feedback-checklist.md`
+- `rg -n "^(<<<<<<<|>>>>>>>|=======)$" README.md CLAUDE.md docs/WORK_CYCLE.md docs/staging-feedback-checklist.md`
+
