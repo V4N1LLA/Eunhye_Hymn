@@ -25,6 +25,15 @@ export default function HelpPage() {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">사용자 관리 잠금 정책</h2>
+        <div className="mt-2 space-y-1 text-sm text-slate-600">
+          <div>- 현재 로그인한 운영자 계정은 역할/상태 변경이 잠깁니다.</div>
+          <div>- 마지막 활성 관리자 계정은 USER 변경/비활성화가 잠깁니다.</div>
+          <div>- 목적: 단일 운영자 환경에서 관리자 계정 잠금(셀프 락아웃) 방지</div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">자주 보이는 API 에러 코드</h2>
         <div className="mt-2 space-y-1 text-sm text-slate-600">
           <div>- `admin_login_disabled`: 서버에 관리자 ID/PW가 비어 있음</div>
