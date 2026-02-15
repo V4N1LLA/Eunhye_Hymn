@@ -13,6 +13,11 @@ class AppConfig {
     defaultValue: '',
   );
 
+  static const enableDevLogin = bool.fromEnvironment(
+    'ENABLE_DEV_LOGIN',
+    defaultValue: false,
+  );
+
   static String normalizeApiBaseUrl(String value) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) {

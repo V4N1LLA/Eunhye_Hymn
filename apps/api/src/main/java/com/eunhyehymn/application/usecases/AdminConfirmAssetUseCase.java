@@ -42,7 +42,10 @@ public class AdminConfirmAssetUseCase {
             throw new ApiException(HttpStatus.NOT_FOUND, "hymn_not_found", "찬송가를 찾을 수 없습니다", null);
         }
 
-        assetRepository.deleteByHymnIdAndTypeAndPart(hymnId, type, resolvedPart);
+        // PNG 악보는 한 곡에 여러 장(페이지) 등록할 수 있어 기존 파일을 유지한다.
+        if (type != AssetType.PNG) {
+            assetRepository.deleteByHymnIdAndTypeAndPart(hymnId, type, resolvedPart);
+        }
 
         Asset asset = new Asset(
             UUID.randomUUID(),

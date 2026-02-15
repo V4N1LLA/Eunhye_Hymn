@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface AssetJpaRepository extends JpaRepository<AssetEntity, UUID> {
-    List<AssetEntity> findByHymnId(UUID hymnId);
+    List<AssetEntity> findByHymnIdOrderByCreatedAtAscIdAsc(UUID hymnId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional

@@ -201,7 +201,7 @@ class AdminHymnApiTest {
             .andExpect(jsonPath("$.success").value(true));
 
         assertThat(hymnJpaRepository.findById(hymnId)).isEmpty();
-        assertThat(assetJpaRepository.findByHymnId(hymnId)).isEmpty();
+        assertThat(assetJpaRepository.findByHymnIdOrderByCreatedAtAscIdAsc(hymnId)).isEmpty();
     }
 
     @Test

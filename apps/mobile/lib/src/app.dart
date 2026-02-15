@@ -41,8 +41,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       apiClient: _apiClient,
       tokenStorage: _tokenStorage,
     );
-    _socialSdkService = SocialSdkService();
-    _socialSdkService.initialize();
+    _socialSdkService = SocialSdkService()..initialize();
     _hymnRepository = HymnRepository(apiClient: _apiClient);
     _bootstrap();
   }
@@ -79,6 +78,9 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       });
       await _hymnRepository.syncPendingActions();
     } catch (e) {
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _initError = e.toString();
       });
@@ -113,10 +115,24 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Eunhye Hymn',
+      title: '은혜찬송',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFF6F0F)),
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFF6F7F9),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF1F2937),
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
       ),
       home: _buildHome(),
     );
@@ -133,7 +149,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       return Scaffold(
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -159,7 +175,6 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
     }
 
     return _HomeShell(
-      profile: _profile!,
       authRepository: _authRepository,
       hymnRepository: _hymnRepository,
       onLogout: _onLogout,
@@ -168,13 +183,11 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
 }
 
 class _HomeShell extends StatefulWidget {
-  final SessionProfile profile;
   final AuthRepository authRepository;
   final HymnRepository hymnRepository;
   final Future<void> Function() onLogout;
 
   const _HomeShell({
-    required this.profile,
     required this.authRepository,
     required this.hymnRepository,
     required this.onLogout,
@@ -203,6 +216,7 @@ class _HomeShellState extends State<_HomeShell> {
     if (_loggingOut) {
       return;
     }
+
     setState(() {
       _loggingOut = true;
     });
@@ -229,18 +243,29 @@ class _HomeShellState extends State<_HomeShell> {
         onOpenHymnDetail: _openHymnDetail,
       ),
     ];
-
-    final titles = ['찬양 목록', '최근 열람'];
-    final roleLabel = widget.profile.role == UserRole.admin ? 'ADMIN' : 'USER';
+    final titles = <String>['찬양 둘러보기', '최근 본 찬양'];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${titles[_index]} · $roleLabel'),
+        title: Text(titles[_index]),
         actions: [
-          IconButton(
-            onPressed: _loggingOut ? null : _handleLogout,
-            icon: const Icon(Icons.logout),
-            tooltip: '로그아웃',
+          PopupMenuButton<String>(
+            enabled: !_loggingOut,
+            onSelected: (value) {
+              if (value == 'logout') {
+                _handleLogout();
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'logout', child: Text('로그아웃')),
+            ],
+            icon: _loggingOut
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.more_vert),
           ),
         ],
       ),
@@ -248,7 +273,9 @@ class _HomeShellState extends State<_HomeShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (index) {
-          setState(() => _index = index);
+          setState(() {
+            _index = index;
+          });
         },
         destinations: const [
           NavigationDestination(
@@ -259,7 +286,7 @@ class _HomeShellState extends State<_HomeShell> {
           NavigationDestination(
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
-            label: '히스토리',
+            label: '최근 본 항목',
           ),
         ],
       ),
