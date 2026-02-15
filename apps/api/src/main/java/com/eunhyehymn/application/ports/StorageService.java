@@ -8,6 +8,10 @@ import java.util.UUID;
 public interface StorageService {
     PresignResult presignUpload(PresignRequest request);
 
+    default String resolveReadUrl(String objectKey, String fallbackUrl) {
+        return fallbackUrl;
+    }
+
     record PresignRequest(
         UUID hymnId,
         AssetType type,

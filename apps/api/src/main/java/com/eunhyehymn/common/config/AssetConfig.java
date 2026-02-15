@@ -22,13 +22,20 @@ public class AssetConfig {
         @Value("${storage.s3.bucket:local-bucket}") String bucket,
         @Value("${storage.s3.region:ap-northeast-2}") String region,
         @Value("${storage.s3.endpoint:}") String endpoint,
-        @Value("${storage.s3.public-base-url:}") String publicBaseUrl
+        @Value("${storage.s3.public-base-url:}") String publicBaseUrl,
+        @Value("${storage.s3.read-presign-expires-minutes:720}") long readPresignExpiresMinutes
     ) {
         S3Presigner.Builder builder = S3Presigner.builder().region(Region.of(region));
         if (endpoint != null && !endpoint.isBlank()) {
             builder.endpointOverride(URI.create(endpoint));
         }
-        return new S3StorageService(builder.build(), bucket, publicBaseUrl, endpoint);
+        return new S3StorageService(
+            builder.build(),
+            bucket,
+            publicBaseUrl,
+            endpoint,
+            Duration.ofMinutes(readPresignExpiresMinutes)
+        );
     }
 
     @Bean

@@ -2,6 +2,7 @@ package com.eunhyehymn.presentation.controllers;
 
 import com.eunhyehymn.application.usecases.GetHymnDetailUseCase;
 import com.eunhyehymn.application.usecases.ListHymnsUseCase;
+import com.eunhyehymn.application.ports.StorageService;
 import com.eunhyehymn.common.response.ApiResponse;
 import com.eunhyehymn.domain.model.Asset;
 import com.eunhyehymn.domain.model.Hymn;
@@ -18,10 +19,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class HymnController {
     private final ListHymnsUseCase listHymnsUseCase;
     private final GetHymnDetailUseCase getHymnDetailUseCase;
+    private final StorageService storageService;
 
-    public HymnController(ListHymnsUseCase listHymnsUseCase, GetHymnDetailUseCase getHymnDetailUseCase) {
+    public HymnController(
+        ListHymnsUseCase listHymnsUseCase,
+        GetHymnDetailUseCase getHymnDetailUseCase,
+        StorageService storageService
+    ) {
         this.listHymnsUseCase = listHymnsUseCase;
         this.getHymnDetailUseCase = getHymnDetailUseCase;
+        this.storageService = storageService;
     }
 
     @GetMapping
@@ -51,11 +58,12 @@ public class HymnController {
     }
 
     private AssetResponse toAsset(Asset asset) {
+        String resolvedUrl = storageService.resolveReadUrl(asset.objectKey(), asset.url());
         return new AssetResponse(
             asset.id(),
             asset.type().name(),
             asset.part() == null ? null : asset.part().name(),
-            asset.url(),
+            resolvedUrl,
             asset.checksum(),
             asset.version()
         );
