@@ -95,80 +95,87 @@ export default function InviteCodePage() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">초대코드 관리</h1>
-        <button
-          type="button"
-          onClick={handleToggleForm}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-        >
-          {showForm ? "취소" : "새 초대코드"}
-        </button>
-      </div>
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">초대코드 관리</h2>
+            <p className="mt-1 text-sm text-slate-600">앱 사용자 등록용 코드 생성/비활성화/사용량 조회를 수행합니다.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleForm}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          >
+            {showForm ? "취소" : "새 초대코드"}
+          </button>
+        </div>
+      </section>
 
-      {mutationError && <p className="text-red-600 mb-4">{mutationError}</p>}
+      {mutationError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{mutationError}</div>
+      )}
 
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-6 space-y-3">
+        <form onSubmit={handleCreate} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">코드</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">코드</label>
             <input
               type="text"
               value={newCode}
               onChange={(e) => setNewCode(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="예: EUNHYE-2026"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">설명 (선택)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">설명 (선택)</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="예: 2026년 새가족용"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">최대 사용 횟수 (선택)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">최대 사용 횟수 (선택)</label>
             <input
               type="number"
               value={maxUses}
               onChange={(e) => setMaxUses(e.target.value)}
               min="1"
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="비워두면 무제한"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">만료일 (선택)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">만료일 (선택)</label>
             <input
               type="datetime-local"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <button
             type="submit"
             disabled={creating || !newCode.trim()}
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {creating ? "생성 중..." : "생성"}
           </button>
         </form>
       )}
 
-      {loading && <p className="text-gray-500">로딩 중...</p>}
-      {loadError && <p className="text-red-600 mb-4">{loadError}</p>}
+      {loading && <p className="text-sm text-gray-500">로딩 중...</p>}
+      {loadError && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>}
 
       {!loading && !loadError && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">코드</th>
                 <th className="px-4 py-3 text-sm font-semibold text-gray-600">설명</th>
@@ -182,24 +189,23 @@ export default function InviteCodePage() {
             <tbody>
               {codes.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
                     등록된 초대코드가 없습니다.
                   </td>
                 </tr>
               )}
               {codes.map((c) => (
-                <tr key={c.code} className="border-b last:border-b-0 hover:bg-gray-50">
+                <tr key={c.code} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50">
                   <td className="px-4 py-3 font-mono text-sm">{c.code}</td>
                   <td className="px-4 py-3 text-sm text-gray-500">{c.description ?? "-"}</td>
                   <td className="px-4 py-3 text-sm">
-                    {c.usedCount}{c.maxUses != null ? ` / ${c.maxUses}` : ""}
+                    {c.usedCount}
+                    {c.maxUses != null ? ` / ${c.maxUses}` : ""}
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        c.enabled
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-500"
+                      className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        c.enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
                       }`}
                     >
                       {c.enabled ? "활성" : "비활성"}
@@ -215,16 +221,14 @@ export default function InviteCodePage() {
                       <span className="text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {new Date(c.createdAt).toLocaleDateString("ko-KR")}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{new Date(c.createdAt).toLocaleDateString("ko-KR")}</td>
                   <td className="px-4 py-3">
                     {c.enabled && (
                       <button
                         type="button"
                         onClick={() => handleRevoke(c.code)}
                         disabled={revokingCodes.has(c.code)}
-                        className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
+                        className="text-sm font-medium text-red-600 hover:text-red-800 disabled:opacity-50"
                       >
                         {revokingCodes.has(c.code) ? "..." : "비활성화"}
                       </button>
@@ -234,7 +238,7 @@ export default function InviteCodePage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </section>
       )}
     </div>
   );

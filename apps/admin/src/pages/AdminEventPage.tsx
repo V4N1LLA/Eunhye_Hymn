@@ -258,13 +258,18 @@ export default function AdminEventPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">감사 로그/분석</h1>
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h1 className="text-2xl font-bold text-slate-900">감사 로그/분석</h1>
+        <p className="mt-1 text-sm text-slate-600">
+          사용자 이벤트 조회, 기간 집계, CSV 내보내기(동기/비동기)까지 한 화면에서 처리합니다.
+        </p>
+      </section>
 
-      <div className="bg-white rounded-lg shadow p-4 mb-4 border border-indigo-100">
+      <div className="bg-white rounded-2xl border border-indigo-100 p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Async Export Ops Metrics</h2>
+            <h2 className="text-base font-semibold text-gray-900">비동기 내보내기 운영 지표</h2>
             {opsMetrics && (
               <p className="text-xs text-gray-500 mt-1">
                 {formatDateTime(opsMetrics.fromInclusive)} ~ {formatDateTime(opsMetrics.toExclusive)}
@@ -289,12 +294,12 @@ export default function AdminEventPage() {
           </div>
         </div>
 
-        {opsMetricsLoading && <p className="text-sm text-gray-500 mt-3">Loading metrics...</p>}
+        {opsMetricsLoading && <p className="text-sm text-gray-500 mt-3">지표 로딩 중...</p>}
 
         {!opsMetricsLoading && opsMetrics && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
             <div className="rounded border border-gray-200 px-3 py-2">
-              <p className="text-xs text-gray-500">Total Jobs</p>
+              <p className="text-xs text-gray-500">총 작업 수</p>
               <p className="text-xl font-semibold text-gray-900">{opsMetrics.jobs.total.toLocaleString("ko-KR")}</p>
               <p className="text-xs text-gray-500 mt-1">
                 completed {opsMetrics.jobs.completed.toLocaleString("ko-KR")} / failed{" "}
@@ -302,7 +307,7 @@ export default function AdminEventPage() {
               </p>
             </div>
             <div className="rounded border border-gray-200 px-3 py-2">
-              <p className="text-xs text-gray-500">Failure Rate</p>
+              <p className="text-xs text-gray-500">실패율</p>
               <p className="text-xl font-semibold text-rose-600">{opsMetrics.jobs.failureRatePercent.toFixed(2)}%</p>
               <p className="text-xs text-gray-500 mt-1">
                 queued {opsMetrics.jobs.queued.toLocaleString("ko-KR")} / running{" "}
@@ -310,7 +315,7 @@ export default function AdminEventPage() {
               </p>
             </div>
             <div className="rounded border border-gray-200 px-3 py-2">
-              <p className="text-xs text-gray-500">Processing Time</p>
+              <p className="text-xs text-gray-500">처리 시간</p>
               <p className="text-xl font-semibold text-gray-900">{formatSeconds(opsMetrics.processing.averageSeconds)}</p>
               <p className="text-xs text-gray-500 mt-1">
                 p95 {formatSeconds(opsMetrics.processing.p95Seconds)} / sample{" "}
@@ -318,7 +323,7 @@ export default function AdminEventPage() {
               </p>
             </div>
             <div className="rounded border border-gray-200 px-3 py-2">
-              <p className="text-xs text-gray-500">Cleanup Volume</p>
+              <p className="text-xs text-gray-500">정리 건수</p>
               <p className="text-xl font-semibold text-emerald-700">
                 {opsMetrics.cleanup.deletedJobs.toLocaleString("ko-KR")}
               </p>

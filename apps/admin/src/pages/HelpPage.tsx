@@ -1,39 +1,38 @@
 export default function HelpPage() {
   return (
     <div className="space-y-4">
-      <div>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h1 className="text-2xl font-bold text-slate-900">도움말</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          운영자 1인 기준으로, Admin 로그인/권한 이슈 해결 가이드입니다.
-        </p>
-      </div>
+        <p className="mt-1 text-sm text-slate-600">운영자 1인 기준 로그인/권한 문제를 빠르게 해결하는 가이드입니다.</p>
+      </section>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
-        <h2 className="text-lg font-semibold text-slate-900">로그인 방식</h2>
-        <div className="text-sm text-slate-600 space-y-1">
-          <div>- Admin 웹은 ID/PW 로그인(`auth/admin/login`)을 사용합니다.</div>
-          <div>- 서버에 `ADMIN_LOGIN_ID`, `ADMIN_LOGIN_PASSWORD`가 설정되어 있어야 로그인됩니다.</div>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">로그인 규칙 (중요)</h2>
+        <div className="mt-2 space-y-1 text-sm text-slate-600">
+          <div>- Admin 웹은 OAuth가 아니라 관리자 ID/PW 로그인만 사용합니다.</div>
+          <div>- 필요한 서버 환경변수: `ADMIN_LOGIN_ID`, `ADMIN_LOGIN_PASSWORD`</div>
+          <div>- 초대코드(`stage-...`)는 앱 사용자 가입용이며, Admin 로그인 ID가 아닙니다.</div>
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
-        <h2 className="text-lg font-semibold text-slate-900">권한이 없다고 나올 때</h2>
-        <div className="text-sm text-slate-600 space-y-1">
-          <div>- 현재 토큰 role이 `USER`이면 Admin API는 403입니다.</div>
-          <div>- 로그아웃 후 재로그인하세요.</div>
-          <div>- 계속 실패하면 브라우저 `sessionStorage`의 `accessToken`, `refreshToken`을 지우고 다시 로그인하세요.</div>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">권한 없음(403) 해결 순서</h2>
+        <div className="mt-2 space-y-1 text-sm text-slate-600">
+          <div>1) 로그인 화면에서 "세션 초기화 후 다시 로그인" 버튼 실행</div>
+          <div>2) 관리자 ID/PW로 다시 로그인</div>
+          <div>3) 여전히 실패하면 서버 환경변수와 배포 반영 여부 확인</div>
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
-        <h2 className="text-lg font-semibold text-slate-900">API 에러 코드</h2>
-        <div className="text-sm text-slate-600 space-y-1">
-          <div>- `admin_login_disabled`: 서버에 ID/PW 설정이 없음</div>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">자주 보이는 API 에러 코드</h2>
+        <div className="mt-2 space-y-1 text-sm text-slate-600">
+          <div>- `admin_login_disabled`: 서버에 관리자 ID/PW가 비어 있음</div>
           <div>- `admin_login_failed`: 아이디 또는 비밀번호 불일치</div>
-          <div>- `unauthorized`: 로그인 토큰 없음/만료</div>
-          <div>- `forbidden`: USER 토큰으로 admin endpoint 접근</div>
+          <div>- `unauthorized`: 토큰 만료/누락</div>
+          <div>- `forbidden`: ADMIN이 아닌 토큰으로 Admin API 호출</div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
