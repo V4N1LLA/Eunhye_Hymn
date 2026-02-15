@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Locale;
 
 public class SocialTokenVerifierImpl implements SocialTokenVerifier {
     private final ObjectMapper objectMapper;
@@ -24,7 +25,11 @@ public class SocialTokenVerifierImpl implements SocialTokenVerifier {
 
     @Override
     public SocialUserInfo verify(String provider, String token) {
-        return switch (provider.toUpperCase()) {
+        if (provider == null || provider.isBlank()) {
+            throw new SocialLoginException("Unsupported social provider: " + provider);
+        }
+
+        return switch (provider.trim().toUpperCase(Locale.ROOT)) {
             case "KAKAO" -> verifyKakao(token);
             default -> throw new SocialLoginException("Unsupported social provider: " + provider);
         };
