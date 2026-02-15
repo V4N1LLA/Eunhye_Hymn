@@ -157,7 +157,9 @@ Base URL: `/api/v1`
 
 ### 4.1 사용자 관리
 - `GET /admin/users`
+- `POST /admin/users`
 - `PATCH /admin/users/{id}`
+- `DELETE /admin/users/{id}` (soft-delete: `status=DISABLED`)
 
 ### 4.2 초대코드 관리
 - `POST /admin/invite-codes`

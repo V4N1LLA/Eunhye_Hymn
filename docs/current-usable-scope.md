@@ -25,10 +25,10 @@
 
 - 찬양 관리: 목록/생성/수정/삭제, 검색/필터, 활성화 토글
 - 에셋 관리: Presign -> 업로드 -> Confirm 3단계, 에셋 삭제
-- 사용자 관리: 사용자 목록, 역할/상태 변경
+- 사용자 관리: 생성/조회/수정/삭제(soft-delete), 운영자 잠금 정책(현재 운영자/마지막 활성 관리자 보호)
 - 초대코드 관리: 생성/비활성화/만료일 설정 및 표시
 - 감사 로그/분석: 이벤트 로그 필터/페이지네이션 조회, 이벤트 타입별 집계(최근 N일, `summaryDays` 1~90 커스텀), 동기 CSV 내보내기 + 비동기 대용량 CSV 작업(요청/상태/다운로드) + 완료/실패 작업 자동 정리
-- 인증: Google/Kakao 소셜 로그인 UI, Dev 로그인
+- 인증: Admin ID/PW 로그인(운영), Google/Kakao 소셜 로그인(사용자), Dev 로그인(로컬)
 - 토큰: 401 발생 시 Access Token 자동 갱신 후 재시도
 
 관련 파일:
@@ -49,7 +49,7 @@
 - 인증/인가: JWT, Refresh Token 회전, 소셜 로그인(Google/Kakao), Dev 로그인
 - 찬양: 공개 조회 + 관리자 CRUD + 삭제(cascade)
 - 에셋: 관리자 Presign/Confirm/Delete (AssetType: `PNG`, `MIDI`)
-- 사용자/초대코드 관리자 기능
+- 사용자/초대코드 관리자 기능(사용자 CRUD + 초대코드 생성/비활성화)
 - 관리자 감사 로그: `GET /admin/events` 조회/필터/페이지네이션 + 최근 N일 이벤트 타입 집계(`summaryDays` 1~90)
 - 관리자 감사 로그 내보내기: `GET /admin/events/export`(동기 CSV), `POST /admin/events/export-jobs` + `GET /admin/events/export-jobs/{jobId}` + `GET /admin/events/export-jobs/{jobId}/download`(비동기 대용량 CSV), 스케줄러 기반 결과 정리(기본 7일 보관)
 - 멤버 기능: 즐겨찾기, 메모, 히스토리, 이벤트 기록
