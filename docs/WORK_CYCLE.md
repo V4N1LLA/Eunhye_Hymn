@@ -924,3 +924,33 @@
 - `rg -n "staging-feedback-checklist" README.md CLAUDE.md docs/WORK_CYCLE.md docs/staging-feedback-checklist.md`
 - `rg -n "^(<<<<<<<|>>>>>>>|=======)$" README.md CLAUDE.md docs/WORK_CYCLE.md docs/staging-feedback-checklist.md`
 
+## 33. 이번 사이클 기록 (2026-02-15, mobile friendly ui/ux)
+
+### 목표
+- 모바일 앱의 목록/히스토리 탐색 경험을 더 빠르고 명확하게 만들어 스테이징 수동 검수 효율을 높인다.
+
+### 범위
+- 포함: 찬양 목록/최근 열람 화면 UI·UX 개선, 모바일 문서/작업 기준 문서 동기화
+- 제외: API 계약 변경, 인증/도메인 로직 변경, 배포 워크플로 변경
+
+### 수행 작업
+1. 찬양 목록 UX 개선
+- `apps/mobile/lib/src/features/hymn/hymn_list_page.dart`
+- 검색어 즉시 지우기 버튼, 태그 필터(ChoiceChip), 필터 초기화 액션 추가
+- 로딩 스켈레톤, 빈 상태 가이드, soft error 배너(캐시 fallback 안내) 추가
+- 카드 정보 구조 개선(태그 칩/가독성 강화)
+
+2. 최근 열람 UX 개선
+- `apps/mobile/lib/src/features/history/history_page.dart`
+- 검색 + 기간 필터(전체/오늘/최근 7일/최근 30일) 추가
+- 필터 초기화, 빈 상태 가이드, soft error 배너 추가
+- 히스토리 카드 태그 노출 및 정렬/시간 표기 정돈
+
+3. 문서 동기화
+- `docs/mobile/README.md`: 모바일 기능 목록에 목록/히스토리 UX 개선 내역 반영
+- `CLAUDE.md`: 모바일 구현 기능/파일 역할 설명에 UX 개선 반영
+
+### 검증
+- `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 analyze`
+- `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 test`
+

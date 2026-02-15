@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../hymn/hymn_repository.dart';
 
+enum _HistoryRange { all, today, week, month }
+
 class HistoryPage extends StatefulWidget {
   final HymnRepository hymnRepository;
   final void Function(String hymnId) onOpenHymnDetail;
@@ -17,21 +19,46 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  final _searchController = TextEditingController();
+
   bool _loading = true;
   String? _error;
   List<HistoryItem> _items = const [];
+  String _query = '';
+  _HistoryRange _range = _HistoryRange.all;
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(() {
+      final next = _searchController.text;
+      if (_query == next) {
+        return;
+      }
+      setState(() {
+        _query = next;
+      });
+    });
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({bool showLoading = true}) async {
+    if (showLoading || _items.isEmpty) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    } else {
+      setState(() {
+        _error = null;
+      });
+    }
 
     try {
       final items = await widget.hymnRepository.getHistory();
@@ -57,64 +84,126 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
+  void _clearFilters() {
+    _searchController.clear();
+    setState(() {
+      _query = '';
+      _range = _HistoryRange.all;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    if (_loading && _items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 12),
-              FilledButton(onPressed: _load, child: const Text('다시 시도')),
-            ],
-          ),
-        ),
-      );
+    if (_error != null && _items.isEmpty) {
+      return _HistoryErrorView(message: _error!, onRetry: _load);
     }
 
+    final filtered = _filterItems();
+    final hasFilter = _query.trim().isNotEmpty || _range != _HistoryRange.all;
+
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () => _load(showLoading: false),
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              child: Text(
-                _items.isEmpty
-                    ? '아직 열어본 찬양이 없어요.'
-                    : '최근에 열어본 ${_items.length}곡',
-                style: const TextStyle(
-                  color: Color(0xFF5B6572),
-                  fontWeight: FontWeight.w500,
-                ),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: '제목, 번호, 태그 검색',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _query.trim().isEmpty
+                          ? null
+                          : IconButton(
+                              onPressed: _searchController.clear,
+                              icon: const Icon(Icons.close),
+                            ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final range in _HistoryRange.values)
+                        ChoiceChip(
+                          label: Text(_labelForRange(range)),
+                          selected: _range == range,
+                          onSelected: (selected) {
+                            if (!selected) {
+                              return;
+                            }
+                            setState(() {
+                              _range = range;
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          filtered.isEmpty
+                              ? '표시할 최근 기록이 없어요.'
+                              : '최근 열람 ${filtered.length}곡',
+                          style: const TextStyle(
+                            color: Color(0xFF5B6572),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (hasFilter)
+                        TextButton.icon(
+                          onPressed: _clearFilters,
+                          icon: const Icon(Icons.filter_alt_off, size: 18),
+                          label: const Text('필터 초기화'),
+                        ),
+                    ],
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 8),
+                    _HistorySoftErrorBanner(
+                      message: '연결이 불안정해요. 저장된 기록으로 보여드리고 있어요.',
+                      onRetry: () => _load(showLoading: false),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
-          if (_items.isEmpty)
-            const SliverFillRemaining(
+          if (filtered.isEmpty)
+            SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(
-                child: Text(
-                  '찬양을 열어보면 이곳에 기록됩니다.',
-                  style: TextStyle(color: Color(0xFF6B7280)),
-                ),
+              child: _HistoryEmptyState(
+                hasFilter: hasFilter,
+                onResetFilter: _clearFilters,
+                onRefresh: () => _load(showLoading: false),
               ),
             )
           else
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               sliver: SliverList.builder(
-                itemCount: _items.length,
+                itemCount: filtered.length,
                 itemBuilder: (context, index) {
-                  final item = _items[index];
+                  final item = filtered[index];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: _HistoryCard(
@@ -128,6 +217,43 @@ class _HistoryPageState extends State<HistoryPage> {
         ],
       ),
     );
+  }
+
+  List<HistoryItem> _filterItems() {
+    final now = DateTime.now();
+    final query = _query.trim().toLowerCase();
+
+    final filtered = _items.where((item) {
+      final itemDate = _tryParseDate(item.lastOpenedAt);
+      if (!_matchRange(_range, now, itemDate)) {
+        return false;
+      }
+
+      if (query.isEmpty) {
+        return true;
+      }
+
+      return item.title.toLowerCase().contains(query) ||
+          (item.number ?? '').toLowerCase().contains(query) ||
+          (item.tags ?? '').toLowerCase().contains(query);
+    }).toList();
+
+    filtered.sort((a, b) {
+      final left = _tryParseDate(a.lastOpenedAt);
+      final right = _tryParseDate(b.lastOpenedAt);
+      if (left == null && right == null) {
+        return 0;
+      }
+      if (left == null) {
+        return 1;
+      }
+      if (right == null) {
+        return -1;
+      }
+      return right.compareTo(left);
+    });
+
+    return filtered;
   }
 }
 
@@ -144,6 +270,7 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final lastOpened = _formatRelativeTime(item.lastOpenedAt);
     final numberText = item.number?.trim();
+    final tags = _splitTags(item.tags);
 
     return Material(
       color: Colors.white,
@@ -154,6 +281,7 @@ class _HistoryCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 42,
@@ -189,11 +317,41 @@ class _HistoryCard extends StatelessWidget {
                         fontSize: 12.5,
                       ),
                     ),
+                    if (tags.isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final tag in tags.take(3))
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                tag,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF6B7280),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child:
+                    Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
+              ),
             ],
           ),
         ),
@@ -202,14 +360,178 @@ class _HistoryCard extends StatelessWidget {
   }
 }
 
-String _formatRelativeTime(String? value) {
-  if (value == null || value.trim().isEmpty) {
-    return '방금 전';
+class _HistoryEmptyState extends StatelessWidget {
+  final bool hasFilter;
+  final VoidCallback onResetFilter;
+  final VoidCallback onRefresh;
+
+  const _HistoryEmptyState({
+    required this.hasFilter,
+    required this.onResetFilter,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.history_toggle_off_rounded,
+                size: 42, color: Color(0xFF9CA3AF)),
+            const SizedBox(height: 10),
+            Text(
+              hasFilter ? '조건에 맞는 기록이 없어요.' : '아직 최근 열람 기록이 없어요.',
+              style: const TextStyle(
+                color: Color(0xFF374151),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              hasFilter ? '필터를 초기화하고 다른 찬양을 찾아보세요.' : '찬양을 열어보면 이곳에 자동으로 기록돼요.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF6B7280)),
+            ),
+            const SizedBox(height: 14),
+            if (hasFilter)
+              FilledButton.tonalIcon(
+                onPressed: onResetFilter,
+                icon: const Icon(Icons.filter_alt_off),
+                label: const Text('필터 초기화'),
+              )
+            else
+              FilledButton.tonalIcon(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh),
+                label: const Text('새로고침'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryErrorView extends StatelessWidget {
+  final String message;
+  final Future<void> Function() onRetry;
+
+  const _HistoryErrorView({
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded, size: 40, color: Colors.red),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(onPressed: onRetry, child: const Text('다시 시도')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistorySoftErrorBanner extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _HistorySoftErrorBanner({
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off_rounded,
+              size: 18, color: Color(0xFF92400E)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(color: Color(0xFF92400E)),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: const Text('재시도')),
+        ],
+      ),
+    );
+  }
+}
+
+String _labelForRange(_HistoryRange range) {
+  switch (range) {
+    case _HistoryRange.all:
+      return '전체';
+    case _HistoryRange.today:
+      return '오늘';
+    case _HistoryRange.week:
+      return '최근 7일';
+    case _HistoryRange.month:
+      return '최근 30일';
+  }
+}
+
+bool _matchRange(_HistoryRange range, DateTime now, DateTime? itemDate) {
+  if (range == _HistoryRange.all || itemDate == null) {
+    return true;
   }
 
-  final parsed = DateTime.tryParse(value)?.toLocal();
+  final diff = now.difference(itemDate);
+  if (diff.isNegative) {
+    return true;
+  }
+
+  switch (range) {
+    case _HistoryRange.all:
+      return true;
+    case _HistoryRange.today:
+      return now.year == itemDate.year &&
+          now.month == itemDate.month &&
+          now.day == itemDate.day;
+    case _HistoryRange.week:
+      return diff.inDays < 7;
+    case _HistoryRange.month:
+      return diff.inDays < 30;
+  }
+}
+
+DateTime? _tryParseDate(String? value) {
+  if (value == null || value.trim().isEmpty) {
+    return null;
+  }
+  return DateTime.tryParse(value)?.toLocal();
+}
+
+String _formatRelativeTime(String? value) {
+  final parsed = _tryParseDate(value);
   if (parsed == null) {
-    return value;
+    return '방금 전';
   }
 
   final diff = DateTime.now().difference(parsed);
@@ -229,4 +551,16 @@ String _formatRelativeTime(String? value) {
   final month = parsed.month.toString().padLeft(2, '0');
   final day = parsed.day.toString().padLeft(2, '0');
   return '${parsed.year}.$month.$day';
+}
+
+List<String> _splitTags(String? raw) {
+  if (raw == null || raw.trim().isEmpty) {
+    return const [];
+  }
+
+  return raw
+      .split(',')
+      .map((tag) => tag.trim())
+      .where((tag) => tag.isNotEmpty)
+      .toList();
 }
