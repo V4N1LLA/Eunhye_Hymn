@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/material.dart';
 
 import '../../core/network/api_exception.dart';
 import 'hymn_repository.dart';
@@ -50,6 +50,7 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
       final detail = await widget.hymnRepository.getHymnDetail(widget.hymnId);
       final note = await widget.hymnRepository.getNote(widget.hymnId);
       final favorite = await widget.hymnRepository.getFavorite(widget.hymnId);
+
       if (!mounted) {
         return;
       }
@@ -84,7 +85,8 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
     });
 
     try {
-      final favorite = await widget.hymnRepository.toggleFavorite(widget.hymnId);
+      final favorite =
+          await widget.hymnRepository.toggleFavorite(widget.hymnId);
       if (!mounted) {
         return;
       }
@@ -93,7 +95,9 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(favorite ? '즐겨찾기에 추가했습니다.' : '즐겨찾기를 해제했습니다.'),
+          content: Text(
+            favorite ? '즐겨찾기에 추가했어요.' : '즐겨찾기에서 삭제했어요.',
+          ),
         ),
       );
     } on ApiException catch (e) {
@@ -116,10 +120,11 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
     if (_savingNote) {
       return;
     }
+
     final content = _noteController.text.trim();
     if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('메모를 입력한 뒤 저장하세요.')),
+        const SnackBar(content: Text('메모를 입력해 주세요.')),
       );
       return;
     }
@@ -134,7 +139,7 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('메모를 저장했습니다.')),
+        const SnackBar(content: Text('메모를 저장했어요.')),
       );
     } on ApiException catch (e) {
       if (!mounted) {
@@ -154,46 +159,11 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('찬양 상세')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_error != null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('찬양 상세')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(_error!, style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: _load,
-                  child: const Text('다시 시도'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     final detail = _detail;
-    if (detail == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('찬양 상세')),
-        body: const Center(child: Text('데이터가 없습니다.')),
-      );
-    }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(detail.title),
+        title: Text(detail?.title ?? '찬양 상세'),
         actions: [
           IconButton(
             onPressed: _togglingFavorite ? null : _toggleFavorite,
@@ -202,58 +172,120 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: _buildBody(detail),
+    );
+  }
+
+  Widget _buildBody(HymnDetail? detail) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_error!, style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _load,
+                child: const Text('다시 시도'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (detail == null) {
+      return const Center(child: Text('찬양 정보를 불러오지 못했습니다.'));
+    }
+
+    final imageAssets = detail.assets.where((asset) => asset.isImage).toList();
+    final midiAssets = detail.assets.where((asset) => asset.isMidi).toList();
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    detail.title,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text('번호: ${detail.number ?? "-"}'),
-                  Text('태그: ${detail.tags ?? "-"}'),
-                  Text('활성화: ${detail.enabled ? "예" : "아니오"}'),
-                ],
+          _SongSummaryCard(detail: detail),
+          const SizedBox(height: 16),
+          _SectionTitle(
+            title: '악보',
+            subtitle: imageAssets.isEmpty
+                ? '등록된 악보가 없습니다.'
+                : '총 ${imageAssets.length}페이지',
+          ),
+          const SizedBox(height: 8),
+          if (imageAssets.isEmpty)
+            const _EmptyCard(message: '관리자가 악보를 등록하면 여기에서 바로 볼 수 있어요.')
+          else
+            ...List.generate(
+              imageAssets.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _ImageAssetCard(
+                  asset: imageAssets[index],
+                  label: '악보 ${index + 1}페이지',
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '에셋',
-            style: Theme.of(context).textTheme.titleMedium,
+          const SizedBox(height: 10),
+          _SectionTitle(
+            title: '반주',
+            subtitle: midiAssets.isEmpty
+                ? '등록된 반주 파일이 없습니다.'
+                : '총 ${midiAssets.length}개',
           ),
           const SizedBox(height: 8),
-          if (detail.assets.isEmpty)
-            const Text('등록된 에셋이 없습니다.')
+          if (midiAssets.isEmpty)
+            const _EmptyCard(message: '등록된 반주 파일이 없습니다.')
           else
-            ...detail.assets.map((asset) => _AssetCard(asset: asset)),
-          const SizedBox(height: 20),
-          Text(
-            '메모',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _noteController,
-            minLines: 4,
-            maxLines: 8,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: '찬양 메모를 입력하세요.',
+            ...List.generate(
+              midiAssets.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _MidiCard(
+                  title: '반주 ${index + 1}',
+                  url: midiAssets[index].url,
+                ),
+              ),
             ),
-          ),
+          const SizedBox(height: 10),
+          const _SectionTitle(title: '메모', subtitle: '개인 메모를 저장해 보세요.'),
           const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed: _savingNote ? null : _saveNote,
-              child: Text(_savingNote ? '저장 중...' : '메모 저장'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _noteController,
+                    minLines: 4,
+                    maxLines: 8,
+                    decoration: InputDecoration(
+                      hintText: '이 찬양에 대한 메모를 남겨보세요.',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton(
+                      onPressed: _savingNote ? null : _saveNote,
+                      child: Text(_savingNote ? '저장 중...' : '메모 저장'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -262,38 +294,188 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
   }
 }
 
-class _AssetCard extends StatelessWidget {
-  final HymnAsset asset;
+class _SongSummaryCard extends StatelessWidget {
+  final HymnDetail detail;
 
-  const _AssetCard({required this.asset});
+  const _SongSummaryCard({required this.detail});
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              detail.title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (detail.number != null && detail.number!.trim().isNotEmpty)
+                  _Badge(text: '번호 ${detail.number}'),
+                if (detail.tags != null && detail.tags!.trim().isNotEmpty)
+                  _Badge(text: detail.tags!),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final String text;
+
+  const _Badge({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEEE1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFFEA580C),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionTitle({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: const TextStyle(color: Color(0xFF6B7280)),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyCard extends StatelessWidget {
+  final String message;
+
+  const _EmptyCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Text(
+          message,
+          style: const TextStyle(color: Color(0xFF6B7280)),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageAssetCard extends StatelessWidget {
+  final HymnAsset asset;
+  final String label;
+
+  const _ImageAssetCard({
+    required this.asset,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('타입: ${asset.type} / 파트: ${asset.part ?? "-"}'),
-            const SizedBox(height: 6),
-            if (asset.isImage && asset.url.startsWith('http'))
+            Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            if (asset.url.startsWith('http'))
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  asset.url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Text('이미지를 불러올 수 없습니다.'),
+                borderRadius: BorderRadius.circular(10),
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Image.network(
+                    asset.url,
+                    fit: BoxFit.fitWidth,
+                    errorBuilder: (_, __, ___) => const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('악보 이미지를 불러오지 못했습니다.'),
+                    ),
                   ),
                 ),
               )
-            else if (asset.isMidi && asset.url.startsWith('http'))
-              _MidiAssetPlayer(url: asset.url)
             else
-              SelectableText(asset.url),
+              const Text(
+                '이미지 주소가 올바르지 않습니다.',
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MidiCard extends StatelessWidget {
+  final String title;
+  final String url;
+
+  const _MidiCard({
+    required this.title,
+    required this.url,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            _MidiAssetPlayer(url: url),
           ],
         ),
       ),
@@ -357,7 +539,7 @@ class _MidiAssetPlayerState extends State<_MidiAssetPlayer> {
         return;
       }
       setState(() {
-        _error = 'MIDI 재생에 실패했습니다. 기기/브라우저 코덱 지원을 확인하세요.';
+        _error = '반주 재생에 실패했습니다.';
       });
     }
   }
@@ -366,7 +548,7 @@ class _MidiAssetPlayerState extends State<_MidiAssetPlayer> {
     try {
       await _player.stop();
     } catch (_) {
-      // stop 실패 시에도 UI는 계속 사용 가능하게 둔다.
+      // 정지 실패는 사용 흐름을 막지 않는다.
     }
   }
 
@@ -410,10 +592,10 @@ class _MidiAssetPlayerState extends State<_MidiAssetPlayer> {
             DropdownButton<double>(
               value: _speed,
               items: const [
-                DropdownMenuItem(value: 0.75, child: Text('0.75x')),
-                DropdownMenuItem(value: 1.0, child: Text('1.0x')),
-                DropdownMenuItem(value: 1.25, child: Text('1.25x')),
-                DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+                DropdownMenuItem(value: 0.75, child: Text('0.75배속')),
+                DropdownMenuItem(value: 1.0, child: Text('1.0배속')),
+                DropdownMenuItem(value: 1.25, child: Text('1.25배속')),
+                DropdownMenuItem(value: 1.5, child: Text('1.5배속')),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -423,8 +605,6 @@ class _MidiAssetPlayerState extends State<_MidiAssetPlayer> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        SelectableText(widget.url),
         if (_error != null) ...[
           const SizedBox(height: 6),
           Text(

@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -201,7 +201,10 @@ class HymnRepository {
     } catch (_) {
       final cached = await _readJsonList(_hymnListCacheKey);
       if (cached != null) {
-        return cached.whereType<Map<String, dynamic>>().map(HymnSummary.fromJson).toList();
+        return cached
+            .whereType<Map<String, dynamic>>()
+            .map(HymnSummary.fromJson)
+            .toList();
       }
       rethrow;
     }
@@ -315,7 +318,10 @@ class HymnRepository {
     } catch (_) {
       final cached = await _readJsonList(_userScopedKey(_historyCacheKey));
       if (cached != null) {
-        return cached.whereType<Map<String, dynamic>>().map(HistoryItem.fromJson).toList();
+        return cached
+            .whereType<Map<String, dynamic>>()
+            .map(HistoryItem.fromJson)
+            .toList();
       }
       rethrow;
     }
@@ -361,7 +367,8 @@ class HymnRepository {
   String _detailCacheKey(String hymnId) => 'mobile.cache.hymn.detail.$hymnId';
   String _favoriteCacheKey(String hymnId) =>
       _userScopedKey('mobile.cache.hymn.favorite.$hymnId');
-  String _noteCacheKey(String hymnId) => _userScopedKey('mobile.cache.hymn.note.$hymnId');
+  String _noteCacheKey(String hymnId) =>
+      _userScopedKey('mobile.cache.hymn.note.$hymnId');
 
   Future<void> _writeFavoriteCache(String hymnId, bool favorite) async {
     await _writeJsonObject(_favoriteCacheKey(hymnId), {'favorite': favorite});
@@ -443,7 +450,8 @@ class HymnRepository {
     return null;
   }
 
-  Future<void> _writeJsonList(String key, List<Map<String, dynamic>> value) async {
+  Future<void> _writeJsonList(
+      String key, List<Map<String, dynamic>> value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, jsonEncode(value));
   }

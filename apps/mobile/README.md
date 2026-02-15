@@ -5,12 +5,13 @@
 ## Scope
 
 - Social login
-  - Kakao SDK login (mobile)
-  - Dev login (local/dev only)
+  - Kakao SDK login (mobile, redirect flow)
+  - Invite code input (first login only)
+  - Hidden dev login switch (`ENABLE_DEV_LOGIN=true`)
 - Hymn
   - List and search
   - Detail view
-  - PNG asset display
+  - PNG asset display (multi-page per hymn)
   - MIDI playback controls (play/pause/stop/speed)
 - Personalization
   - Favorites toggle
@@ -47,6 +48,7 @@ Notes:
 - `API_BASE_URL` automatically appends `/api/v1` if omitted.
 - For physical devices, use the reachable host IP/domain instead of `10.0.2.2`.
 - Kakao Android callback scheme is `kakao<KAKAO_NATIVE_APP_KEY>`. If the key is missing/mismatched at run time, Kakao consent can stop at "Continue" without returning to the app.
+- `ENABLE_DEV_LOGIN=true` adds hidden local dev login panel on the login screen.
 
 ## Structure
 

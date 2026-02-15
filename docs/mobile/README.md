@@ -9,11 +9,12 @@
 - 로그인
   - 소셜 SDK 직접 로그인 (Kakao 모바일)
   - 로그인 화면에서 Kakao 버튼 클릭 시 provider 앱/브라우저로 리디렉션
-  - Dev 로그인 (개발 환경)
+  - 초대코드 입력 지원 (최초 1회)
+  - Dev 로그인은 `ENABLE_DEV_LOGIN=true`일 때만 노출
 - 찬양
   - 목록 조회 + 검색
   - 상세 조회
-  - PNG 에셋 이미지 표시
+  - PNG 에셋 이미지 표시 (한 곡 다중 페이지 지원)
   - MIDI 에셋 앱 내 재생 UX (재생/일시정지/정지/속도)
 - 개인화
   - 즐겨찾기 토글
@@ -84,6 +85,7 @@ cd apps/mobile
 Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
 앱 실행 시 `--dart-define=KAKAO_NATIVE_APP_KEY=...` 값이 누락/불일치하면
 동의 화면의 "계속하기" 이후 앱으로 복귀하지 않을 수 있다.
+로컬 개발용 로그인 화면이 필요하면 `--dart-define=ENABLE_DEV_LOGIN=true`를 함께 사용한다.
 
 ## 5.1 배포 범위 주의
 

@@ -202,7 +202,7 @@ class AdminAssetApiTest {
     }
 
     @Test
-    void confirmReplacesExistingAssetForSameKey() throws Exception {
+    void confirmAllowsMultiplePngAssetsPerHymn() throws Exception {
         assetJpaRepository.save(new com.eunhyehymn.infrastructure.persistence.AssetEntity(
             UUID.randomUUID(),
             hymnId,
@@ -229,12 +229,53 @@ class AdminAssetApiTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.objectKey").value("hymns/" + hymnId + "/PNG/ALL/new.png"));
 
-        var sameKeyAssets = assetJpaRepository.findByHymnId(hymnId).stream()
+        var sameTypeAssets = assetJpaRepository.findByHymnIdOrderByCreatedAtAscIdAsc(hymnId).stream()
             .filter(asset -> asset.getType() == AssetType.PNG)
             .filter(asset -> asset.getPart() == com.eunhyehymn.domain.model.PartType.ALL)
             .toList();
-        assertThat(sameKeyAssets).hasSize(1);
-        assertThat(sameKeyAssets.get(0).getObjectKey()).isEqualTo("hymns/" + hymnId + "/PNG/ALL/new.png");
+        assertThat(sameTypeAssets).hasSize(2);
+        assertThat(sameTypeAssets)
+            .extracting(com.eunhyehymn.infrastructure.persistence.AssetEntity::getObjectKey)
+            .containsExactly(
+                "hymns/" + hymnId + "/PNG/ALL/old.png",
+                "hymns/" + hymnId + "/PNG/ALL/new.png"
+            );
+    }
+
+    @Test
+    void confirmReplacesExistingMidiAssetForSamePart() throws Exception {
+        assetJpaRepository.save(new com.eunhyehymn.infrastructure.persistence.AssetEntity(
+            UUID.randomUUID(),
+            hymnId,
+            AssetType.MIDI,
+            com.eunhyehymn.domain.model.PartType.ALL,
+            "https://public.local/hymns/old.mid",
+            "hymns/" + hymnId + "/MIDI/ALL/old.mid",
+            null,
+            null,
+            Instant.now()
+        ));
+
+        String payload = objectMapper.writeValueAsString(Map.of(
+            "hymnId", hymnId.toString(),
+            "type", AssetType.MIDI.name(),
+            "publicUrl", "https://public.local/hymns/new.mid",
+            "objectKey", "hymns/" + hymnId + "/MIDI/ALL/new.mid"
+        ));
+
+        mockMvc.perform(post("/admin/assets/confirm")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.objectKey").value("hymns/" + hymnId + "/MIDI/ALL/new.mid"));
+
+        var midiAssets = assetJpaRepository.findByHymnIdOrderByCreatedAtAscIdAsc(hymnId).stream()
+            .filter(asset -> asset.getType() == AssetType.MIDI)
+            .filter(asset -> asset.getPart() == com.eunhyehymn.domain.model.PartType.ALL)
+            .toList();
+        assertThat(midiAssets).hasSize(1);
+        assertThat(midiAssets.get(0).getObjectKey()).isEqualTo("hymns/" + hymnId + "/MIDI/ALL/new.mid");
     }
 
     @Test
