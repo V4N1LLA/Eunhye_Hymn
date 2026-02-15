@@ -46,6 +46,7 @@ cd apps/mobile
 Notes:
 - `API_BASE_URL` automatically appends `/api/v1` if omitted.
 - For physical devices, use the reachable host IP/domain instead of `10.0.2.2`.
+- Kakao Android callback scheme is `kakao<KAKAO_NATIVE_APP_KEY>`. If the key is missing/mismatched at run time, Kakao consent can stop at "Continue" without returning to the app.
 
 ## Structure
 

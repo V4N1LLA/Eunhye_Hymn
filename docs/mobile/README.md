@@ -81,6 +81,9 @@ cd apps/mobile
 
 실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.
 `API_BASE_URL`에 `/api/v1`를 생략해도 앱에서 자동으로 보정한다.
+Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
+앱 실행 시 `--dart-define=KAKAO_NATIVE_APP_KEY=...` 값이 누락/불일치하면
+동의 화면의 "계속하기" 이후 앱으로 복귀하지 않을 수 있다.
 
 ## 5.1 배포 범위 주의
 
