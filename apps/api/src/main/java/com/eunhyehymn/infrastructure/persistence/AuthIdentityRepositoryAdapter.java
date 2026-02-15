@@ -42,4 +42,10 @@ public class AuthIdentityRepositoryAdapter implements AuthIdentityRepository {
             .map(AuthIdentityMapper::toDomain)
             .toList();
     }
+
+    @Override
+    public Optional<AuthIdentity> findByUserIdAndProvider(UUID userId, String provider) {
+        return authIdentityJpaRepository.findByUserIdAndProvider(userId, provider)
+            .map(AuthIdentityMapper::toDomain);
+    }
 }

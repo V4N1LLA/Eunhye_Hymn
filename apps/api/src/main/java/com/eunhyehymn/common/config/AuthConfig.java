@@ -8,6 +8,8 @@ import com.eunhyehymn.application.usecases.DevLoginUseCase;
 import com.eunhyehymn.application.usecases.LogoutUseCase;
 import com.eunhyehymn.application.usecases.RefreshTokenUseCase;
 import com.eunhyehymn.application.usecases.SocialLoginUseCase;
+import com.eunhyehymn.application.usecases.UpdateAdminPasswordCredentialUseCase;
+import com.eunhyehymn.domain.repository.AdminPasswordCredentialRepository;
 import com.eunhyehymn.domain.repository.AuthIdentityRepository;
 import com.eunhyehymn.domain.repository.InviteCodeRepository;
 import com.eunhyehymn.domain.repository.RefreshTokenRepository;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 public class AuthConfig {
@@ -54,6 +58,11 @@ public class AuthConfig {
     @Bean
     TokenHashService tokenHashService() {
         return new Sha256TokenHashService();
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -139,22 +148,43 @@ public class AuthConfig {
 
     @Bean
     AdminPasswordLoginUseCase adminPasswordLoginUseCase(
+        AdminPasswordCredentialRepository adminPasswordCredentialRepository,
         AuthIdentityRepository authIdentityRepository,
         UserRepository userRepository,
         RefreshTokenRepository refreshTokenRepository,
         TokenService tokenService,
         TokenHashService tokenHashService,
+        PasswordEncoder passwordEncoder,
         @Value("${security.jwt.refresh-token-ttl-seconds}") long refreshTokenTtlSeconds,
         @Value("${security.admin.login-id:}") String loginId,
         @Value("${security.admin.login-password:}") String loginPassword
     ) {
         return new AdminPasswordLoginUseCase(
+            adminPasswordCredentialRepository,
             authIdentityRepository,
             userRepository,
             refreshTokenRepository,
             tokenService,
             tokenHashService,
+            passwordEncoder,
             refreshTokenTtlSeconds,
+            loginId,
+            loginPassword
+        );
+    }
+
+    @Bean
+    UpdateAdminPasswordCredentialUseCase updateAdminPasswordCredentialUseCase(
+        AdminPasswordCredentialRepository adminPasswordCredentialRepository,
+        AuthIdentityRepository authIdentityRepository,
+        PasswordEncoder passwordEncoder,
+        @Value("${security.admin.login-id:}") String loginId,
+        @Value("${security.admin.login-password:}") String loginPassword
+    ) {
+        return new UpdateAdminPasswordCredentialUseCase(
+            adminPasswordCredentialRepository,
+            authIdentityRepository,
+            passwordEncoder,
             loginId,
             loginPassword
         );

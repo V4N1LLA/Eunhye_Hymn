@@ -16,6 +16,9 @@ Important:
 API endpoint:
 - `POST /api/v1/auth/admin/login`
 
+Credential rotation endpoint (admin token required):
+- `POST /api/v1/admin/auth/password`
+
 Request body:
 ```json
 {
@@ -25,6 +28,8 @@ Request body:
 ```
 
 If login succeeds, API issues normal access/refresh tokens with `ADMIN` role.
+
+You can rotate admin ID/password from Admin web `/help` page.
 
 ## Optional: Social Login Allowlist Mode
 
