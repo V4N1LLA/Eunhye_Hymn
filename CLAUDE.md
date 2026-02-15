@@ -1,7 +1,7 @@
 ﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-14
+> 마지막 업데이트: 2026-02-15
 
 ---
 
@@ -727,6 +727,8 @@ develop push → GitHub Actions
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`
+- 스테이징 피드백 루프 체크리스트 추가
+  - `docs/staging-feedback-checklist.md`
 - 스테이징 리허설 실행 로그 문서 추가
   - `docs/staging-rehearsal-log.md`
 - 2026-02-14 실리허설/롤백/복구 실행 기록 반영
@@ -753,7 +755,7 @@ develop push → GitHub Actions
 - 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
 
 **2. 운영 문서/절차 고도화**
-- `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
+- `docs/runbook.md` + `docs/staging-smoke-checklist.md` + `docs/staging-feedback-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
 - 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`에 주기적으로 갱신
 
 **3. 기능 백로그**
