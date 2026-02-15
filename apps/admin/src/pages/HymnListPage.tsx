@@ -1,17 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { deleteHymn, listHymns, updateHymn, type HymnResponse } from "../api/hymns";
+import InsightCard from "../components/InsightCard";
 
 type EnabledFilter = "all" | "enabled" | "disabled";
-
-function StatCard({ title, value }: { title: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-      <div className="text-xs text-slate-500">{title}</div>
-      <div className="mt-1 text-xl font-semibold text-slate-900">{value.toLocaleString("ko-KR")}</div>
-    </div>
-  );
-}
 
 export default function HymnListPage() {
   const [hymns, setHymns] = useState<HymnResponse[]>([]);
@@ -136,10 +128,26 @@ export default function HymnListPage() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <StatCard title="전체 찬양" value={hymns.length} />
-          <StatCard title="활성 찬양" value={enabledCount} />
-          <StatCard title="비활성 찬양" value={disabledCount} />
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <InsightCard title="전체 찬양" value={hymns.length} tone="indigo" badge="HM" description="등록된 찬양" loading={loading} />
+          <InsightCard
+            title="활성 찬양"
+            value={enabledCount}
+            tone="emerald"
+            badge="LIVE"
+            description="서비스 노출 중"
+            ratio={hymns.length > 0 ? enabledCount / hymns.length : 0}
+            loading={loading}
+          />
+          <InsightCard
+            title="비활성 찬양"
+            value={disabledCount}
+            tone="amber"
+            badge="OFF"
+            description="노출 중단 상태"
+            ratio={hymns.length > 0 ? disabledCount / hymns.length : 0}
+            loading={loading}
+          />
         </div>
 
         <div className="mt-4 flex flex-col gap-3 md:flex-row">

@@ -57,9 +57,12 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <div className="flex min-h-screen">
-        <aside className="hidden w-80 shrink-0 flex-col bg-indigo-900 text-white lg:flex">
+    <div className="relative min-h-screen bg-gradient-to-b from-slate-100 via-slate-100 to-indigo-50/40 text-slate-900">
+      <div className="pointer-events-none absolute -left-20 top-16 h-64 w-64 rounded-full bg-indigo-200/40 blur-3xl" />
+      <div className="pointer-events-none absolute right-0 top-0 h-56 w-56 rounded-full bg-violet-200/35 blur-3xl" />
+      <div className="relative flex min-h-screen">
+        <aside className="relative hidden w-80 shrink-0 flex-col overflow-hidden bg-gradient-to-b from-indigo-950 via-indigo-900 to-indigo-900 text-white lg:flex">
+          <div className="pointer-events-none absolute -right-20 top-0 h-56 w-56 rounded-full bg-violet-400/25 blur-3xl" />
           <div className="border-b border-indigo-800 px-5 py-5">
             <NavLink to="/" className="block rounded-xl border border-indigo-700/70 bg-indigo-800/60 px-3 py-3 hover:bg-indigo-700/70">
               <div className="text-lg font-bold tracking-wide">Eunhye Admin</div>
@@ -102,7 +105,7 @@ export default function Layout() {
         </aside>
 
         <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <header className="sticky top-0 z-20 border-b border-slate-200 bg-gradient-to-r from-white/95 to-indigo-50/70 backdrop-blur">
             <div className="flex items-start justify-between gap-4 px-4 py-3 md:px-6">
               <div>
                 <div className="text-xs font-semibold text-indigo-600">ADMIN</div>

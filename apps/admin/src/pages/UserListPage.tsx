@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createUser, deleteUser, listUsers, updateUser, type UserResponse } from "../api/adminUsers";
 import { useAuth } from "../auth/AuthContext";
+import InsightCard from "../components/InsightCard";
 
 type RoleFilter = "all" | "ADMIN" | "USER";
 type StatusFilter = "all" | "ACTIVE" | "DISABLED";
@@ -15,15 +16,6 @@ function roleLabel(role: string): string {
 
 function statusLabel(status: string): string {
   return status === "ACTIVE" ? "활성" : "비활성";
-}
-
-function StatCard({ title, value }: { title: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-      <div className="text-xs text-slate-500">{title}</div>
-      <div className="mt-1 text-xl font-semibold text-slate-900">{value.toLocaleString("ko-KR")}</div>
-    </div>
-  );
 }
 
 export default function UserListPage() {
@@ -292,11 +284,35 @@ export default function UserListPage() {
           `DISABLED` 처리됩니다.
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard title="전체 사용자" value={totalUsers} />
-          <StatCard title="활성 사용자" value={activeUsers} />
-          <StatCard title="비활성 사용자" value={disabledUsers} />
-          <StatCard title="활성 관리자" value={activeAdminCount} />
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <InsightCard title="전체 사용자" value={totalUsers} tone="slate" badge="USR" description="가입된 계정" loading={loading} />
+          <InsightCard
+            title="활성 사용자"
+            value={activeUsers}
+            tone="emerald"
+            badge="ON"
+            description="접근 가능한 상태"
+            ratio={totalUsers > 0 ? activeUsers / totalUsers : 0}
+            loading={loading}
+          />
+          <InsightCard
+            title="비활성 사용자"
+            value={disabledUsers}
+            tone="amber"
+            badge="OFF"
+            description="차단 또는 soft-delete"
+            ratio={totalUsers > 0 ? disabledUsers / totalUsers : 0}
+            loading={loading}
+          />
+          <InsightCard
+            title="활성 관리자"
+            value={activeAdminCount}
+            tone="indigo"
+            badge="ADM"
+            description="ADMIN + ACTIVE"
+            ratio={totalUsers > 0 ? activeAdminCount / totalUsers : 0}
+            loading={loading}
+          />
         </div>
 
         <div className="mt-4 flex flex-col gap-3 md:flex-row">

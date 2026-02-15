@@ -5,6 +5,7 @@ import {
   revokeInviteCode,
   type InviteCodeResponse,
 } from "../api/adminInviteCodes";
+import InsightCard from "../components/InsightCard";
 
 type StatusFilter = "all" | "active" | "inactive" | "expired" | "exhausted";
 
@@ -30,15 +31,6 @@ function statusBadgeClass(code: InviteCodeResponse): string {
   if (isExpired(code)) return "bg-amber-100 text-amber-700";
   if (isExhausted(code)) return "bg-orange-100 text-orange-700";
   return "bg-green-100 text-green-700";
-}
-
-function StatCard({ title, value }: { title: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-      <div className="text-xs text-slate-500">{title}</div>
-      <div className="mt-1 text-xl font-semibold text-slate-900">{value.toLocaleString("ko-KR")}</div>
-    </div>
-  );
 }
 
 async function copyTextToClipboard(text: string): Promise<void> {
@@ -280,12 +272,44 @@ export default function InviteCodePage() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
-          <StatCard title="전체 코드" value={stats.total} />
-          <StatCard title="활성 코드" value={stats.active} />
-          <StatCard title="비활성 코드" value={stats.inactive} />
-          <StatCard title="만료 코드" value={stats.expired} />
-          <StatCard title="소진 코드" value={stats.exhausted} />
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <InsightCard title="전체 코드" value={stats.total} tone="slate" badge="ALL" description="생성된 코드 수" loading={loading} />
+          <InsightCard
+            title="활성 코드"
+            value={stats.active}
+            tone="emerald"
+            badge="ON"
+            description="즉시 사용 가능"
+            ratio={stats.total > 0 ? stats.active / stats.total : 0}
+            loading={loading}
+          />
+          <InsightCard
+            title="비활성 코드"
+            value={stats.inactive}
+            tone="indigo"
+            badge="OFF"
+            description="관리자가 중지"
+            ratio={stats.total > 0 ? stats.inactive / stats.total : 0}
+            loading={loading}
+          />
+          <InsightCard
+            title="만료 코드"
+            value={stats.expired}
+            tone="amber"
+            badge="EXP"
+            description="유효기간 경과"
+            ratio={stats.total > 0 ? stats.expired / stats.total : 0}
+            loading={loading}
+          />
+          <InsightCard
+            title="소진 코드"
+            value={stats.exhausted}
+            tone="rose"
+            badge="MAX"
+            description="사용 횟수 소진"
+            ratio={stats.total > 0 ? stats.exhausted / stats.total : 0}
+            loading={loading}
+          />
         </div>
 
         <div className="mt-4 flex flex-col gap-3 md:flex-row">
