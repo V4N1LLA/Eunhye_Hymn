@@ -108,7 +108,9 @@ npm run dev
 | 에셋 (관리자) | `POST /admin/assets/presign` | 업로드 URL 발급 |
 | | `POST /admin/assets/confirm` | 업로드 확인 |
 | 사용자 (관리자) | `GET /admin/users` | 사용자 목록 |
+| | `POST /admin/users` | 사용자 생성 |
 | | `PATCH /admin/users/{id}` | 역할/상태 변경 |
+| | `DELETE /admin/users/{id}` | 사용자 삭제(soft-delete, `DISABLED`) |
 | 초대코드 (관리자) | `POST /admin/invite-codes` | 초대코드 생성 |
 | | `DELETE /admin/invite-codes/{code}` | 비활성화 |
 | 감사 로그 (관리자) | `GET /admin/events` | 이벤트 로그 조회 + 최근 N일 집계 |

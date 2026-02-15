@@ -2,6 +2,27 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-15
+
+### Admin CRUD 예외 하드닝 + 운영자 UX 개선
+- API
+  - 사용자/찬양 관리 요청의 입력 정규화 및 빈 PATCH(`empty_update`) 방어 추가
+  - 사용자 생성 이름 길이 제한(64자), 사용자 삭제/수정 트랜잭션 보강
+  - Admin principal 파싱 실패 시 `invalid_principal`로 명시적 401 반환
+- Admin UI
+  - 사용자/찬양 관리에 통계 카드, 새로고침/재시도, 성공/실패 피드백, 필터 초기화 추가
+  - 사용자 관리의 잠금 사유(현재 운영자/마지막 활성 관리자) 가시성 강화
+  - 찬양 번호 입력을 문자열 기반으로 정리(서식 보존), 생성/수정 폼 입력 검증 강화
+- 테스트
+  - `AdminUserApiTest`, `AdminHymnApiTest`에 empty payload/정규화/잘못된 principal 케이스 추가
+
+### 스테이징 수동 검수 문서 업데이트
+- `docs/staging-smoke-checklist.md`
+  - 관리자 웹 스모크 단계에 사용자 CRUD/찬양 CRUD 상세 점검 항목 추가
+  - 관리자 로그인 방식 참조 문서(`docs/staging-admin-login.md`) 연결
+- `README.md`, `docs/api-contract.md`, `docs/current-usable-scope.md`
+  - 사용자 관리 API 범위(`POST/DELETE /admin/users`) 및 현재 검증 가능 범위 설명 동기화
+
 ## 2026-02-14
 
 ### Login token input clarification for staging
