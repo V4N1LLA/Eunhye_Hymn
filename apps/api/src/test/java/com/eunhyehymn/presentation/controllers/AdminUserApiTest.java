@@ -1,7 +1,9 @@
 package com.eunhyehymn.presentation.controllers;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -115,6 +117,54 @@ class AdminUserApiTest {
     }
 
     @Test
+    void adminCanCreateUser() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of(
+            "displayName", "신규사용자",
+            "role", "USER",
+            "status", "ACTIVE"
+        ));
+
+        mockMvc.perform(post("/admin/users")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.displayName").value("신규사용자"))
+            .andExpect(jsonPath("$.data.role").value("USER"))
+            .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
+    @Test
+    void createUserWithInvalidRoleReturnsBadRequest() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of(
+            "displayName", "신규사용자",
+            "role", "INVALID"
+        ));
+
+        mockMvc.perform(post("/admin/users")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void adminCanDeleteUserSoftly() throws Exception {
+        mockMvc.perform(delete("/admin/users/" + userId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("DISABLED"));
+    }
+
+    @Test
+    void adminCannotDeleteSelf() throws Exception {
+        mockMvc.perform(delete("/admin/users/" + adminId)
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("self_delete"));
+    }
+
+    @Test
     void invalidRoleReturnsBadRequest() throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of("role", "INVALID"));
 
@@ -170,6 +220,23 @@ class AdminUserApiTest {
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(demotePayload))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("last_admin"));
+    }
+
+    @Test
+    void cannotDeleteLastActiveAdmin() throws Exception {
+        UUID secondAdminId = UUID.randomUUID();
+        userJpaRepository.save(new UserEntity(secondAdminId, "두번째관리자", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
+        String secondAdminToken = jwtService.issueAccessToken(secondAdminId.toString(), Role.ADMIN.name());
+
+        mockMvc.perform(delete("/admin/users/" + adminId)
+                .header("Authorization", "Bearer " + secondAdminToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("DISABLED"));
+
+        mockMvc.perform(delete("/admin/users/" + secondAdminId)
+                .header("Authorization", "Bearer " + adminToken))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("last_admin"));
     }
