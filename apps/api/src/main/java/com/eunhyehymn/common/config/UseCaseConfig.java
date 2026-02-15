@@ -1,6 +1,8 @@
 package com.eunhyehymn.common.config;
 
 import com.eunhyehymn.application.usecases.AdminCreateHymnUseCase;
+import com.eunhyehymn.application.usecases.AdminCreateUserUseCase;
+import com.eunhyehymn.application.usecases.AdminDeleteUserUseCase;
 import com.eunhyehymn.application.usecases.AdminEventExportJobUseCase;
 import com.eunhyehymn.application.usecases.AdminListEventsUseCase;
 import com.eunhyehymn.application.usecases.AdminDeleteHymnUseCase;
@@ -139,5 +141,15 @@ public class UseCaseConfig {
     @Bean
     AdminUpdateUserUseCase adminUpdateUserUseCase(UserRepository userRepository) {
         return new AdminUpdateUserUseCase(userRepository);
+    }
+
+    @Bean
+    AdminCreateUserUseCase adminCreateUserUseCase(UserRepository userRepository) {
+        return new AdminCreateUserUseCase(userRepository);
+    }
+
+    @Bean
+    AdminDeleteUserUseCase adminDeleteUserUseCase(UserRepository userRepository) {
+        return new AdminDeleteUserUseCase(userRepository);
     }
 }

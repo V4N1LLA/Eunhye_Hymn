@@ -27,8 +27,10 @@ export default function HelpPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">사용자 관리 잠금 정책</h2>
         <div className="mt-2 space-y-1 text-sm text-slate-600">
+          <div>- 사용자 관리에서 생성/조회/수정/삭제(비활성)가 가능합니다.</div>
           <div>- 현재 로그인한 운영자 계정은 역할/상태 변경이 잠깁니다.</div>
           <div>- 마지막 활성 관리자 계정은 USER 변경/비활성화가 잠깁니다.</div>
+          <div>- 사용자 삭제는 소프트 삭제이며 `DISABLED` 상태로 처리됩니다.</div>
           <div>- 목적: 단일 운영자 환경에서 관리자 계정 잠금(셀프 락아웃) 방지</div>
         </div>
       </section>
