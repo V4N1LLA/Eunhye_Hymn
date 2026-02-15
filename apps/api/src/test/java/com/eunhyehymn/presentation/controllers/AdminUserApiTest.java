@@ -69,8 +69,8 @@ class AdminUserApiTest {
 
         adminId = UUID.randomUUID();
         userId = UUID.randomUUID();
-        userJpaRepository.save(new UserEntity(adminId, "관리자", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
-        userJpaRepository.save(new UserEntity(userId, "일반", Role.USER, UserStatus.ACTIVE, Instant.now(), Instant.now()));
+        userJpaRepository.save(new UserEntity(adminId, "admin", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
+        userJpaRepository.save(new UserEntity(userId, "member", Role.USER, UserStatus.ACTIVE, Instant.now(), Instant.now()));
 
         adminToken = jwtService.issueAccessToken(adminId.toString(), Role.ADMIN.name());
         userToken = jwtService.issueAccessToken(userId.toString(), Role.USER.name());
@@ -101,7 +101,7 @@ class AdminUserApiTest {
                 .content(payload))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.role").value("ADMIN"))
-            .andExpect(jsonPath("$.data.displayName").value("일반"));
+            .andExpect(jsonPath("$.data.displayName").value("member"));
     }
 
     @Test
@@ -117,9 +117,19 @@ class AdminUserApiTest {
     }
 
     @Test
+    void updateWithoutAnyFieldsReturnsBadRequest() throws Exception {
+        mockMvc.perform(patch("/admin/users/" + userId)
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("empty_update"));
+    }
+
+    @Test
     void adminCanCreateUser() throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of(
-            "displayName", "신규사용자",
+            "displayName", "new-user",
             "role", "USER",
             "status", "ACTIVE"
         ));
@@ -129,15 +139,46 @@ class AdminUserApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.displayName").value("신규사용자"))
+            .andExpect(jsonPath("$.data.displayName").value("new-user"))
             .andExpect(jsonPath("$.data.role").value("USER"))
             .andExpect(jsonPath("$.data.status").value("ACTIVE"));
     }
 
     @Test
+    void createUserAcceptsCaseInsensitiveRoleAndDefaultsBlankStatus() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of(
+            "displayName", "admin2",
+            "role", "admin",
+            "status", " "
+        ));
+
+        mockMvc.perform(post("/admin/users")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.role").value("ADMIN"))
+            .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
+    @Test
+    void createUserWithBlankDisplayNameReturnsBadRequest() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of(
+            "displayName", "   "
+        ));
+
+        mockMvc.perform(post("/admin/users")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("validation_error"));
+    }
+
+    @Test
     void createUserWithInvalidRoleReturnsBadRequest() throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of(
-            "displayName", "신규사용자",
+            "displayName", "new-user",
             "role", "INVALID"
         ));
 
@@ -200,14 +241,10 @@ class AdminUserApiTest {
 
     @Test
     void cannotDemoteLastActiveAdmin() throws Exception {
-        // setUp creates one ADMIN (adminId) and one USER (userId).
-        // adminId is the only active admin, so demoting them via another admin should fail.
-        // Create a second admin to perform the request.
         UUID secondAdminId = UUID.randomUUID();
-        userJpaRepository.save(new UserEntity(secondAdminId, "두번째관리자", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
+        userJpaRepository.save(new UserEntity(secondAdminId, "admin2", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
         String secondAdminToken = jwtService.issueAccessToken(secondAdminId.toString(), Role.ADMIN.name());
 
-        // Now there are 2 active admins. Demoting one should succeed.
         String demotePayload = objectMapper.writeValueAsString(Map.of("role", "USER"));
         mockMvc.perform(patch("/admin/users/" + adminId)
                 .header("Authorization", "Bearer " + secondAdminToken)
@@ -215,7 +252,6 @@ class AdminUserApiTest {
                 .content(demotePayload))
             .andExpect(status().isOk());
 
-        // Now secondAdmin is the only active admin. Use adminToken (demoted but JWT still valid) to try demoting the last admin.
         mockMvc.perform(patch("/admin/users/" + secondAdminId)
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -227,7 +263,7 @@ class AdminUserApiTest {
     @Test
     void cannotDeleteLastActiveAdmin() throws Exception {
         UUID secondAdminId = UUID.randomUUID();
-        userJpaRepository.save(new UserEntity(secondAdminId, "두번째관리자", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
+        userJpaRepository.save(new UserEntity(secondAdminId, "admin2", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
         String secondAdminToken = jwtService.issueAccessToken(secondAdminId.toString(), Role.ADMIN.name());
 
         mockMvc.perform(delete("/admin/users/" + adminId)
@@ -239,5 +275,18 @@ class AdminUserApiTest {
                 .header("Authorization", "Bearer " + adminToken))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("last_admin"));
+    }
+
+    @Test
+    void malformedPrincipalReturnsUnauthorized() throws Exception {
+        String malformedToken = jwtService.issueAccessToken("not-a-uuid", Role.ADMIN.name());
+        String payload = objectMapper.writeValueAsString(Map.of("role", "USER"));
+
+        mockMvc.perform(patch("/admin/users/" + userId)
+                .header("Authorization", "Bearer " + malformedToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value("invalid_principal"));
     }
 }

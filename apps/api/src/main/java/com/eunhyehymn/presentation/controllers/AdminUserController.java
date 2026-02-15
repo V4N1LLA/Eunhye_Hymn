@@ -12,15 +12,16 @@ import com.eunhyehymn.domain.model.UserStatus;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -68,7 +69,7 @@ public class AdminUserController {
         @RequestBody UpdateUserRequest request,
         Authentication authentication
     ) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = parseRequesterId(authentication);
         Role role = parseEnum(Role.class, request.role(), "role");
         UserStatus status = parseEnum(UserStatus.class, request.status(), "status");
         User user = adminUpdateUserUseCase.update(requesterId, id, role, status);
@@ -77,20 +78,38 @@ public class AdminUserController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<UserResponse> delete(@PathVariable UUID id, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = parseRequesterId(authentication);
         User user = adminDeleteUserUseCase.delete(requesterId, id);
         return ApiResponse.success(UserResponse.from(user));
     }
 
+    private UUID parseRequesterId(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "authentication is required", null);
+        }
+
+        try {
+            return UUID.fromString(authentication.getName());
+        } catch (IllegalArgumentException ex) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_principal", "invalid authenticated principal", null);
+        }
+    }
+
     private <E extends Enum<E>> E parseEnum(Class<E> enumClass, String value, String fieldName) {
-        if (value == null) {
+        if (value == null || value.isBlank()) {
             return null;
         }
+
+        String normalizedValue = value.trim().toUpperCase(Locale.ROOT);
         try {
-            return Enum.valueOf(enumClass, value);
+            return Enum.valueOf(enumClass, normalizedValue);
         } catch (IllegalArgumentException e) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "validation_error",
-                fieldName + " 값이 올바르지 않습니다: " + value, null);
+            throw new ApiException(
+                HttpStatus.BAD_REQUEST,
+                "validation_error",
+                "invalid " + fieldName + " value: " + value,
+                null
+            );
         }
     }
 

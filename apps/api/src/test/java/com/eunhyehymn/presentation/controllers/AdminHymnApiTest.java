@@ -42,41 +42,18 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AdminHymnApiTest {
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private JwtService jwtService;
-
-    @Autowired
-    private UserJpaRepository userJpaRepository;
-
-    @Autowired
-    private HymnJpaRepository hymnJpaRepository;
-
-    @Autowired
-    private AssetJpaRepository assetJpaRepository;
-
-    @Autowired
-    private HymnNoteJpaRepository hymnNoteJpaRepository;
-
-    @Autowired
-    private UserHymnStateJpaRepository userHymnStateJpaRepository;
-
-    @Autowired
-    private EventJpaRepository eventJpaRepository;
-
-    @Autowired
-    private AuthIdentityJpaRepository authIdentityJpaRepository;
-
-    @Autowired
-    private RefreshTokenJpaRepository refreshTokenJpaRepository;
-
-    @Autowired
-    private InviteCodeJpaRepository inviteCodeJpaRepository;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private JwtService jwtService;
+    @Autowired private UserJpaRepository userJpaRepository;
+    @Autowired private HymnJpaRepository hymnJpaRepository;
+    @Autowired private AssetJpaRepository assetJpaRepository;
+    @Autowired private HymnNoteJpaRepository hymnNoteJpaRepository;
+    @Autowired private UserHymnStateJpaRepository userHymnStateJpaRepository;
+    @Autowired private EventJpaRepository eventJpaRepository;
+    @Autowired private AuthIdentityJpaRepository authIdentityJpaRepository;
+    @Autowired private RefreshTokenJpaRepository refreshTokenJpaRepository;
+    @Autowired private InviteCodeJpaRepository inviteCodeJpaRepository;
 
     private String adminToken;
     private String userToken;
@@ -95,8 +72,8 @@ class AdminHymnApiTest {
 
         UUID adminId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        userJpaRepository.save(new UserEntity(adminId, "관리자", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
-        userJpaRepository.save(new UserEntity(userId, "일반", Role.USER, UserStatus.ACTIVE, Instant.now(), Instant.now()));
+        userJpaRepository.save(new UserEntity(adminId, "admin", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
+        userJpaRepository.save(new UserEntity(userId, "member", Role.USER, UserStatus.ACTIVE, Instant.now(), Instant.now()));
 
         adminToken = jwtService.issueAccessToken(adminId.toString(), Role.ADMIN.name());
         userToken = jwtService.issueAccessToken(userId.toString(), Role.USER.name());
@@ -104,7 +81,7 @@ class AdminHymnApiTest {
 
     @Test
     void adminEndpointRequiresAdminRole() throws Exception {
-        String payload = objectMapper.writeValueAsString(Map.of("title", "권한"));
+        String payload = objectMapper.writeValueAsString(Map.of("title", "forbidden"));
 
         mockMvc.perform(post("/admin/hymns")
                 .header("Authorization", "Bearer " + userToken)
@@ -118,7 +95,7 @@ class AdminHymnApiTest {
     @Test
     void adminCanCreateAndUpdateHymn() throws Exception {
         String createPayload = objectMapper.writeValueAsString(Map.of(
-            "title", "관리자 생성",
+            "title", "create hymn",
             "number", "101",
             "tags", "admin",
             "enabled", false
@@ -129,7 +106,7 @@ class AdminHymnApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createPayload))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.title").value("관리자 생성"))
+            .andExpect(jsonPath("$.data.title").value("create hymn"))
             .andExpect(jsonPath("$.data.enabled").value(false))
             .andReturn()
             .getResponse()
@@ -138,7 +115,7 @@ class AdminHymnApiTest {
         String hymnId = objectMapper.readTree(createResponse).get("data").get("id").asText();
 
         String updatePayload = objectMapper.writeValueAsString(Map.of(
-            "title", "관리자 수정",
+            "title", "update hymn",
             "enabled", true
         ));
 
@@ -147,7 +124,7 @@ class AdminHymnApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(updatePayload))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.title").value("관리자 수정"))
+            .andExpect(jsonPath("$.data.title").value("update hymn"))
             .andExpect(jsonPath("$.data.enabled").value(true));
 
         HymnEntity saved = hymnJpaRepository.findById(UUID.fromString(hymnId)).orElseThrow();
@@ -155,9 +132,40 @@ class AdminHymnApiTest {
     }
 
     @Test
+    void updateWithEmptyPayloadReturnsBadRequest() throws Exception {
+        UUID hymnId = UUID.randomUUID();
+        hymnJpaRepository.save(new HymnEntity(hymnId, "hymn", "1", "tag", true, Instant.now()));
+
+        mockMvc.perform(patch("/admin/hymns/" + hymnId)
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("empty_update"));
+    }
+
+    @Test
+    void createTrimsAndNormalizesOptionalFields() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of(
+            "title", "  normalized hymn  ",
+            "number", "   ",
+            "tags", "  worship  "
+        ));
+
+        mockMvc.perform(post("/admin/hymns")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.title").value("normalized hymn"))
+            .andExpect(jsonPath("$.data.number").isEmpty())
+            .andExpect(jsonPath("$.data.tags").value("worship"));
+    }
+
+    @Test
     void adminListReturnsAllHymns() throws Exception {
-        hymnJpaRepository.save(new HymnEntity(UUID.randomUUID(), "활성", "1", "tag", true, Instant.now()));
-        hymnJpaRepository.save(new HymnEntity(UUID.randomUUID(), "비활성", "2", "tag", false, Instant.now()));
+        hymnJpaRepository.save(new HymnEntity(UUID.randomUUID(), "enabled", "1", "tag", true, Instant.now()));
+        hymnJpaRepository.save(new HymnEntity(UUID.randomUUID(), "disabled", "2", "tag", false, Instant.now()));
 
         String response = mockMvc.perform(get("/admin/hymns")
                 .header("Authorization", "Bearer " + adminToken))
@@ -179,25 +187,20 @@ class AdminHymnApiTest {
     @Test
     void adminCanDeleteHymn() throws Exception {
         UUID hymnId = UUID.randomUUID();
-        hymnJpaRepository.save(new HymnEntity(hymnId, "삭제 대상", "99", "tag", true, Instant.now()));
+        hymnJpaRepository.save(new HymnEntity(hymnId, "delete target", "99", "tag", true, Instant.now()));
 
-        // 관련 에셋도 생성
         assetJpaRepository.save(new AssetEntity(
             UUID.randomUUID(), hymnId, AssetType.PNG, PartType.ALL,
             "https://example.com/test.png", "hymns/" + hymnId + "/PNG/ALL/test.png",
             null, null, Instant.now()
         ));
 
-        // 삭제 요청
         mockMvc.perform(delete("/admin/hymns/" + hymnId)
                 .header("Authorization", "Bearer " + adminToken))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true));
 
-        // 찬양이 삭제되었는지 확인
         assertThat(hymnJpaRepository.findById(hymnId)).isEmpty();
-
-        // 관련 에셋도 삭제되었는지 확인
         assertThat(assetJpaRepository.findByHymnId(hymnId)).isEmpty();
     }
 
@@ -215,7 +218,7 @@ class AdminHymnApiTest {
     @Test
     void deleteHymnRequiresAdminRole() throws Exception {
         UUID hymnId = UUID.randomUUID();
-        hymnJpaRepository.save(new HymnEntity(hymnId, "권한 테스트", "100", "tag", true, Instant.now()));
+        hymnJpaRepository.save(new HymnEntity(hymnId, "protected", "100", "tag", true, Instant.now()));
 
         mockMvc.perform(delete("/admin/hymns/" + hymnId)
                 .header("Authorization", "Bearer " + userToken))
@@ -223,7 +226,6 @@ class AdminHymnApiTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error.code").value("forbidden"));
 
-        // 찬양이 삭제되지 않았는지 확인
         assertThat(hymnJpaRepository.findById(hymnId)).isPresent();
     }
 }
