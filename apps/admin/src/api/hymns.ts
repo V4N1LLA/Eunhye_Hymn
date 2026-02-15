@@ -3,7 +3,7 @@ import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
 export interface HymnResponse {
   id: string;
   title: string;
-  number: number | null;
+  number: string | null;
   tags: string | null;
   enabled: boolean;
   createdAt: string;
@@ -12,7 +12,7 @@ export interface HymnResponse {
 export interface HymnDetailResponse {
   id: string;
   title: string;
-  number: number | null;
+  number: string | null;
   tags: string | null;
   enabled: boolean;
   createdAt: string;
@@ -30,14 +30,14 @@ export interface AssetResponse {
 
 export interface CreateHymnRequest {
   title: string;
-  number?: number | null;
+  number?: string | null;
   tags?: string | null;
   enabled?: boolean;
 }
 
 export interface UpdateHymnRequest {
   title?: string | null;
-  number?: number | null;
+  number?: string | null;
   tags?: string | null;
   enabled?: boolean | null;
 }

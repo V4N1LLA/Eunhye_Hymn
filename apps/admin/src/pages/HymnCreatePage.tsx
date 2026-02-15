@@ -2,6 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createHymn } from "../api/hymns";
 
+const TITLE_MAX_LENGTH = 120;
+const NUMBER_MAX_LENGTH = 20;
+
+function normalizeOptional(value: string): string | null {
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
 export default function HymnCreatePage() {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
@@ -13,17 +21,29 @@ export default function HymnCreatePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
+    const normalizedTitle = title.trim();
+    const normalizedNumber = number.trim();
+
+    if (!normalizedTitle) {
       setError("제목을 입력해 주세요.");
       return;
     }
+    if (normalizedTitle.length > TITLE_MAX_LENGTH) {
+      setError(`제목은 최대 ${TITLE_MAX_LENGTH}자까지 입력할 수 있습니다.`);
+      return;
+    }
+    if (normalizedNumber.length > NUMBER_MAX_LENGTH) {
+      setError(`번호는 최대 ${NUMBER_MAX_LENGTH}자까지 입력할 수 있습니다.`);
+      return;
+    }
+
     setError(null);
     setSaving(true);
     try {
       await createHymn({
-        title: title.trim(),
-        number: number ? parseInt(number, 10) : null,
-        tags: tags.trim() || null,
+        title: normalizedTitle,
+        number: normalizedNumber || null,
+        tags: normalizeOptional(tags),
         enabled,
       });
       navigate("/hymns", { replace: true });
@@ -36,10 +56,10 @@ export default function HymnCreatePage() {
 
   return (
     <div className="max-w-lg">
-      <h1 className="text-2xl font-bold mb-6">새 찬양 추가</h1>
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 flex flex-col gap-4">
+      <h1 className="mb-6 text-2xl font-bold">새 찬양 추가</h1>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-lg bg-white p-6 shadow">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="title" className="mb-1 block text-sm font-medium text-gray-700">
             제목 *
           </label>
           <input
@@ -47,23 +67,32 @@ export default function HymnCreatePage() {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            maxLength={TITLE_MAX_LENGTH}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
+          <div className="mt-1 text-right text-xs text-slate-500">
+            {title.trim().length}/{TITLE_MAX_LENGTH}
+          </div>
         </div>
+
         <div>
-          <label htmlFor="number" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="number" className="mb-1 block text-sm font-medium text-gray-700">
             번호
           </label>
           <input
             id="number"
-            type="number"
+            type="text"
             value={number}
             onChange={(e) => setNumber(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            maxLength={NUMBER_MAX_LENGTH}
+            placeholder="예: 23, A-12"
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
+          <div className="mt-1 text-xs text-slate-500">숫자/문자 모두 입력 가능합니다.</div>
         </div>
+
         <div>
-          <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="tags" className="mb-1 block text-sm font-medium text-gray-700">
             태그 (쉼표 구분)
           </label>
           <input
@@ -72,9 +101,10 @@ export default function HymnCreatePage() {
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="예: 찬양, 경배"
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
+
         <div className="flex items-center gap-2">
           <input
             id="enabled"
@@ -93,15 +123,15 @@ export default function HymnCreatePage() {
         <div className="flex gap-3">
           <button
             type="submit"
-            disabled={saving}
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+            disabled={saving || !title.trim()}
+            className="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {saving ? "저장 중..." : "저장"}
           </button>
           <button
             type="button"
             onClick={() => navigate("/hymns")}
-            className="border border-gray-300 px-4 py-2 rounded hover:bg-gray-50"
+            className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-50"
           >
             취소
           </button>
