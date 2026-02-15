@@ -22,11 +22,9 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _socialTokenController = TextEditingController();
   final _inviteCodeController = TextEditingController();
-  final _displayNameController = TextEditingController(text: '모바일관리자');
+  final _displayNameController = TextEditingController(text: 'Mobile User');
 
-  SocialProvider _provider = SocialProvider.google;
   UserRole _devRole = UserRole.user;
   bool _loading = false;
   bool _showDevLogin = false;
@@ -34,7 +32,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    _socialTokenController.dispose();
     _inviteCodeController.dispose();
     _displayNameController.dispose();
     super.dispose();
@@ -47,9 +44,8 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final token = await _resolveSocialToken();
+      final token = await widget.socialSdkService.fetchToken();
       final profile = await widget.authRepository.loginWithSocial(
-        provider: _provider,
         token: token,
         inviteCode: _inviteCodeController.text.trim().isEmpty
             ? null
@@ -60,9 +56,9 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _error = e.message;
       });
-    } catch (_) {
+    } catch (e) {
       setState(() {
-        _error = '로그인 중 알 수 없는 오류가 발생했습니다.';
+        _error = 'Social login failed: $e';
       });
     } finally {
       if (mounted) {
@@ -71,56 +67,12 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     }
-  }
-
-  Future<void> _fetchTokenFromSdk() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final token = await widget.socialSdkService.fetchToken(_provider);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _socialTokenController.text = token;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${_provider.name.toUpperCase()} 토큰을 가져왔습니다.')),
-      );
-    } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = e.message;
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
-    }
-  }
-
-  Future<String> _resolveSocialToken() async {
-    final manualToken = _socialTokenController.text.trim();
-    if (manualToken.isNotEmpty) {
-      return manualToken;
-    }
-
-    final token = await widget.socialSdkService.fetchToken(_provider);
-    _socialTokenController.text = token;
-    return token;
   }
 
   Future<void> _handleDevLogin() async {
     if (_displayNameController.text.trim().isEmpty) {
       setState(() {
-        _error = '표시 이름을 입력하세요.';
+        _error = 'Display name is required.';
       });
       return;
     }
@@ -141,9 +93,9 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _error = e.message;
       });
-    } catch (_) {
+    } catch (e) {
       setState(() {
-        _error = 'Dev 로그인 중 알 수 없는 오류가 발생했습니다.';
+        _error = 'Dev login failed: $e';
       });
     } finally {
       if (mounted) {
@@ -158,7 +110,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Eunhye Hymn 로그인'),
+        title: const Text('Eunhye Hymn Login'),
       ),
       body: SafeArea(
         child: Center(
@@ -178,67 +130,33 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   const Text(
-                    '소셜 로그인',
+                    'Social Login',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<SocialProvider>(
-                    initialValue: _provider,
-                    decoration: const InputDecoration(
-                      labelText: 'Provider',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: SocialProvider.google,
-                        child: Text('Google'),
-                      ),
-                      DropdownMenuItem(
-                        value: SocialProvider.kakao,
-                        child: Text('Kakao'),
-                      ),
-                    ],
-                    onChanged: _loading
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              setState(() => _provider = value);
-                            }
-                          },
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Tap Kakao icon to sign in with provider redirect.',
                   ),
                   const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: _loading ? null : _fetchTokenFromSdk,
-                    icon: const Icon(Icons.login),
-                    label: Text(_loading
-                        ? '처리 중...'
-                        : '${_provider == SocialProvider.google ? "Google" : "Kakao"} SDK로 로그인 토큰 가져오기'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _socialTokenController,
-                    enabled: !_loading,
-                    decoration: const InputDecoration(
-                      labelText: '소셜 토큰 (SDK 자동 입력, 필요 시 수동 입력)',
-                      border: OutlineInputBorder(),
-                    ),
+                  _SocialLoginButton(
+                    onPressed: _loading ? null : _handleSocialLogin,
+                    label: _loading ? 'Signing in...' : 'Continue with Kakao',
+                    backgroundColor: const Color(0xFFFEE500),
+                    foregroundColor: Colors.black87,
+                    borderColor: const Color(0xFFFEE500),
+                    icon: const Icon(Icons.chat_bubble_rounded),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _inviteCodeController,
                     enabled: !_loading,
                     decoration: const InputDecoration(
-                      labelText: '초대코드 (신규 사용자만)',
+                      labelText: 'Invite code (first login only)',
                       border: OutlineInputBorder(),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: _loading ? null : _handleSocialLogin,
-                    child: Text(_loading ? '로그인 중...' : '소셜 로그인'),
                   ),
                   const SizedBox(height: 20),
                   OutlinedButton.icon(
@@ -247,8 +165,9 @@ class _LoginPageState extends State<LoginPage> {
                         : () {
                             setState(() => _showDevLogin = !_showDevLogin);
                           },
-                    icon: Icon(_showDevLogin ? Icons.expand_less : Icons.expand_more),
-                    label: const Text('Dev 로그인 (개발용)'),
+                    icon: Icon(
+                        _showDevLogin ? Icons.expand_less : Icons.expand_more),
+                    label: const Text('Dev Login (local only)'),
                   ),
                   if (_showDevLogin) ...[
                     const SizedBox(height: 12),
@@ -256,7 +175,7 @@ class _LoginPageState extends State<LoginPage> {
                       controller: _displayNameController,
                       enabled: !_loading,
                       decoration: const InputDecoration(
-                        labelText: '표시 이름',
+                        labelText: 'Display name',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -264,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
                     DropdownButtonFormField<UserRole>(
                       initialValue: _devRole,
                       decoration: const InputDecoration(
-                        labelText: '역할',
+                        labelText: 'Role',
                         border: OutlineInputBorder(),
                       ),
                       items: const [
@@ -288,12 +207,55 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 12),
                     FilledButton.tonal(
                       onPressed: _loading ? null : _handleDevLogin,
-                      child: Text(_loading ? '처리 중...' : 'Dev 로그인'),
+                      child: Text(_loading ? 'Processing...' : 'Dev Login'),
                     ),
                   ],
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialLoginButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final Color borderColor;
+  final Widget icon;
+
+  const _SocialLoginButton({
+    required this.onPressed,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.borderColor,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: FilledButton.icon(
+        onPressed: onPressed,
+        icon: icon,
+        label: Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: FilledButton.styleFrom(
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          side: BorderSide(color: borderColor),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),

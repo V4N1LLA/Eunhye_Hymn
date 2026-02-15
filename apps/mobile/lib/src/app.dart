@@ -101,7 +101,6 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
 
   Future<void> _onLogout() async {
     await _authRepository.logout();
-    await _socialSdkService.signOutGoogle();
     _hymnRepository.bindSessionUser(null);
     if (!mounted) {
       return;

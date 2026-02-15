@@ -19,7 +19,6 @@ jwt_refresh_ttl = 604800
 invite_code     = "CHANGE_ME_invite_code"
 
 # ── Optional ─────────────────────────────────────────────────
-google_client_id  = ""
 allowed_ssh_cidrs = ["0.0.0.0/0"]   # restrict to your IP for security
 
 # ── Monitoring ───────────────────────────────────────────────

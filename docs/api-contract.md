@@ -28,12 +28,12 @@ Base URL: `/api/v1`
 }
 ```
 
-### 1.2 소셜 로그인 (Google/Kakao)
+### 1.2 소셜 로그인 (Kakao)
 - `POST /auth/social`
 - 요청 `data` 예시:
 ```json
 {
-  "provider": "google",
+  "provider": "kakao",
   "token": "social-token",
   "inviteCode": "ABC123"
 }

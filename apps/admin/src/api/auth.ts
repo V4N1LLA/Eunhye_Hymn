@@ -12,7 +12,7 @@ export interface DevLoginRequest {
 }
 
 export interface SocialLoginRequest {
-  provider: "GOOGLE" | "KAKAO";
+  provider: "KAKAO";
   token: string;
   inviteCode?: string;
 }

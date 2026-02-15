@@ -55,7 +55,7 @@
 ## 4. 모바일 스모크
 
 1. 로그인
-   - Android/iOS: Google/Kakao SDK 로그인 성공
+   - Android/iOS: Kakao SDK 로그인 성공
    - 웹/미지원 환경: Kakao 수동 토큰 fallback 동작 확인
 2. 찬양 목록/검색
    - 목록 로드와 검색 응답 확인
