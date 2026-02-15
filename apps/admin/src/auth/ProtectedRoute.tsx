@@ -9,7 +9,7 @@ export default function ProtectedRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  if (user?.role && user.role !== "ADMIN") {
+  if (user?.role !== "ADMIN") {
     return <NotAuthorizedPage />;
   }
 

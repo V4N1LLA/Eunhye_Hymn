@@ -54,9 +54,14 @@ function loadUser(): User | null {
   if (!token) return null;
   const payload = parseJwtPayload(token);
   if (!payload) return null;
+  const userId = payload.sub ?? payload.userId;
+  const role = payload.role ?? "USER";
+  if (typeof userId !== "string" || typeof role !== "string") {
+    return null;
+  }
   return {
-    userId: (payload.sub ?? payload.userId) as string,
-    role: (payload.role ?? "USER") as string,
+    userId,
+    role,
   };
 }
 
@@ -68,9 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setTokensAndUser = useCallback((accessToken: string, refreshToken: string, fallbackUser?: User) => {
     setTokens(accessToken, refreshToken);
     const parsed = parseJwtPayload(accessToken);
+    const userId = parsed?.sub ?? parsed?.userId;
+    const role = parsed?.role ?? "USER";
     setUser(
-      parsed
-        ? { userId: (parsed.sub ?? parsed.userId) as string, role: (parsed.role ?? "USER") as string }
+      parsed && typeof userId === "string" && typeof role === "string"
+        ? { userId, role }
         : fallbackUser ?? null,
     );
   }, []);
@@ -82,6 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithAdminPassword = useCallback(async (loginId: string, password: string) => {
     const result = await apiAdminPasswordLogin({ loginId, password });
+    const payload = parseJwtPayload(result.accessToken);
+    const role = payload?.role;
+    if (role !== "ADMIN") {
+      clearTokens();
+      setUser(null);
+      throw new Error("관리자 권한 토큰이 아닙니다. 세션을 초기화한 뒤 관리자 계정으로 다시 로그인해 주세요.");
+    }
     setTokensAndUser(result.accessToken, result.refreshToken);
     return { newUser: result.newUser };
   }, [setTokensAndUser]);

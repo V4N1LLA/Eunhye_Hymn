@@ -94,6 +94,10 @@ async function handleResponse<T>(response: Response, unauthorized: UnauthorizedM
     throw new Error(resolveErrorMessage(payload, "인증에 실패했습니다."));
   }
 
+  if (response.status === 403) {
+    throw new Error(resolveErrorMessage(payload, "관리자 권한이 없습니다. 세션 초기화 후 관리자 계정으로 다시 로그인해 주세요."));
+  }
+
   if (!response.ok || payload?.success === false) {
     throw new Error(resolveErrorMessage(payload, "요청 처리 중 오류가 발생했습니다."));
   }

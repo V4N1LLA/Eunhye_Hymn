@@ -19,7 +19,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/help" element={<HelpPage />} />
+          <Route path="/login/help" element={<HelpPage />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<DashboardPage />} />
@@ -30,6 +30,7 @@ export default function App() {
               <Route path="/users" element={<UserListPage />} />
               <Route path="/invite-codes" element={<InviteCodePage />} />
               <Route path="/events" element={<AdminEventPage />} />
+              <Route path="/help" element={<HelpPage />} />
             </Route>
           </Route>
         </Routes>

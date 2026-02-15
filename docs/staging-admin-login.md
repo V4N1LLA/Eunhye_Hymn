@@ -9,6 +9,10 @@ Admin login can use dedicated credentials configured by environment variables:
 - `ADMIN_LOGIN_ID`
 - `ADMIN_LOGIN_PASSWORD`
 
+Important:
+- Invite codes (for example `stage-xxxxxx`) are for app user onboarding.
+- Invite codes are **not** admin login IDs.
+
 API endpoint:
 - `POST /api/v1/auth/admin/login`
 
@@ -38,4 +42,5 @@ This mode is optional and can be disabled once ID/PW login is fully adopted.
   - ID or password mismatch.
 - `forbidden` on admin pages after login:
   - clear browser `sessionStorage` tokens and log in again.
+  - ensure you used `ADMIN_LOGIN_ID` / `ADMIN_LOGIN_PASSWORD`, not an invite code.
 
