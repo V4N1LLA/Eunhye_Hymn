@@ -23,7 +23,7 @@ docs/       프로젝트 문서
 
 - 찬양 CRUD + 삭제 (에셋/메모/히스토리 cascade 삭제)
 - S3 에셋 관리 (presigned URL로 클라이언트 직접 업로드)
-- 소셜 로그인 (Google, Kakao) + JWT 인증 + 토큰 자동 회전
+- 소셜 로그인 (Kakao) + JWT 인증 + 토큰 자동 회전
 - 초대코드 관리 (생성, 검증, 만료, 사용 횟수 제한)
 - 사용자 관리 (역할/상태 변경)
 - 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
@@ -35,12 +35,12 @@ docs/       프로젝트 문서
 - 사용자 관리 (역할/상태 변경)
 - 초대코드 관리 (생성/비활성화/만료일 설정)
 - 감사 로그/분석 (필터/페이지네이션 조회, 최근 N일 이벤트 타입 집계, CSV 내보내기)
-- Google/Kakao 소셜 로그인 + Dev 로그인 (개발용)
+- Kakao 소셜 로그인 + Dev 로그인 (개발용)
 - Access Token 만료 시 자동 갱신
 
 ### 모바일 앱 (Flutter MVP)
 
-- 소셜 SDK 직접 로그인 (Google/Kakao 모바일, Kakao 웹은 토큰 입력 fallback) + Dev 로그인
+- 소셜 SDK 직접 로그인 (Kakao 모바일) + Dev 로그인
 - 찬양 목록 조회 + 검색
 - 찬양 상세 조회 (PNG 에셋 미리보기 + MIDI 앱 내 재생)
 - 즐겨찾기 토글
@@ -87,7 +87,7 @@ npm run dev
 | Backend | Spring Boot 3.3, Java 17, Gradle 8.7 |
 | Database | PostgreSQL + Flyway 마이그레이션 |
 | Storage | AWS S3 (presigned URL) |
-| Auth | Spring Security + JWT + Google/Kakao OAuth |
+| Auth | Spring Security + JWT + Kakao OAuth |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS v4 |
 | CI/CD | GitHub Actions (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test) |
 
@@ -97,7 +97,7 @@ npm run dev
 
 | 영역 | 주요 경로 | 설명 |
 |------|-----------|------|
-| 인증 | `POST /auth/social` | Google/Kakao 소셜 로그인 |
+| 인증 | `POST /auth/social` | Kakao 소셜 로그인 |
 | | `POST /auth/invite/validate` | 초대코드 검증 |
 | | `POST /auth/refresh` | 토큰 갱신 |
 | 찬양 (공개) | `GET /hymns` | 활성 찬양 목록 |

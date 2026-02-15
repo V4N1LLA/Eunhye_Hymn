@@ -127,7 +127,6 @@ cd apps/mobile
 | `JWT_ACCESS_TTL_SECONDS` | Access 토큰 TTL | **필수** | 없음 |
 | `JWT_REFRESH_TTL_SECONDS` | Refresh 토큰 TTL | **필수** | 없음 |
 | `INVITE_CODE` | 초대코드 | **필수 (미설정 시 부팅 실패)** | 없음 |
-| `GOOGLE_CLIENT_ID` | Google OAuth 클라이언트 ID | - | (빈 문자열, 미설정 시 aud 검증 생략) |
 | `S3_BUCKET` | S3 버킷명 | - | `local-bucket` |
 | `S3_REGION` | AWS 리전 | - | `ap-northeast-2` |
 | `S3_ENDPOINT` | S3 엔드포인트 오버라이드 | - | (빈 문자열) |
@@ -209,7 +208,7 @@ com.eunhyehymn/
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
 | POST | `/auth/invite/validate` | 없음 | 초대코드 검증 |
-| POST | `/auth/social` | 없음 | 소셜 로그인 (Google/Kakao) |
+| POST | `/auth/social` | 없음 | 소셜 로그인 (Kakao) |
 | POST | `/auth/refresh` | 없음 | 토큰 갱신 (RefreshRequest → TokenResponse) |
 | POST | `/auth/logout` | 없음 | 로그아웃 (LogoutRequest) |
 | POST | `/auth/dev/login` | 없음 | **dev 프로필 전용** (DevLoginRequest → TokenResponse) |
@@ -312,7 +311,7 @@ com.eunhyehymn/
 | `GetFavoriteUseCase` | `get(userId, hymnId)` | 즐겨찾기 상태 조회 (없으면 false) |
 | `ToggleFavoriteUseCase` | `toggle(userId, hymnId)` | 즐겨찾기 토글 (없으면 true, 있으면 반전) |
 | `GetHistoryUseCase` | `getHistory(userId)` | lastOpenedAt desc 정렬 |
-| `SocialLoginUseCase` | `login(provider, token, inviteCode?)` | Google/Kakao 토큰 검증, 신규 사용자는 초대코드 필요 |
+| `SocialLoginUseCase` | `login(provider, token, inviteCode?)` | Kakao 토큰 검증, 신규 사용자는 초대코드 필요 |
 | `RefreshTokenUseCase` | `refresh(rawRefreshToken)` | 해시 검증, 만료 확인, 토큰 회전 |
 | `LogoutUseCase` | `logout(rawRefreshToken)` | revokedAt 설정 |
 | `DevLoginUseCase` | `login(userId, role, displayName)` | 사용자 생성/갱신, 토큰 발급 |
@@ -407,7 +406,7 @@ com.eunhyehymn/
 | `AdminHymnApiTest` | 관리자 찬양 CRUD + 삭제 API |
 | `AdminAssetApiTest` | 에셋 presign/confirm/삭제 API |
 | `AuthFlowTest` | 인증/토큰 갱신 플로우 |
-| `SocialLoginApiTest` | 소셜 로그인 API (Google/Kakao, 초대코드 검증, 기존 사용자) |
+| `SocialLoginApiTest` | 소셜 로그인 API (Kakao, 초대코드 검증, 기존 사용자) |
 | `FlywayRepositoryIntegrationTest` | DB 마이그레이션 통합 |
 | `GetHistoryUseCaseTest` | 히스토리 Use Case 단위 |
 | `CleanupEventExportJobsUseCaseTest` | 비동기 export 정리 Use Case 단위 |
@@ -436,7 +435,7 @@ com.eunhyehymn/
 | 파일 | 역할 |
 |------|------|
 | `src/api/client.ts` | 공통 fetch wrapper (`apiGet`, `apiPost`, `apiPatch`, `apiDelete`), Bearer 토큰 자동 추가, **401 시 자동 토큰 갱신 후 재시도** (mutex 패턴), `unauthorized` 모드 (`"redirect"` / `"throw"`), `includeAuth` 옵션 |
-| `src/api/auth.ts` | **소셜 로그인** (Google/Kakao), 초대코드 검증, Dev 로그인, 토큰 갱신, 로그아웃 API (`PUBLIC_AUTH_OPTIONS`로 인증 없는 요청 구분) |
+| `src/api/auth.ts` | **소셜 로그인** (Kakao), 초대코드 검증, Dev 로그인, 토큰 갱신, 로그아웃 API (`PUBLIC_AUTH_OPTIONS`로 인증 없는 요청 구분) |
 | `src/api/hymns.ts` | 찬양 목록/생성/수정/**삭제**/상세 API |
 | `src/api/adminAssets.ts` | 에셋 presign/confirm/삭제 API (공통 클라이언트 사용) |
 | `src/api/adminUsers.ts` | 사용자 목록/역할·상태 변경 API |
@@ -446,7 +445,7 @@ com.eunhyehymn/
 | `src/auth/tokenStore.ts` | Admin 토큰 저장소(sessionStorage), 구 localStorage 토큰 마이그레이션/정리 |
 | `src/auth/ProtectedRoute.tsx` | 미인증 시 `/login` redirect |
 | `src/components/Layout.tsx` | 사이드바(찬양 관리, 에셋 업로드, 사용자 관리, 초대코드 관리, 감사 로그/분석) + 로그아웃 |
-| `src/pages/LoginPage.tsx` | **Google/Kakao 소셜 로그인** + 초대코드 입력 + 접이식 Dev Login |
+| `src/pages/LoginPage.tsx` | **Kakao 소셜 로그인** + 초대코드 입력 + 접이식 Dev Login |
 | `src/pages/HymnListPage.tsx` | 찬양 목록 테이블 (번호, 제목, 태그, 활성 상태) + 검색/필터 + 활성화 토글 + **삭제** |
 | `src/pages/HymnCreatePage.tsx` | 찬양 생성 폼 (title, number, tags, enabled) |
 | `src/pages/HymnEditPage.tsx` | 찬양 수정 폼 + 에셋 목록(URL 링크, 삭제) + 임베디드 업로드 + 업로드 후 자동 새로고침 + **찬양 삭제 버튼** |
@@ -665,7 +664,7 @@ develop push → GitHub Actions
 **백엔드 API (29 UseCase, 11 Controller)**
 - 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
 - S3 에셋 관리 (presign/confirm/삭제)
-- JWT 인증 + 소셜 로그인 (Google/Kakao) + 토큰 회전
+- JWT 인증 + 소셜 로그인 (Kakao) + 토큰 회전
 - DB 기반 초대코드 관리 (CRUD + 검증 + 원자적 사용 횟수 증가)
 - 사용자 관리 (역할/상태 변경)
 - 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
@@ -680,13 +679,13 @@ develop push → GitHub Actions
 - 사용자 관리 (역할/상태 변경, 검색/필터)
 - 초대코드 관리 (생성/비활성화/만료일 설정)
 - 감사 로그/분석 화면 (`GET /admin/events`) - 필터/페이지네이션 조회 + 집계 기간(1~90일) 커스텀 + 동기 CSV 내보내기 + 비동기 대용량 CSV 작업/다운로드 + 운영 지표 카드(실패율/처리시간/정리량)
-- 소셜 로그인 UI (Google/Kakao) + 초대코드 입력 플로우
+- 소셜 로그인 UI (Kakao) + 초대코드 입력 플로우
 - Access Token 자동 갱신 (401 → refresh → 재시도, mutex 패턴)
 - 인증 컨텍스트 (`loginWithSocial`, `setTokensAndUser`), 공통 API 클라이언트, 사이드바 레이아웃
 - Dev Login (개발용, 접이식)
 
 **Mobile 앱 (Flutter MVP)**
-- 소셜 SDK 직접 로그인 (Google/Kakao 모바일, Kakao 웹은 토큰 입력 fallback) + Dev 로그인
+- 소셜 SDK 직접 로그인 (Kakao 모바일, Kakao 웹은 토큰 입력 fallback) + Dev 로그인
 - 찬양 목록/검색 + 상세 조회
 - PNG 에셋 표시 + 메모 조회/저장 + MIDI 에셋 앱 내 재생 UX
 - 즐겨찾기 토글 + 최근 열람 히스토리
@@ -885,5 +884,6 @@ GitHub PR을 자동으로 리뷰하고 인라인 코멘트를 게시하는 플�
 | **PR 리뷰** | `/pr-reviewer:review-pr <PR_URL>` 실행 |
 | **PR 리뷰 코멘트 해결** | `/pr-reviewer:resolve-reviews` 실행 |
 | **기능 완료 후** | 자체 점검 — 의존성 방향, 중복, 네이밍, 복잡도 확인 |
+
 
 

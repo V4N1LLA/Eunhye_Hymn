@@ -58,7 +58,7 @@
 1. 소셜 SDK 직접 로그인
 - 브랜치: `feat/mobile-social-sdk`
 - PR: #36
-- 핵심: Google/Kakao SDK 로그인 흐름 추가, KakaoTalk 실패 시 계정 로그인 fallback
+- 핵심: Kakao SDK 로그인 흐름 추가, KakaoTalk 실패 시 계정 로그인 fallback
 
 2. MIDI 앱 내 플레이어 UX
 - 브랜치: `feat/mobile-midi-player-ux`
@@ -877,14 +877,14 @@
 - Remove staging login confusion by clarifying token input semantics for social login.
 
 ### Scope
-- Included: Admin login UI label/help updates for Google/Kakao token types, hide dev login on non-localhost.
+- Included: Admin login UI label/help updates for Kakao token types, hide dev login on non-localhost.
 - Excluded: auth API logic changes, deployment workflow changes.
 
 ### Work
 1. Token input clarification
 - `apps/admin/src/pages/LoginPage.tsx`
 - Provider-specific token label/help:
-  - Google -> `ID Token`
+  - Kakao -> `Access Token`
   - Kakao -> `Access Token` (without `Bearer ` prefix)
 
 2. Dev login visibility guard
@@ -896,3 +896,4 @@
 
 ### Validation
 - `cd apps/admin && npm ci && npx tsc --noEmit && npm run build`
+

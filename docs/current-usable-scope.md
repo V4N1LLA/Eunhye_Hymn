@@ -28,7 +28,7 @@
 - 사용자 관리: 생성/조회/수정/삭제(soft-delete), 운영자 잠금 정책(현재 운영자/마지막 활성 관리자 보호)
 - 초대코드 관리: 생성/비활성화/만료일 설정 및 표시
 - 감사 로그/분석: 이벤트 로그 필터/페이지네이션 조회, 이벤트 타입별 집계(최근 N일, `summaryDays` 1~90 커스텀), 동기 CSV 내보내기 + 비동기 대용량 CSV 작업(요청/상태/다운로드) + 완료/실패 작업 자동 정리
-- 인증: Admin ID/PW 로그인(운영), Google/Kakao 소셜 로그인(사용자), Dev 로그인(로컬)
+- 인증: Admin ID/PW 로그인(운영), Kakao 소셜 로그인(사용자), Dev 로그인(로컬)
 - 토큰: 401 발생 시 Access Token 자동 갱신 후 재시도
 
 관련 파일:
@@ -46,7 +46,7 @@
 
 다음 도메인 기능이 동작 범위에 포함된다.
 
-- 인증/인가: JWT, Refresh Token 회전, 소셜 로그인(Google/Kakao), Dev 로그인
+- 인증/인가: JWT, Refresh Token 회전, 소셜 로그인(Kakao), Dev 로그인
 - 찬양: 공개 조회 + 관리자 CRUD + 삭제(cascade)
 - 에셋: 관리자 Presign/Confirm/Delete (AssetType: `PNG`, `MIDI`)
 - 사용자/초대코드 관리자 기능(사용자 CRUD + 초대코드 생성/비활성화)
@@ -60,7 +60,7 @@
 
 다음 기능을 앱에서 바로 검증할 수 있다.
 
-- 로그인: 소셜 SDK 직접 로그인(Google/Kakao 모바일), Kakao 웹/미지원 플랫폼 토큰 입력 fallback, Dev 로그인
+- 로그인: 소셜 SDK 직접 로그인(Kakao 모바일), Kakao 웹/미지원 플랫폼 토큰 입력 fallback, Dev 로그인
 - 찬양: 목록 조회/검색, 상세 조회, PNG 에셋 표시, MIDI 앱 내 재생(재생/일시정지/정지/속도)
 - 개인화: 즐겨찾기 토글, 메모 조회/저장, 최근 열람 히스토리
 - 오프라인: 목록/상세/메모/즐겨찾기/히스토리 캐시 fallback + 오프라인 변경 동기화 큐
@@ -148,7 +148,7 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - 리뷰 반영: paused 상태에서 `resume()` 사용
 
 ### PR #36 (mobile-social-sdk)
-- Google/Kakao SDK 직접 로그인 흐름 추가
+- Kakao SDK 직접 로그인 흐름 추가
 - 리뷰 반영: KakaoTalk 실패 시 `loginWithKakaoAccount()` fallback
 
 ### PR #31 (aws-staging)

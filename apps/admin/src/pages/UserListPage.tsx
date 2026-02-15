@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createUser, deleteUser, listUsers, updateUser, type UserResponse } from "../api/adminUsers";
+import {
+  createUser,
+  deleteUser,
+  listUsers,
+  updateUser,
+  type UserIdentitySummary,
+  type UserResponse,
+} from "../api/adminUsers";
 import { useAuth } from "../auth/AuthContext";
 import InsightCard from "../components/InsightCard";
 
@@ -9,6 +16,7 @@ type EditableRole = "ADMIN" | "USER";
 type EditableStatus = "ACTIVE" | "DISABLED";
 
 const DISPLAY_NAME_MAX_LENGTH = 64;
+const COPY_FEEDBACK_TIMEOUT_MS = 1500;
 
 function roleLabel(role: string): string {
   return role === "ADMIN" ? "관리자" : "일반";
@@ -16,6 +24,49 @@ function roleLabel(role: string): string {
 
 function statusLabel(status: string): string {
   return status === "ACTIVE" ? "활성" : "비활성";
+}
+
+function identityProviderLabel(provider: string | null): string {
+  return provider ? provider.toUpperCase() : "UNKNOWN";
+}
+
+function identityPrimaryValue(identity: UserIdentitySummary): string {
+  return identity.emailMasked ?? identity.providerSubjectMasked ?? "식별 정보 없음";
+}
+
+function shortUuid(value: string): string {
+  if (value.length <= 14) return value;
+  return `${value.slice(0, 8)}...${value.slice(-4)}`;
+}
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString("ko-KR");
+}
+
+function formatDateTime(value: string | null): string {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("ko-KR", { hour12: false });
+}
+
+async function copyTextToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+
+  if (!copied) {
+    throw new Error("copy_failed");
+  }
 }
 
 export default function UserListPage() {
@@ -38,6 +89,8 @@ export default function UserListPage() {
   const [newRole, setNewRole] = useState<EditableRole>("USER");
   const [newStatus, setNewStatus] = useState<EditableStatus>("ACTIVE");
   const [creating, setCreating] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -45,6 +98,12 @@ export default function UserListPage() {
     try {
       const data = await listUsers();
       setUsers(data);
+      setSelectedUserId((prev) => {
+        if (prev && data.some((item) => item.id === prev)) {
+          return prev;
+        }
+        return data.length > 0 ? data[0].id : null;
+      });
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "사용자 목록을 불러올 수 없습니다.");
     } finally {
@@ -66,16 +125,34 @@ export default function UserListPage() {
     return users.filter((u) => {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
       if (statusFilter !== "all" && u.status !== statusFilter) return false;
-      if (query && !u.displayName.toLowerCase().includes(query)) return false;
-      return true;
+
+      if (!query) return true;
+      if (u.displayName.toLowerCase().includes(query)) return true;
+      if (u.id.toLowerCase().includes(query)) return true;
+
+      const identities = u.identities ?? [];
+      return identities.some((identity) =>
+        `${identity.provider ?? ""} ${identity.emailMasked ?? ""} ${identity.providerSubjectMasked ?? ""}`
+          .toLowerCase()
+          .includes(query),
+      );
     });
   }, [users, search, roleFilter, statusFilter]);
+
+  const selectedUser = useMemo(() => {
+    if (!selectedUserId) return null;
+    return users.find((u) => u.id === selectedUserId) ?? null;
+  }, [users, selectedUserId]);
 
   const totalUsers = users.length;
   const activeUsers = useMemo(() => users.filter((u) => u.status === "ACTIVE").length, [users]);
   const disabledUsers = totalUsers - activeUsers;
   const activeAdminCount = useMemo(
     () => users.filter((u) => u.role === "ADMIN" && u.status === "ACTIVE").length,
+    [users],
+  );
+  const linkedIdentityUsers = useMemo(
+    () => users.filter((u) => (u.identities ?? []).length > 0).length,
     [users],
   );
 
@@ -123,6 +200,20 @@ export default function UserListPage() {
     setSearch("");
     setRoleFilter("all");
     setStatusFilter("all");
+  };
+
+  const handleCopyUserId = async (userId: string) => {
+    clearMutationFeedback();
+    try {
+      await copyTextToClipboard(userId);
+      setCopiedUserId(userId);
+      setMutationSuccess("사용자 UUID를 클립보드에 복사했습니다.");
+      window.setTimeout(() => {
+        setCopiedUserId((prev) => (prev === userId ? null : prev));
+      }, COPY_FEEDBACK_TIMEOUT_MS);
+    } catch {
+      setMutationError("UUID 복사에 실패했습니다. 수동으로 복사해 주세요.");
+    }
   };
 
   const handleRoleChange = async (targetUser: UserResponse, newRoleValue: string) => {
@@ -237,6 +328,7 @@ export default function UserListPage() {
         status: newStatus,
       });
       setUsers((prev) => [created, ...prev]);
+      setSelectedUserId(created.id);
       setMutationSuccess(`"${created.displayName}" 사용자를 생성했습니다.`);
       resetCreateForm();
       setShowCreateForm(false);
@@ -253,7 +345,7 @@ export default function UserListPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-slate-900">사용자 관리</h2>
-            <p className="mt-1 text-sm text-slate-600">생성/조회/수정/삭제(비활성) 작업을 수행합니다.</p>
+            <p className="mt-1 text-sm text-slate-600">이름/UUID/연동 식별정보로 사용자를 찾고 권한/상태를 관리합니다.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -284,7 +376,7 @@ export default function UserListPage() {
           `DISABLED` 처리됩니다.
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <InsightCard title="전체 사용자" value={totalUsers} tone="slate" badge="USR" description="가입된 계정" loading={loading} />
           <InsightCard
             title="활성 사용자"
@@ -313,6 +405,15 @@ export default function UserListPage() {
             ratio={totalUsers > 0 ? activeAdminCount / totalUsers : 0}
             loading={loading}
           />
+          <InsightCard
+            title="연동 계정"
+            value={linkedIdentityUsers}
+            tone="sky"
+            badge="ID"
+            description="소셜 로그인 연결"
+            ratio={totalUsers > 0 ? linkedIdentityUsers / totalUsers : 0}
+            loading={loading}
+          />
         </div>
 
         <div className="mt-4 flex flex-col gap-3 md:flex-row">
@@ -320,7 +421,7 @@ export default function UserListPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="이름 검색..."
+            placeholder="이름/UUID/연동정보 검색..."
             className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <select
@@ -430,13 +531,13 @@ export default function UserListPage() {
       {!loading && !loadError && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-[760px] w-full text-left">
+            <table className="min-w-[1080px] w-full text-left">
               <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">이름</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">사용자</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">연동 식별정보</th>
                   <th className="px-4 py-3 text-sm font-semibold text-gray-600">역할</th>
                   <th className="px-4 py-3 text-sm font-semibold text-gray-600">상태</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">가입일</th>
                   <th className="px-4 py-3 text-sm font-semibold text-gray-600">최근 로그인</th>
                   <th className="px-4 py-3 text-sm font-semibold text-gray-600">작업</th>
                 </tr>
@@ -468,11 +569,13 @@ export default function UserListPage() {
                   const deleteLockReason = getDeleteLockReason(user);
                   const lockHints = [...new Set([roleLockReason, statusLockReason, deleteLockReason].filter(Boolean))] as string[];
                   const inProgress = updatingIds.has(user.id) || deletingIds.has(user.id);
+                  const identities = user.identities ?? [];
+                  const isSelected = selectedUserId === user.id;
 
                   return (
-                    <tr key={user.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium">
-                        <div className="flex flex-wrap items-center gap-2">
+                    <tr key={user.id} className={`border-b border-slate-100 last:border-b-0 ${isSelected ? "bg-indigo-50/40" : "hover:bg-slate-50"}`}>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2 font-medium">
                           <span>{user.displayName}</span>
                           {isCurrentOperator(user) && (
                             <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
@@ -480,8 +583,41 @@ export default function UserListPage() {
                             </span>
                           )}
                         </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          <span className="font-mono" title={user.id}>
+                            {shortUuid(user.id)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void handleCopyUserId(user.id)}
+                            className="rounded border border-slate-300 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
+                          >
+                            {copiedUserId === user.id ? "복사됨" : "UUID 복사"}
+                          </button>
+                          <span>가입: {formatDate(user.createdAt)}</span>
+                        </div>
                         {lockHints.length > 0 && (
                           <div className="mt-1 text-xs text-amber-700">{lockHints.join(" · ")}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {identities.length === 0 ? (
+                          <span className="text-xs text-slate-400">연동 정보 없음</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {identities.slice(0, 2).map((identity, index) => (
+                              <div
+                                key={`${user.id}-${identity.createdAt}-${index}`}
+                                className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1"
+                              >
+                                <div className="text-[11px] font-semibold text-slate-600">{identityProviderLabel(identity.provider)}</div>
+                                <div className="mt-0.5 font-mono text-[11px] text-slate-700">{identityPrimaryValue(identity)}</div>
+                              </div>
+                            ))}
+                            {identities.length > 2 && (
+                              <div className="text-[11px] text-slate-500">+{identities.length - 2}개 더 있음 (상세에서 확인)</div>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -511,26 +647,109 @@ export default function UserListPage() {
                           {inProgress ? "..." : statusLabel(user.status)}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString("ko-KR")}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString("ko-KR") : "-"}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{formatDateTime(user.lastLoginAt)}</td>
                       <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => void handleDeleteUser(user)}
-                          disabled={inProgress || deleteLockReason !== null}
-                          title={deleteLockReason ?? ""}
-                          className="text-sm font-semibold text-red-600 hover:text-red-800 disabled:opacity-40"
-                        >
-                          {deletingIds.has(user.id) ? "삭제 중..." : "삭제"}
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedUserId(user.id)}
+                            className={`text-sm font-semibold ${isSelected ? "text-indigo-700" : "text-indigo-600 hover:text-indigo-800"}`}
+                          >
+                            상세
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteUser(user)}
+                            disabled={inProgress || deleteLockReason !== null}
+                            title={deleteLockReason ?? ""}
+                            className="text-sm font-semibold text-red-600 hover:text-red-800 disabled:opacity-40"
+                          >
+                            {deletingIds.has(user.id) ? "삭제 중..." : "삭제"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+        </section>
+      )}
+
+      {!loading && !loadError && selectedUser && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">사용자 상세</h3>
+              <p className="mt-1 text-sm text-slate-600">선택한 사용자의 식별 정보와 로그인 연동 상태를 확인합니다.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleCopyUserId(selectedUser.id)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              {copiedUserId === selectedUser.id ? "UUID 복사됨" : "UUID 복사"}
+            </button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="text-xs text-slate-500">이름</div>
+              <div className="mt-1 text-sm font-semibold text-slate-900">{selectedUser.displayName}</div>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="text-xs text-slate-500">UUID</div>
+              <div className="mt-1 break-all font-mono text-xs text-slate-700">{selectedUser.id}</div>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="text-xs text-slate-500">권한/상태</div>
+              <div className="mt-1 text-sm font-semibold text-slate-900">
+                {roleLabel(selectedUser.role)} / {statusLabel(selectedUser.status)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="text-xs text-slate-500">가입일 / 최근 로그인</div>
+              <div className="mt-1 text-sm text-slate-700">
+                {formatDateTime(selectedUser.createdAt)} / {formatDateTime(selectedUser.lastLoginAt)}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-slate-900">연동 식별 정보</h4>
+              <span className="text-xs text-slate-500">{(selectedUser.identities ?? []).length}개 연결됨</span>
+            </div>
+
+            {(selectedUser.identities ?? []).length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-xs text-slate-500">
+                연결된 소셜 로그인 정보가 없습니다.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(selectedUser.identities ?? []).map((identity, index) => (
+                  <div key={`${selectedUser.id}-${identity.createdAt}-${index}`} className="rounded-lg border border-slate-200 px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                        {identityProviderLabel(identity.provider)}
+                      </span>
+                      <span className="text-xs text-slate-500">연동일: {formatDateTime(identity.createdAt)}</span>
+                    </div>
+                    <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                        <div className="text-[11px] text-slate-500">마스킹 이메일</div>
+                        <div className="mt-0.5 font-mono text-xs text-slate-700">{identity.emailMasked ?? "-"}</div>
+                      </div>
+                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                        <div className="text-[11px] text-slate-500">마스킹 providerSubject</div>
+                        <div className="mt-0.5 font-mono text-xs text-slate-700">{identity.providerSubjectMasked ?? "-"}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}

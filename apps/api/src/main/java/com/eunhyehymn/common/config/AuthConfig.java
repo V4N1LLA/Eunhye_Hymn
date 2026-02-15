@@ -62,11 +62,8 @@ public class AuthConfig {
     }
 
     @Bean
-    SocialTokenVerifier socialTokenVerifier(
-        ObjectMapper objectMapper,
-        @Value("${security.social.google.client-id:}") String googleClientId
-    ) {
-        return new SocialTokenVerifierImpl(objectMapper, googleClientId);
+    SocialTokenVerifier socialTokenVerifier(ObjectMapper objectMapper) {
+        return new SocialTokenVerifierImpl(objectMapper);
     }
 
     @Bean

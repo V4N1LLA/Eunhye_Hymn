@@ -48,7 +48,6 @@ Copy-Item terraform.tfvars.example terraform.tfvars
 | `jwt_secret` | 32~64자 랜덤 문자열 | `p9v...` |
 | `invite_code` | 서비스 가입 초대 코드 | `SING-2026` |
 | `allowed_ssh_cidrs` | SSH 허용 IP. 가능하면 본인 공인 IP/32 | `["123.45.67.89/32"]` |
-| `google_client_id` | (선택) OAuth 사용 시 채움 | `123.apps.googleusercontent.com` |
 | `alert_email` | CloudWatch 알람을 받을 주소 | `ops@example.com` |
 
 > ⚠️ `terraform.tfvars`는 `.gitignore`에 포함되어 있으므로 Git에 커밋하지 않습니다. 대신 보안 저장소에 복사본을 보관하세요.
@@ -130,3 +129,4 @@ terraform apply -var-file=terraform.tfvars
 
 ## 9. 실제 실행 권한에 대한 안내
 이 문서와 스크립트는 내부 개발자가 직접 AWS 콘솔/CLI에서 실행해야 합니다. 원격 에이전트는 계정 자격 증명에 접근할 수 없으므로, 위 절차를 따라 사용자 본인이 명령을 수행한 뒤 결과를 공유하면 추가 지원이 가능합니다.
+

@@ -1,5 +1,12 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
 
+export interface UserIdentitySummary {
+  provider: string | null;
+  providerSubjectMasked: string | null;
+  emailMasked: string | null;
+  createdAt: string;
+}
+
 export interface UserResponse {
   id: string;
   displayName: string;
@@ -7,6 +14,7 @@ export interface UserResponse {
   status: string;
   createdAt: string;
   lastLoginAt: string | null;
+  identities: UserIdentitySummary[];
 }
 
 export interface UpdateUserRequest {

@@ -28,7 +28,6 @@
 ### Login token input clarification for staging
 - `apps/admin/src/pages/LoginPage.tsx`
   - Login token label is now provider-specific:
-    - Google: `ID Token`
     - Kakao: `Access Token`
   - Added token guidance text to prevent Kakao ID-token misuse.
   - Dev login section is now shown only on localhost (`localhost`, `127.0.0.1`) to avoid staging confusion.
@@ -404,7 +403,7 @@
 
 ### 모바일 기능 3건 머지
 - PR #36 `feat/mobile-social-sdk`
-  - Google/Kakao 소셜 SDK 로그인 추가
+  - Kakao 소셜 SDK 로그인 추가
   - KakaoTalk 실패 시 Kakao 계정 로그인 fallback 추가
 - PR #37 `feat/mobile-midi-player-ux`
   - 상세 화면 MIDI 재생/일시정지/정지/속도 UI 추가

@@ -7,8 +7,8 @@
 구현 기능:
 
 - 로그인
-  - 소셜 SDK 직접 로그인 (Google, Kakao 모바일)
-  - Kakao 웹/미지원 플랫폼은 토큰 입력 fallback
+  - 소셜 SDK 직접 로그인 (Kakao 모바일)
+  - 로그인 화면에서 Kakao 버튼 클릭 시 provider 앱/브라우저로 리디렉션
   - Dev 로그인 (개발 환경)
 - 찬양
   - 목록 조회 + 검색
@@ -66,15 +66,28 @@
 
 cd apps/mobile
 ..\..\scripts\flutterw.ps1 pub get
+
+# 웹 실행
 ..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+
+# Android 에뮬레이터/실기기 (staging)
+..\..\scripts\flutterw.ps1 run -d emulator-5554 --dart-define=API_BASE_URL=http://13.209.200.12
+
+# 소셜 로그인 포함 실행 (권장)
+..\..\scripts\flutterw.ps1 run -d emulator-5554 `
+  --dart-define=API_BASE_URL=http://13.209.200.12 `
+  --dart-define=KAKAO_NATIVE_APP_KEY=<kakao_native_app_key>
 ```
 
 실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.
+`API_BASE_URL`에 `/api/v1`를 생략해도 앱에서 자동으로 보정한다.
 
 ## 5.1 배포 범위 주의
 
-- 현재 저장소 기준 실행/검증 경로는 `flutter run -d chrome` 중심이다.
-- 앱스토어 배포(Android/iOS)는 본 저장소에 네이티브 프로젝트 디렉토리(`android/`, `ios/`)가 포함되도록 별도 준비 후 진행해야 한다.
+- 현재 저장소에는 네이티브 프로젝트 디렉토리(`android/`, `ios/`)가 포함되어 있다.
+- Android debug는 `android/app/src/debug/AndroidManifest.xml`에서 cleartext(`http`)를 허용한다.
+- iOS는 `ios/Runner/Info.plist`에 스테이징 호스트(`13.209.200.12`) ATS 예외가 포함되어 있다.
+- 운영/스토어 배포 전에는 HTTPS 도메인 기준으로 ATS/cleartext 설정을 재검토해야 한다.
 
 ## 6. CI
 

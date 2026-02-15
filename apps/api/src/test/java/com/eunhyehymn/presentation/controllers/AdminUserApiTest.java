@@ -6,10 +6,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.AuthIdentityEntity;
 import com.eunhyehymn.infrastructure.persistence.AuthIdentityJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
@@ -20,6 +22,7 @@ import com.eunhyehymn.infrastructure.persistence.UserEntity;
 import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserJpaRepository;
 import com.eunhyehymn.infrastructure.security.JwtService;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.Map;
@@ -71,6 +74,14 @@ class AdminUserApiTest {
         userId = UUID.randomUUID();
         userJpaRepository.save(new UserEntity(adminId, "admin", Role.ADMIN, UserStatus.ACTIVE, Instant.now(), Instant.now()));
         userJpaRepository.save(new UserEntity(userId, "member", Role.USER, UserStatus.ACTIVE, Instant.now(), Instant.now()));
+        authIdentityJpaRepository.save(new AuthIdentityEntity(
+            UUID.randomUUID(),
+            userId,
+            "KAKAO",
+            "1234567890123",
+            "member@example.com",
+            Instant.now()
+        ));
 
         adminToken = jwtService.issueAccessToken(adminId.toString(), Role.ADMIN.name());
         userToken = jwtService.issueAccessToken(userId.toString(), Role.USER.name());
@@ -89,6 +100,35 @@ class AdminUserApiTest {
                 .header("Authorization", "Bearer " + adminToken))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.length()").value(2));
+    }
+
+    @Test
+    void userListIncludesMaskedIdentitySummary() throws Exception {
+        String responseBody = mockMvc.perform(get("/admin/users")
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        JsonNode data = objectMapper.readTree(responseBody).get("data");
+        boolean matched = false;
+        for (JsonNode userNode : data) {
+            if (!userId.toString().equals(userNode.path("id").asText())) {
+                continue;
+            }
+
+            JsonNode identities = userNode.path("identities");
+            if (identities.isArray() && identities.size() > 0) {
+                JsonNode firstIdentity = identities.get(0);
+                matched = "KAKAO".equals(firstIdentity.path("provider").asText())
+                    && firstIdentity.path("providerSubjectMasked").asText().contains("...")
+                    && firstIdentity.path("emailMasked").asText().contains("@");
+            }
+            break;
+        }
+
+        assertTrue(matched, "Expected masked identity summary for member user");
     }
 
     @Test

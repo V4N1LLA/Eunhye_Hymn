@@ -6,7 +6,6 @@ param(
   [string]$DbPassword,
   [string]$JwtSecret,
   [string]$InviteCode,
-  [string]$GoogleClientId = "",
   [string]$AdminEmails = "",
   [string]$AdminKakaoSubjects = "",
   [bool]$AdminEnforceAdminOnly = $false,
@@ -103,7 +102,6 @@ try {
 $dbPasswordEscaped = Escape-ComposeEnvValue -Value $DbPassword
 $jwtSecretEscaped = Escape-ComposeEnvValue -Value $JwtSecret
 $inviteCodeEscaped = Escape-ComposeEnvValue -Value $InviteCode
-$googleClientIdEscaped = Escape-ComposeEnvValue -Value $GoogleClientId
 $adminEmailsEscaped = Escape-ComposeEnvValue -Value $AdminEmails
 $adminKakaoSubjectsEscaped = Escape-ComposeEnvValue -Value $AdminKakaoSubjects
 $adminEnforceValue = $(if ($AdminEnforceAdminOnly) { "true" } else { "false" })
@@ -119,7 +117,6 @@ JWT_SECRET=$jwtSecretEscaped
 JWT_ACCESS_TTL_SECONDS=3600
 JWT_REFRESH_TTL_SECONDS=604800
 INVITE_CODE=$inviteCodeEscaped
-GOOGLE_CLIENT_ID=$googleClientIdEscaped
 ADMIN_EMAILS=$adminEmailsEscaped
 ADMIN_KAKAO_SUBJECTS=$adminKakaoSubjectsEscaped
 ADMIN_ENFORCE_ADMIN_ONLY=$adminEnforceValue

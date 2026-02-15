@@ -82,12 +82,6 @@ variable "invite_code" {
   sensitive   = true
 }
 
-variable "google_client_id" {
-  description = "Google OAuth client ID (optional)"
-  type        = string
-  default     = ""
-}
-
 variable "allowed_ssh_cidrs" {
   description = "CIDR blocks allowed to SSH into EC2"
   type        = list(string)

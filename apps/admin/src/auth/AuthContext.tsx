@@ -31,7 +31,7 @@ interface AuthContextValue {
   user: User | null;
   login: (req: DevLoginRequest) => Promise<void>;
   loginWithAdminPassword: (loginId: string, password: string) => Promise<{ newUser: boolean }>;
-  loginWithSocial: (provider: "GOOGLE" | "KAKAO", token: string, inviteCode?: string) => Promise<{ newUser: boolean }>;
+  loginWithSocial: (provider: "KAKAO", token: string, inviteCode?: string) => Promise<{ newUser: boolean }>;
   logout: () => Promise<void>;
 }
 
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { newUser: result.newUser };
   }, [setTokensAndUser]);
 
-  const loginWithSocial = useCallback(async (provider: "GOOGLE" | "KAKAO", token: string, inviteCode?: string) => {
+  const loginWithSocial = useCallback(async (provider: "KAKAO", token: string, inviteCode?: string) => {
     const result = await apiSocialLogin({ provider, token, inviteCode });
     setTokensAndUser(result.accessToken, result.refreshToken);
     return { newUser: result.newUser };

@@ -2,8 +2,6 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/storage/token_storage.dart';
 
-enum SocialProvider { google, kakao }
-
 enum UserRole { user, admin }
 
 class SessionProfile {
@@ -45,7 +43,6 @@ class AuthRepository {
   }
 
   Future<SessionProfile> loginWithSocial({
-    required SocialProvider provider,
     required String token,
     String? inviteCode,
   }) async {
@@ -53,9 +50,10 @@ class AuthRepository {
       '/auth/social',
       includeAuth: false,
       body: {
-        'provider': provider == SocialProvider.google ? 'GOOGLE' : 'KAKAO',
+        'provider': 'KAKAO',
         'token': token,
-        if (inviteCode != null && inviteCode.isNotEmpty) 'inviteCode': inviteCode,
+        if (inviteCode != null && inviteCode.isNotEmpty)
+          'inviteCode': inviteCode,
       },
     );
 
@@ -125,7 +123,10 @@ class AuthRepository {
   SessionProfile _toSessionProfile(Map<String, dynamic> raw) {
     final userId = raw['userId']?.toString();
     final roleText = raw['role']?.toString().toUpperCase();
-    if (userId == null || userId.isEmpty || roleText == null || roleText.isEmpty) {
+    if (userId == null ||
+        userId.isEmpty ||
+        roleText == null ||
+        roleText.isEmpty) {
       throw ApiException('프로필 응답에 필수 값이 없습니다.');
     }
 

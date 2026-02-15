@@ -12,7 +12,7 @@
 ### 1.2 auth_identities
 - `id` (UUID, PK)
 - `user_id` (UUID, FK -> users.id)
-- `provider` (varchar, GOOGLE/KAKAO)
+- `provider` (varchar, KAKAO)
 - `provider_subject` (varchar)
 - `email` (varchar, nullable)
 - `created_at` (timestamp)

@@ -12,6 +12,7 @@ import {
   type AdminEventSummary,
   type EventType,
 } from "../api/adminEvents";
+import { listUsers } from "../api/adminUsers";
 
 const EVENT_TYPE_OPTIONS: Array<{ label: string; value: "all" | EventType }> = [
   { label: "전체", value: "all" },
@@ -41,6 +42,12 @@ function toIsoUtc(localDateTime: string): string | undefined {
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString("ko-KR", { hour12: false });
+}
+
+function shortUuid(value: string | null): string {
+  if (!value) return "-";
+  if (value.length <= 12) return value;
+  return `${value.slice(0, 8)}...${value.slice(-4)}`;
 }
 
 function triggerDownload(blob: Blob, filename: string): void {
@@ -103,6 +110,7 @@ export default function AdminEventPage() {
   const [asyncJob, setAsyncJob] = useState<AdminEventExportJob | null>(null);
   const [opsMetrics, setOpsMetrics] = useState<AdminEventExportOpsMetrics | null>(null);
   const [opsMetricsLoading, setOpsMetricsLoading] = useState(true);
+  const [userNamesById, setUserNamesById] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const isSummaryWindowFromDateFilter = Boolean(fromLocal || toLocal);
 
@@ -149,10 +157,27 @@ export default function AdminEventPage() {
     }
   };
 
+  const fetchUserNames = async () => {
+    try {
+      const users = await listUsers();
+      const nextMap: Record<string, string> = {};
+      for (const user of users) {
+        nextMap[user.id] = user.displayName;
+      }
+      setUserNamesById(nextMap);
+    } catch {
+      // Ignore user-name map failures; events table should still work with raw UUIDs.
+    }
+  };
+
   useEffect(() => {
     void fetchEvents(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
+
+  useEffect(() => {
+    void fetchUserNames();
+  }, []);
 
   useEffect(() => {
     void fetchOpsMetrics(opsMetricsDays);
@@ -255,6 +280,10 @@ export default function AdminEventPage() {
     } finally {
       setDownloadingAsyncJob(false);
     }
+  };
+
+  const resolveUserName = (targetUserId: string): string => {
+    return userNamesById[targetUserId] ?? "미등록 사용자";
   };
 
   return (
@@ -529,7 +558,7 @@ export default function AdminEventPage() {
             <tr>
               <th className="px-4 py-3 text-sm font-semibold text-gray-600">시각</th>
               <th className="px-4 py-3 text-sm font-semibold text-gray-600">이벤트</th>
-              <th className="px-4 py-3 text-sm font-semibold text-gray-600">userId</th>
+              <th className="px-4 py-3 text-sm font-semibold text-gray-600">사용자</th>
               <th className="px-4 py-3 text-sm font-semibold text-gray-600">hymnId</th>
               <th className="px-4 py-3 text-sm font-semibold text-gray-600">part</th>
               <th className="px-4 py-3 text-sm font-semibold text-gray-600">metadata</th>
@@ -547,7 +576,12 @@ export default function AdminEventPage() {
               <tr key={item.id} className="border-b last:border-b-0 hover:bg-gray-50 align-top">
                 <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDateTime(item.createdAt)}</td>
                 <td className="px-4 py-3 text-sm font-medium">{item.eventType}</td>
-                <td className="px-4 py-3 text-xs text-gray-600 break-all">{item.userId}</td>
+                <td className="px-4 py-3 text-xs text-gray-600">
+                  <div className="font-semibold text-slate-800">{resolveUserName(item.userId)}</div>
+                  <div className="mt-1 font-mono text-[11px] text-slate-500" title={item.userId}>
+                    {shortUuid(item.userId)}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-xs text-gray-600 break-all">{item.hymnId ?? "-"}</td>
                 <td className="px-4 py-3 text-sm">{item.part ?? "-"}</td>
                 <td className="px-4 py-3 text-xs text-gray-600 break-all">{item.metadataJson ?? "-"}</td>
