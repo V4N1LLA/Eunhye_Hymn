@@ -2,6 +2,34 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-16
+
+### Mobile UI/UX 개선 (PR #89)
+- Hymn 목록/History 화면의 탐색 UX 개선
+  - 검색어 즉시 삭제 버튼
+  - 태그/기간 필터
+  - 필터 초기화 액션
+  - 빈 상태 가이드/soft error 배너
+- 반영 파일
+  - `apps/mobile/lib/src/features/hymn/hymn_list_page.dart`
+  - `apps/mobile/lib/src/features/history/history_page.dart`
+  - `docs/mobile/README.md`
+  - `CLAUDE.md`
+  - `docs/WORK_CYCLE.md`
+- merge: `0520074` (`feat(mobile): improve hymn list and history usability (#89)`)
+
+### Mobile release readiness (PR #90)
+- Android release APK 빌드 검증 워크플로우 추가
+  - `.github/workflows/mobile-release-check.yml`
+  - PR/develop push + workflow_dispatch 트리거
+  - `app-release.apk` artifact 업로드
+- 문서/기준 동기화
+  - `docs/mobile/README.md` (Release 패키징 준비 섹션)
+  - `CLAUDE.md` (CI/미완료 상태 반영)
+  - `docs/WORK_CYCLE.md` (cycle #34 반영)
+- 저장소 정리
+  - `apps/mobile/android/.gitignore`에 `/.kotlin` 추가
+- merge: `35569af` (`ci(mobile): add android release build readiness check (#90)`)
 ## 2026-02-15
 
 ### Admin CRUD 예외 하드닝 + 운영자 UX 개선

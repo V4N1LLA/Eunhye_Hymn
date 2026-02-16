@@ -732,6 +732,8 @@ develop push → GitHub Actions
   - `docs/current-usable-scope.md`
   - `docs/mobile/README.md`
   - `README.md`
+- 개발 변경 이력 동기화
+  - `docs/changelog-dev.md`
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`
