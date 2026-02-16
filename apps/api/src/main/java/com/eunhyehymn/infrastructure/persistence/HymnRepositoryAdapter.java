@@ -41,4 +41,9 @@ public class HymnRepositoryAdapter implements HymnRepository {
     public List<Hymn> findByIdIn(List<UUID> ids) {
         return hymnJpaRepository.findByIdIn(ids).stream().map(HymnMapper::toDomain).toList();
     }
+
+    @Override
+    public void deleteById(UUID id) {
+        hymnJpaRepository.deleteById(id);
+    }
 }

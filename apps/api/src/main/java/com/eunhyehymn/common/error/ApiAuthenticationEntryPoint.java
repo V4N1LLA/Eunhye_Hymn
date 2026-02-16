@@ -3,6 +3,7 @@ package com.eunhyehymn.common.error;
 import com.eunhyehymn.common.response.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
@@ -24,7 +25,8 @@ public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
         ErrorResponse error = ErrorResponse.of("unauthorized", "인증이 필요합니다", null);
         ApiResponse<Object> body = ApiResponse.failure(error);
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getWriter(), body);
+        objectMapper.writeValue(response.getOutputStream(), body);
     }
 }

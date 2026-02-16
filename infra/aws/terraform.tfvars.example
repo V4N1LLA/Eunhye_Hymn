@@ -1,0 +1,25 @@
+# Copy this file to terraform.tfvars and fill in the values
+# cp terraform.tfvars.example terraform.tfvars
+
+aws_region        = "ap-northeast-2"
+ec2_key_pair_name = "eunhye-staging"       # aws ec2 create-key-pair 으로 생성한 키 이름
+
+# ── RDS ──────────────────────────────────────────────────────
+db_name     = "eunhye_hymn"
+db_username = "postgres"
+db_password = "CHANGE_ME_strong_password_here"
+
+# ── S3 (globally unique) ─────────────────────────────────────
+s3_bucket_name = "eunhye-hymn-assets-staging"
+
+# ── App Config ───────────────────────────────────────────────
+jwt_secret      = "CHANGE_ME_random_64_char_string"
+jwt_access_ttl  = 3600
+jwt_refresh_ttl = 604800
+invite_code     = "CHANGE_ME_invite_code"
+
+# ── Optional ─────────────────────────────────────────────────
+allowed_ssh_cidrs = ["0.0.0.0/0"]   # restrict to your IP for security
+
+# ── Monitoring ───────────────────────────────────────────────
+alert_email = ""   # CloudWatch 알람 수신 이메일 (빈값이면 구독 생략)

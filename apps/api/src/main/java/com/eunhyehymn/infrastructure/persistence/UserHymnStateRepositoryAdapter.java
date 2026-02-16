@@ -35,4 +35,9 @@ public class UserHymnStateRepositoryAdapter implements UserHymnStateRepository {
             .map(UserHymnStateMapper::toDomain)
             .toList();
     }
+
+    @Override
+    public void deleteByHymnId(UUID hymnId) {
+        userHymnStateJpaRepository.deleteByIdHymnId(hymnId);
+    }
 }

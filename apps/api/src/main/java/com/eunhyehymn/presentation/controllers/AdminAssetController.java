@@ -2,6 +2,7 @@ package com.eunhyehymn.presentation.controllers;
 
 import com.eunhyehymn.application.ports.StorageService;
 import com.eunhyehymn.application.usecases.AdminConfirmAssetUseCase;
+import com.eunhyehymn.application.usecases.AdminDeleteAssetUseCase;
 import com.eunhyehymn.application.usecases.AdminPresignAssetUseCase;
 import com.eunhyehymn.common.response.ApiResponse;
 import com.eunhyehymn.domain.model.Asset;
@@ -11,6 +12,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,13 +25,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminAssetController {
     private final AdminPresignAssetUseCase adminPresignAssetUseCase;
     private final AdminConfirmAssetUseCase adminConfirmAssetUseCase;
+    private final AdminDeleteAssetUseCase adminDeleteAssetUseCase;
 
     public AdminAssetController(
         AdminPresignAssetUseCase adminPresignAssetUseCase,
-        AdminConfirmAssetUseCase adminConfirmAssetUseCase
+        AdminConfirmAssetUseCase adminConfirmAssetUseCase,
+        AdminDeleteAssetUseCase adminDeleteAssetUseCase
     ) {
         this.adminPresignAssetUseCase = adminPresignAssetUseCase;
         this.adminConfirmAssetUseCase = adminConfirmAssetUseCase;
+        this.adminDeleteAssetUseCase = adminDeleteAssetUseCase;
     }
 
     @PostMapping("/presign")
@@ -62,6 +68,12 @@ public class AdminAssetController {
             asset.url(),
             asset.objectKey()
         ));
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteAsset(@PathVariable UUID id) {
+        adminDeleteAssetUseCase.delete(id);
+        return ApiResponse.success(null);
     }
 
     public record PresignRequest(

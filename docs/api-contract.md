@@ -1,82 +1,101 @@
 # Eunhye Hymn API 계약 (MVP)
 
 Base URL: `/api/v1`
+모든 응답은 기본적으로 아래 envelope를 사용한다.
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
 
 ## 1. 인증
+
 ### 1.1 초대 코드 검증
-- **POST** `/auth/invite/validate`
-- 요청:
+- `POST /auth/invite/validate`
+- 요청 `data` 예시:
 ```json
 {
-  "inviteCode": "ABC123"
+  "code": "ABC123"
 }
 ```
-- 응답:
+- 응답 `data` 예시:
 ```json
 {
-  "valid": true,
-  "expiresAt": "2025-01-01T00:00:00Z"
+  "valid": true
 }
 ```
 
-### 1.2 소셜 로그인 (Google/Kakao)
-- **POST** `/auth/social`
-- 요청:
+### 1.2 소셜 로그인 (Kakao)
+- `POST /auth/social`
+- 요청 `data` 예시:
 ```json
 {
-  "provider": "google",
-  "providerAccessToken": "...",
+  "provider": "kakao",
+  "token": "social-token",
   "inviteCode": "ABC123"
 }
 ```
-- 응답:
+- 응답 `data` 예시:
 ```json
 {
   "accessToken": "jwt-access",
   "refreshToken": "jwt-refresh",
-  "expiresIn": 3600,
-  "user": {
-    "id": "usr_123",
-    "role": "member",
-    "name": "Grace Kim"
-  }
+  "newUser": false
 }
 ```
 
 ### 1.3 토큰 갱신
-- **POST** `/auth/refresh`
-- 요청:
+- `POST /auth/refresh`
+- 요청 `data`: `{ "refreshToken": "jwt-refresh" }`
+- 응답 `data`: `{ "accessToken": "...", "refreshToken": "..." }`
+
+### 1.4 로그아웃
+- `POST /auth/logout`
+- 요청 `data`: `{ "refreshToken": "jwt-refresh" }`
+- 응답 `data`: `null`
+
+### 1.5 Admin ID/PW 로그인
+- `POST /auth/admin/login`
+- 요청 `data` 예시:
 ```json
 {
-  "refreshToken": "jwt-refresh"
+  "loginId": "owner",
+  "password": "your-admin-password"
 }
 ```
-- 응답:
+- 응답 `data` 예시:
 ```json
 {
   "accessToken": "jwt-access",
-  "refreshToken": "jwt-refresh-rotated"
+  "refreshToken": "jwt-refresh",
+  "newUser": false
 }
 ```
 
-### 1.4 로그아웃
-- **POST** `/auth/logout`
-- 요청:
+### 1.6 Admin ID/PW 변경 (관리자 토큰 필요)
+- `POST /admin/auth/password`
+- 요청 `data` 예시:
 ```json
 {
-  "refreshToken": "jwt-refresh"
+  "currentPassword": "current-password",
+  "newLoginId": "owner2",
+  "newPassword": "new-password-456!"
 }
 ```
-- 응답:
+- 응답 `data` 예시:
 ```json
 {
-  "success": true
+  "loginId": "owner2",
+  "updatedAt": "2026-02-15T14:00:00Z"
 }
 ```
 
-### 1.5 DEV 로그인 (개발 환경 전용)
-- **POST** `/auth/dev/login`
-- 요청:
+### 1.7 DEV 로그인 (개발 환경 전용)
+- `POST /auth/dev/login`
+- 요청 `data` 예시:
 ```json
 {
   "userId": "00000000-0000-0000-0000-000000000000",
@@ -84,37 +103,19 @@ Base URL: `/api/v1`
   "displayName": "개발 사용자"
 }
 ```
-- 응답:
+
+## 2. 찬양
+
+### 2.1 찬양 목록 (공개)
+- `GET /hymns`
+- 응답 `data`: `[{ id, title, number, tags }]`
+
+### 2.2 찬양 상세 (인증 필요)
+- `GET /hymns/{id}`
+- 응답 `data` 예시:
 ```json
 {
-  "accessToken": "jwt-access",
-  "refreshToken": "jwt-refresh"
-}
-```
-
-## 2. 찬송가
-### 2.1 찬송가 목록
-- **GET** `/hymns`
-- 공개 엔드포인트 (인증 불필요)
-- 응답:
-```json
-[
-  {
-    "id": "hymn_001",
-    "title": "Amazing Grace",
-    "number": "123",
-    "tags": "advent"
-  }
-]
-```
-
-### 2.2 찬송가 상세
-- **GET** `/hymns/{id}`
-- 인증 필요
-- 응답:
-```json
-{
-  "id": "hymn_001",
+  "id": "hymn-uuid",
   "title": "Amazing Grace",
   "number": "123",
   "tags": "advent",
@@ -122,10 +123,18 @@ Base URL: `/api/v1`
   "lastOpenedAt": "2025-01-01T00:00:00Z",
   "assets": [
     {
-      "id": "asset_001",
-      "type": "PDF",
-      "part": null,
-      "url": "https://s3.../score.pdf",
+      "id": "asset-uuid",
+      "type": "PNG",
+      "part": "ALL",
+      "url": "https://cdn.example/hymns/.../PNG/ALL/score.png",
+      "checksum": null,
+      "version": "v1"
+    },
+    {
+      "id": "asset-uuid-2",
+      "type": "MIDI",
+      "part": "S",
+      "url": "https://cdn.example/hymns/.../MIDI/S/soprano.mid",
       "checksum": null,
       "version": "v1"
     }
@@ -133,245 +142,201 @@ Base URL: `/api/v1`
 }
 ```
 
-### 2.3 찬송가 관리 (관리자)
-- 관리자 권한 필요
+### 2.3 찬양 관리 (관리자)
+- `POST /admin/hymns` (생성)
+- `PATCH /admin/hymns/{id}` (수정)
+- `DELETE /admin/hymns/{id}` (삭제)
+- `GET /admin/hymns` (전체 목록)
 
-#### 2.3.1 찬송가 생성
-- **POST** `/admin/hymns`
-- 요청:
-```json
-{
-  "title": "Amazing Grace",
-  "number": "123",
-  "tags": "advent",
-  "enabled": true
-}
-```
-- 응답:
-```json
-{
-  "id": "hymn_001",
-  "title": "Amazing Grace",
-  "number": "123",
-  "tags": "advent",
-  "enabled": true
-}
-```
+## 3. 에셋 관리 (관리자)
 
-#### 2.3.2 찬송가 수정
-- **PATCH** `/admin/hymns/{id}`
-- 요청:
+### 3.1 프리사인 발급
+- `POST /admin/assets/presign`
+- 요청 `data` 예시:
 ```json
 {
-  "title": "Amazing Grace (수정)",
-  "enabled": false
+  "hymnId": "hymn-uuid",
+  "type": "PNG",
+  "part": "ALL",
+  "filename": "score.png",
+  "contentType": "image/png"
 }
 ```
-- 응답:
+- 응답 `data` 예시:
 ```json
 {
-  "id": "hymn_001",
-  "title": "Amazing Grace (수정)",
-  "number": "123",
-  "tags": "advent",
-  "enabled": false
+  "uploadUrl": "https://s3-presigned-url",
+  "publicUrl": "https://cdn.example/hymns/hymn-uuid/PNG/ALL/uuid-score.png",
+  "objectKey": "hymns/hymn-uuid/PNG/ALL/uuid-score.png"
 }
 ```
 
-#### 2.3.3 찬송가 전체 목록 (관리자)
-- **GET** `/admin/hymns`
-- 응답:
-```json
-[
-  {
-    "id": "hymn_001",
-    "title": "Amazing Grace",
-    "number": "123",
-    "tags": "advent",
-    "enabled": true
-  }
-]
-```
-
-## 3. 내 정보
-### 3.1 즐겨찾기 토글
-- **POST** `/me/favorites/{hymnId}`
-- 인증 필요
-- 응답:
+### 3.2 업로드 확인
+- `POST /admin/assets/confirm`
+- 요청 `data` 예시:
 ```json
 {
-  "favorite": true
-}
-```
-
-### 3.2 노트 조회
-- **GET** `/me/hymns/{hymnId}/note`
-- 인증 필요
-- 응답:
-```json
-{
-  "content": "메모 내용"
-}
-```
-
-### 3.3 노트 저장
-- **PUT** `/me/hymns/{hymnId}/note`
-- 인증 필요
-- 요청:
-```json
-{
-  "content": "메모 내용"
-}
-```
-- 응답:
-```json
-{
-  "content": "메모 내용"
-}
-```
-
-### 3.4 최근 열람 기록
-- **GET** `/me/history`
-- 인증 필요
-- 응답:
-```json
-[
-  {
-    "id": "hymn_001",
-    "title": "Amazing Grace",
-    "number": "123",
-    "tags": "advent",
-    "lastOpenedAt": "2025-01-01T00:00:00Z"
-  }
-]
-```
-
-## 4. 초대 코드 (관리자)
-### 3.1 초대 코드 생성
-- **POST** `/invites`
-- 요청:
-```json
-{
-  "maxUses": 10,
-  "expiresAt": "2025-01-01T00:00:00Z"
-}
-```
-- 응답:
-```json
-{
-  "inviteCode": "ABC123",
-  "expiresAt": "2025-01-01T00:00:00Z",
-  "maxUses": 10
-}
-```
-
-### 3.2 초대 코드 폐기
-- **POST** `/invites/{code}/revoke`
-- 응답:
-```json
-{
-  "revoked": true
-}
-```
-
-## 5. 미디어
-### 4.1 서명 URL 발급
-- **POST** `/media/sign`
-- 요청:
-```json
-{
-  "objectKey": "scores/amazing-grace.pdf",
-  "contentType": "application/pdf"
-}
-```
-- 응답:
-```json
-{
-  "signedUrl": "https://s3...",
-  "expiresIn": 300
-}
-```
-
-### 4.2 관리자 에셋 업로드 프리사인
-- 관리자 권한 필요
-
-#### 4.2.1 업로드 URL 발급
-- **POST** `/admin/assets/presign`
-- part가 없으면 ALL로 처리
-- 요청:
-```json
-{
-  "hymnId": "hymn_001",
-  "type": "PDF",
+  "hymnId": "hymn-uuid",
+  "type": "MIDI",
   "part": "S",
-  "filename": "score.pdf",
-  "contentType": "application/pdf"
-}
-```
-- 응답:
-```json
-{
-  "uploadUrl": "https://s3.../presigned",
-  "publicUrl": "https://cdn.../hymns/hymn_001/PDF/S/score.pdf",
-  "objectKey": "hymns/hymn_001/PDF/S/score.pdf"
-}
-```
-
-#### 4.2.2 업로드 확인
-- **POST** `/admin/assets/confirm`
-- objectKey는 `hymns/{hymnId}/{type}/{part}/` 형식을 따라야 함
-- 요청:
-```json
-{
-  "hymnId": "hymn_001",
-  "type": "PDF",
-  "part": "S",
-  "publicUrl": "https://cdn.../hymns/hymn_001/PDF/S/score.pdf",
-  "objectKey": "hymns/hymn_001/PDF/S/score.pdf",
+  "publicUrl": "https://cdn.example/hymns/hymn-uuid/MIDI/S/uuid.mid",
+  "objectKey": "hymns/hymn-uuid/MIDI/S/uuid.mid",
   "checksum": "abc123",
   "version": "v1"
 }
 ```
-- 응답:
+
+### 3.3 에셋 삭제
+- `DELETE /admin/assets/{id}`
+
+## 4. 사용자/초대코드 관리 (관리자)
+
+### 4.1 사용자 관리
+- `GET /admin/users`
+- `POST /admin/users`
+- `PATCH /admin/users/{id}`
+- `DELETE /admin/users/{id}` (soft-delete: `status=DISABLED`)
+
+### 4.2 초대코드 관리
+- `POST /admin/invite-codes`
+- `GET /admin/invite-codes`
+- `DELETE /admin/invite-codes/{code}`
+
+### 4.3 감사 로그/분석
+- `GET /admin/events`
+- `GET /admin/events/export` (CSV 다운로드)
+- `POST /admin/events/export-jobs` (비동기 대용량 CSV 작업 생성, 202 Accepted)
+- `GET /admin/events/export-jobs/{jobId}` (작업 상태 조회)
+- `GET /admin/events/export-jobs/{jobId}/download` (완료 작업 다운로드)
+- `GET /admin/events/export-jobs/metrics` (비동기 export 운영 지표)
+- 지원 쿼리:
+  - `eventType`: `HYMN_OPENED` | `PART_PLAYED` | `NOTE_SAVED` | `FAVORITE_TOGGLED`
+  - `userId`, `hymnId`: UUID
+  - `from`, `to`: ISO-8601 UTC
+  - `page`: 페이지 번호 (기본 1)
+  - `size`: 페이지 크기 (기본 50, 최대 200)
+  - `limit`: 하위 호환 조회 개수 파라미터(미지정 시 `page/size` 사용)
+  - `summaryDays`: 최근 집계 일수 (기본 7, 최대 90)
+  - `days`: 운영 지표 집계 일수 (기본 7, 최대 90, `GET /admin/events/export-jobs/metrics` 전용)
+- 비동기 export 스냅샷 규칙:
+  - `POST /admin/events/export-jobs`에서 `to`를 생략하면 서버가 작업 생성 시각을 `toExclusive`로 고정한다.
+  - 실행 대기 중 신규 유입 이벤트는 해당 작업 결과에서 제외된다.
+- 응답 `data` 예시:
 ```json
 {
-  "assetId": "asset_001",
-  "hymnId": "hymn_001",
-  "type": "PDF",
-  "part": "S",
-  "url": "https://cdn.../hymns/hymn_001/PDF/S/score.pdf",
-  "objectKey": "hymns/hymn_001/PDF/S/score.pdf"
+  "items": [
+    {
+      "id": "event-uuid",
+      "userId": "user-uuid",
+      "eventType": "HYMN_OPENED",
+      "hymnId": "hymn-uuid",
+      "part": "ALL",
+      "metadataJson": "{\"source\":\"mobile\"}",
+      "createdAt": "2026-02-13T11:40:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 50,
+    "total": 2100,
+    "totalPages": 42,
+    "hasPrevious": false,
+    "hasNext": true
+  },
+  "summary": {
+    "fromInclusive": "2026-02-06T00:00:00Z",
+    "toExclusive": "2026-02-13T00:00:00Z",
+    "total": 210,
+    "byType": [
+      { "eventType": "HYMN_OPENED", "count": 120 },
+      { "eventType": "PART_PLAYED", "count": 50 },
+      { "eventType": "NOTE_SAVED", "count": 30 },
+      { "eventType": "FAVORITE_TOGGLED", "count": 10 }
+    ]
+  }
 }
 ```
 
-## 6. 이벤트
-### 6.1 이벤트 기록
-- **POST** `/events`
-- 인증 필요
-- 단건 또는 배열 허용
-- 요청(단건):
+- `GET /admin/events/export` 응답:
+  - `Content-Type: text/csv`
+  - `Content-Disposition: attachment; filename="admin-events-*.csv"`
+  - 보안: CSV 셀 값이 수식(`=`, `+`, `-`, `@`)으로 시작하면 이스케이프 처리
+
+- `POST /admin/events/export-jobs` 응답 `data` 예시:
 ```json
 {
-  "eventType": "HYMN_OPENED",
-  "hymnId": "hymn_001",
-  "part": "S",
-  "metadataJson": "{\"device\":\"ios\"}"
+  "id": "job-uuid",
+  "status": "QUEUED",
+  "exportLimit": 50000,
+  "rowCount": null,
+  "fileName": null,
+  "errorMessage": null,
+  "createdAt": "2026-02-14T05:00:00Z",
+  "startedAt": null,
+  "completedAt": null,
+  "statusUrl": "/admin/events/export-jobs/job-uuid",
+  "downloadUrl": "/admin/events/export-jobs/job-uuid/download",
+  "downloadable": false
 }
 ```
-- 요청(배열):
-```json
-[
-  {
-    "eventType": "PART_PLAYED",
-    "hymnId": "hymn_001",
-    "part": "A",
-    "metadataJson": null
-  }
-]
-```
-- 응답:
+
+- `GET /admin/events/export-jobs/metrics` 응답 `data` 예시:
 ```json
 {
-  "success": true
+  "windowDays": 7,
+  "fromInclusive": "2026-02-07T05:00:00Z",
+  "toExclusive": "2026-02-14T05:00:00Z",
+  "jobs": {
+    "total": 24,
+    "queued": 1,
+    "running": 0,
+    "completed": 21,
+    "failed": 2,
+    "failureRatePercent": 8.7
+  },
+  "processing": {
+    "measuredJobs": 23,
+    "averageSeconds": 14.8,
+    "p95Seconds": 39.0
+  },
+  "cleanup": {
+    "runCount": 7,
+    "deletedJobs": 43
+  }
+}
+```
+
+## 5. 사용자 개인 영역
+
+### 5.1 프로필
+- `GET /me/profile`
+
+### 5.2 즐겨찾기
+- `GET /me/favorites/{hymnId}`
+- `POST /me/favorites/{hymnId}` (toggle)
+
+### 5.3 메모
+- `GET /me/hymns/{hymnId}/note`
+- `PUT /me/hymns/{hymnId}/note`
+- 요청 `data`: `{ "content": "메모 내용" }`
+
+### 5.4 히스토리
+- `GET /me/history`
+
+## 6. 이벤트
+
+### 6.1 사용자 이벤트 기록
+- `POST /events`
+- 단건 또는 배열 요청 허용
+- 이벤트 필드: `eventType`, `hymnId`, `part`, `metadataJson`
+
+## 7. 시스템
+
+### 7.1 헬스 체크
+- `GET /ping`
+- 응답 `data` 예시:
+```json
+{
+  "ok": true
 }
 ```

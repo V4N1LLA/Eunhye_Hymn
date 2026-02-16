@@ -1,3 +1,7 @@
+server:
+  servlet:
+    context-path: /api/v1
+
 spring:
   application:
     name: eunhye-hymn-api
@@ -25,11 +29,19 @@ management:
 
 security:
   jwt:
-    secret: ${JWT_SECRET:change-me}
-    access-token-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:3600}
-    refresh-token-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS:1209600}
+    secret: ${JWT_SECRET}
+    access-token-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS}
+    refresh-token-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS}
   invite:
-    code: ${INVITE_CODE:change-me}
+    code: ${INVITE_CODE}
+  admin:
+    # Comma-separated lists. If enforce-admin-only=true, only allowlisted operators can log in.
+    emails: ${ADMIN_EMAILS:}
+    kakao-subjects: ${ADMIN_KAKAO_SUBJECTS:}
+    enforce-admin-only: ${ADMIN_ENFORCE_ADMIN_ONLY:false}
+    # Admin web ID/password login (staging/ops only)
+    login-id: ${ADMIN_LOGIN_ID:}
+    login-password: ${ADMIN_LOGIN_PASSWORD:}
 
 storage:
   s3:
@@ -38,3 +50,23 @@ storage:
     endpoint: ${S3_ENDPOINT:}
     public-base-url: ${S3_PUBLIC_BASE_URL:}
     presign-expires-minutes: ${S3_PRESIGN_EXPIRES_MINUTES:15}
+
+events:
+  export:
+    jobs:
+      retention-days: ${EVENT_EXPORT_JOB_RETENTION_DAYS:7}
+      cleanup-cron: ${EVENT_EXPORT_JOB_CLEANUP_CRON:0 15 3 * * *}
+      cleanup-zone: ${EVENT_EXPORT_JOB_CLEANUP_ZONE:UTC}
+      recovery:
+        stale-running-minutes: ${EVENT_EXPORT_JOB_RECOVERY_STALE_RUNNING_MINUTES:15}
+        dispatch-batch-size: ${EVENT_EXPORT_JOB_RECOVERY_DISPATCH_BATCH_SIZE:20}
+        cron: ${EVENT_EXPORT_JOB_RECOVERY_CRON:0/30 * * * * *}
+        zone: ${EVENT_EXPORT_JOB_RECOVERY_ZONE:UTC}
+      alert:
+        window-days: ${EVENT_EXPORT_JOB_ALERT_WINDOW_DAYS:1}
+        min-finished-jobs: ${EVENT_EXPORT_JOB_ALERT_MIN_FINISHED_JOBS:5}
+        max-queued-jobs: ${EVENT_EXPORT_JOB_ALERT_MAX_QUEUED_JOBS:20}
+        max-failure-rate-percent: ${EVENT_EXPORT_JOB_ALERT_MAX_FAILURE_RATE_PERCENT:20}
+        max-p95-seconds: ${EVENT_EXPORT_JOB_ALERT_MAX_P95_SECONDS:120}
+        cron: ${EVENT_EXPORT_JOB_ALERT_CRON:0 */10 * * * *}
+        zone: ${EVENT_EXPORT_JOB_ALERT_ZONE:UTC}

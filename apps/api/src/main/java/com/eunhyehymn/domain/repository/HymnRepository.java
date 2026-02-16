@@ -15,4 +15,6 @@ public interface HymnRepository {
     Optional<Hymn> findById(UUID id);
 
     List<Hymn> findByIdIn(List<UUID> ids);
+
+    void deleteById(UUID id);
 }

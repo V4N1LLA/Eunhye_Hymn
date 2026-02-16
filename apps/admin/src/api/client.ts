@@ -1,0 +1,184 @@
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  migrateLegacyLocalStorageTokens,
+  setTokens,
+} from "../auth/tokenStore";
+
+const API_BASE = "/api/v1";
+
+type UnauthorizedMode = "redirect" | "throw";
+
+export interface ApiRequestOptions {
+  unauthorized?: UnauthorizedMode;
+  includeAuth?: boolean;
+}
+
+interface ApiEnvelope<T = unknown> {
+  success?: boolean;
+  data?: T;
+  error?: {
+    message?: string;
+  };
+}
+
+migrateLegacyLocalStorageTokens();
+
+function authHeaders(includeAuth: boolean): Record<string, string> {
+  if (!includeAuth) {
+    return {};
+  }
+
+  const token = getAccessToken();
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+}
+
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshToken(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+
+  const rt = getRefreshToken();
+  if (!rt) return false;
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: rt }),
+      });
+
+      if (!response.ok) return false;
+
+      const payload = (await response.json()) as ApiEnvelope<{
+        accessToken?: string;
+        refreshToken?: string;
+      }>;
+      const tokens = payload.data;
+      if (!tokens?.accessToken || !tokens?.refreshToken) return false;
+
+      setTokens(tokens.accessToken, tokens.refreshToken);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+function redirectToLogin(): never {
+  clearTokens();
+  window.location.href = "/login";
+  throw new Error("인증이 만료되었습니다.");
+}
+
+function resolveErrorMessage(payload: ApiEnvelope | null, fallback: string): string {
+  return payload?.error?.message ?? fallback;
+}
+
+async function handleResponse<T>(response: Response, unauthorized: UnauthorizedMode): Promise<T> {
+  const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
+
+  if (response.status === 401) {
+    if (unauthorized === "redirect") {
+      return redirectToLogin();
+    }
+    throw new Error(resolveErrorMessage(payload, "인증에 실패했습니다."));
+  }
+
+  if (response.status === 403) {
+    throw new Error(resolveErrorMessage(payload, "관리자 권한이 없습니다. 세션 초기화 후 관리자 계정으로 다시 로그인해 주세요."));
+  }
+
+  if (!response.ok || payload?.success === false) {
+    throw new Error(resolveErrorMessage(payload, "요청 처리 중 오류가 발생했습니다."));
+  }
+
+  return payload?.data as T;
+}
+
+interface RequestOptions extends ApiRequestOptions {
+  method: "GET" | "POST" | "PATCH" | "DELETE";
+  path: string;
+  body?: unknown;
+}
+
+async function authorizedFetch({
+  method,
+  path,
+  body,
+  includeAuth = true,
+}: RequestOptions): Promise<Response> {
+  const doFetch = () => {
+    const headers: Record<string, string> = { ...authHeaders(includeAuth) };
+    if (body !== undefined) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    return fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  };
+
+  let response = await doFetch();
+
+  if (response.status === 401 && includeAuth) {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      response = await doFetch();
+    }
+  }
+
+  return response;
+}
+
+async function apiFetch<T>({
+  method,
+  path,
+  body,
+  includeAuth = true,
+  unauthorized = "redirect",
+}: RequestOptions): Promise<T> {
+  const response = await authorizedFetch({ method, path, body, includeAuth, unauthorized });
+  return handleResponse<T>(response, unauthorized);
+}
+
+export async function apiGet<T>(path: string, options?: ApiRequestOptions): Promise<T> {
+  return apiFetch<T>({ method: "GET", path, ...options });
+}
+
+export async function apiPost<T>(path: string, body?: unknown, options?: ApiRequestOptions): Promise<T> {
+  return apiFetch<T>({ method: "POST", path, body, ...options });
+}
+
+export async function apiPatch<T>(path: string, body: unknown, options?: ApiRequestOptions): Promise<T> {
+  return apiFetch<T>({ method: "PATCH", path, body, ...options });
+}
+
+export async function apiDelete<T>(path: string, options?: ApiRequestOptions): Promise<T> {
+  return apiFetch<T>({ method: "DELETE", path, ...options });
+}
+
+export async function apiFetchRaw(options: RequestOptions): Promise<Response> {
+  const { unauthorized = "redirect" } = options;
+  const response = await authorizedFetch(options);
+
+  if (response.status === 401) {
+    if (unauthorized === "redirect") {
+      return redirectToLogin();
+    }
+  }
+
+  return response;
+}
+

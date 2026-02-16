@@ -1,0 +1,19 @@
+services:
+  api:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-northeast-2}
+        awslogs-group: /eunhye-hymn/api
+        awslogs-stream: api
+        awslogs-create-group: "true"
+        awslogs-multiline-pattern: '^\d{4}-\d{2}-\d{2}'
+
+  nginx:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-northeast-2}
+        awslogs-group: /eunhye-hymn/nginx
+        awslogs-stream: nginx
+        awslogs-create-group: "true"

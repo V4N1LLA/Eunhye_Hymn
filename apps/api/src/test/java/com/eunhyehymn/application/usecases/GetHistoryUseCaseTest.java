@@ -7,6 +7,7 @@ import com.eunhyehymn.domain.model.UserHymnState;
 import com.eunhyehymn.domain.repository.HymnRepository;
 import com.eunhyehymn.domain.repository.UserHymnStateRepository;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +39,10 @@ class GetHistoryUseCaseTest {
                     new UserHymnState(userId, hymnA, false, Instant.now().minusSeconds(60), null, null)
                 );
             }
+
+            @Override
+            public void deleteByHymnId(UUID hymnId) {
+            }
         };
 
         AtomicInteger batchCalls = new AtomicInteger();
@@ -58,12 +63,21 @@ class GetHistoryUseCaseTest {
             }
 
             @Override
+            public List<Hymn> findAll() {
+                return Collections.emptyList();
+            }
+
+            @Override
             public List<Hymn> findByIdIn(List<UUID> ids) {
                 batchCalls.incrementAndGet();
                 return List.of(
                     new Hymn(hymnA, "A", "1", "tag", true, Instant.now()),
                     new Hymn(hymnB, "B", "2", "tag", true, Instant.now())
                 );
+            }
+
+            @Override
+            public void deleteById(UUID id) {
             }
         };
 

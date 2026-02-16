@@ -29,7 +29,20 @@ public class AssetRepositoryAdapter implements AssetRepository {
 
     @Override
     public List<Asset> findByHymnId(UUID hymnId) {
-        return assetJpaRepository.findByHymnId(hymnId).stream().map(AssetMapper::toDomain).toList();
+        return assetJpaRepository.findByHymnIdOrderByCreatedAtAscIdAsc(hymnId)
+            .stream()
+            .map(AssetMapper::toDomain)
+            .toList();
+    }
+
+    @Override
+    public void deleteById(UUID id) {
+        assetJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public void deleteByHymnId(UUID hymnId) {
+        assetJpaRepository.deleteByHymnId(hymnId);
     }
 
     @Override

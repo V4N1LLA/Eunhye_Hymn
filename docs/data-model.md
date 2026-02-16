@@ -12,7 +12,7 @@
 ### 1.2 auth_identities
 - `id` (UUID, PK)
 - `user_id` (UUID, FK -> users.id)
-- `provider` (varchar, GOOGLE/KAKAO)
+- `provider` (varchar, KAKAO)
 - `provider_subject` (varchar)
 - `email` (varchar, nullable)
 - `created_at` (timestamp)
@@ -38,9 +38,10 @@
 ### 1.5 assets
 - `id` (UUID, PK)
 - `hymn_id` (UUID, FK -> hymns.id)
-- `type` (varchar, PDF/AUDIO)
-- `part` (varchar, nullable, S/A/T/B/ALL)
+- `type` (varchar, PNG/MIDI)
+- `part` (varchar, S/A/T/B/ALL)
 - `url` (varchar)
+- `object_key` (varchar)
 - `checksum` (varchar, nullable)
 - `version` (varchar, nullable)
 - `created_at` (timestamp)
@@ -73,6 +74,9 @@
 - `metadata_json` (text, nullable)
 - `created_at` (timestamp)
 - INDEX(`user_id`, `created_at`)
+- INDEX(`created_at` DESC)
+- INDEX(`event_type`, `created_at` DESC)
+- INDEX(`hymn_id`, `created_at` DESC)
 
 ## 2. 메모
 - MVP에서는 태그를 콤마 구분 문자열로 저장한다.

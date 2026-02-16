@@ -59,10 +59,33 @@ $RECYCLE.BIN/
 # Environment
 .env
 .env.*
+.envrc
+.secrets/
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Logs
 logs/
 *.log
 
+# Build output
+dist/
+apps/api/bin/
+
+# Claude Code
+.claude/
+.codex/
+.tmp/
+
+# Local Flutter bootstrap artifacts
+tools/flutter/
+.flutter-home/
+.flutter-gitconfig
+
 # Gradle
 .gradle/
+!.env.example
+!apps/api/.env.example
+!apps/api/gradle/wrapper/gradle-wrapper.jar
