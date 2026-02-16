@@ -954,3 +954,32 @@
 - `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 analyze`
 - `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 test`
 
+## 34. 이번 사이클 기록 (2026-02-16, mobile release readiness)
+
+### 목표
+- 모바일 배포 패키징 준비의 첫 단계로 Android release APK 빌드 검증 경로를 CI에 추가한다.
+
+### 범위
+- 포함: release APK 빌드 워크플로우 추가, 모바일/기준 문서 동기화
+- 제외: 앱스토어 서명 키 연동, iOS 릴리즈 파이프라인 구성
+
+### 수행 작업
+1. Mobile release 검증 워크플로우 추가
+- `.github/workflows/mobile-release-check.yml` 신규 추가
+- PR/develop push + workflow_dispatch 트리거 구성
+- `flutter build apk --release` 실행 및 `app-release.apk` artifact 업로드
+
+2. 모바일 문서 동기화
+- `docs/mobile/README.md`에 release 패키징 준비 섹션 추가
+- 수동 실행 입력(`api_base_url`) 및 artifact 확인 경로 안내 반영
+
+3. 기준 문서 동기화
+- `CLAUDE.md` 마지막 업데이트 날짜 갱신
+- 워크플로우 목록/CI 설명/미완료 항목(모바일 배포 패키징) 상태 갱신
+
+### 검증
+- `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 analyze`
+- `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 test`
+- `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 build apk --release --dart-define=API_BASE_URL=https://example.com/api/v1`
+- 로컬 환경에서 Android SDK 미설치로 release APK 빌드는 실패(`Android SDK could not be found`), CI 워크플로우에서 동일 단계로 검증 보완
+

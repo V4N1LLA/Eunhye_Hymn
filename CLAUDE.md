@@ -1,7 +1,7 @@
 ﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-15
+> 마지막 업데이트: 2026-02-16
 
 ---
 
@@ -50,6 +50,7 @@ Eunhye_Hymn/
 │   ├── api-ci.yml        # API 테스트 (PR + develop push)
 │   ├── admin-ci.yml      # Admin 타입체크 + 빌드 (PR + develop push)
 │   ├── mobile-ci.yml     # Mobile lint/test (PR + develop push)
+│   ├── mobile-release-check.yml # Mobile Android release APK 빌드 검증 + artifact
 │   └── deploy-staging.yml # Staging 자동 배포 (develop push)
 ├── CLAUDE.md             # 이 파일
 ├── README.md
@@ -521,6 +522,12 @@ com.eunhyehymn/
 - **캐시**: Flutter SDK + Pub cache
 - **실행**: `flutter pub get` → `flutter analyze` → `flutter test`
 
+### Mobile Release Check (`mobile-release-check.yml`)
+- **트리거**: PR 및 develop push (apps/mobile/** 변경 시) + `workflow_dispatch`
+- **환경**: ubuntu-latest, Java 17 + Flutter stable
+- **실행**: `flutter pub get` → `flutter build apk --release --dart-define=API_BASE_URL=...`
+- **산출물**: `app-release.apk`를 GitHub Actions artifact로 업로드
+
 ### Deploy Staging (`deploy-staging.yml`)
 - **트리거**: develop push + `workflow_dispatch`
 - **Jobs**: `preflight-secrets` → `test-api` → `check-admin` → `build-and-push` → `deploy`
@@ -765,6 +772,7 @@ develop push → GitHub Actions
 
 **4. 모바일 배포 패키징**
 - 현재 저장소 기준 실행은 `flutter run -d chrome` 중심
+- Android release APK 빌드 검증 워크플로우 추가 완료 (`mobile-release-check.yml`, 2026-02-16)
 - 앱스토어 배포(Android/iOS)를 위한 네이티브 프로젝트 디렉토리 및 서명/릴리즈 파이프라인 준비 필요
 
 ---
