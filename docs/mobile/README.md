@@ -104,6 +104,26 @@ Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
   - `flutter analyze`
   - `flutter test`
 
+## 6.1 Release 패키징 준비
+
+- 워크플로우: `.github/workflows/mobile-release-check.yml`
+- 트리거:
+  - PR 및 `develop` push (`apps/mobile/**` 변경 시)
+  - 수동 실행(`workflow_dispatch`)
+- 목적:
+  - Android `release` APK 빌드가 깨지지 않는지 사전 검증
+  - 빌드 산출물(`app-release.apk`)을 Actions artifact로 업로드
+
+수동 실행 시 `api_base_url` 입력을 제공하면 해당 값으로 `--dart-define=API_BASE_URL`를 주입한다.
+
+로컬에서 동일 검증을 수행하려면 Android SDK가 설치되어 있어야 한다.
+예시:
+
+```powershell
+cd apps/mobile
+..\..\scripts\flutterw.ps1 build apk --release --dart-define=API_BASE_URL=https://example.com/api/v1
+```
+
 ## 7. 운영 연계 체크포인트
 
 - 스테이징 스모크 테스트는 `docs/staging-smoke-checklist.md` 기준으로 수행한다.
