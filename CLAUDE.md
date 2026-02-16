@@ -486,9 +486,9 @@ com.eunhyehymn/
 | `lib/src/features/auth/auth_repository.dart` | 소셜/Dev 로그인, 프로필 조회, 로그아웃 |
 | `lib/src/features/auth/login_page.dart` | 소셜 SDK 직접 로그인 + 수동 토큰 fallback + Dev 로그인 UI |
 | `lib/src/features/hymn/hymn_repository.dart` | 찬양 목록/상세, 즐겨찾기, 메모, 히스토리 API |
-| `lib/src/features/hymn/hymn_list_page.dart` | 찬양 목록 + 검색 |
+| `lib/src/features/hymn/hymn_list_page.dart` | 찬양 목록 + 검색/태그 필터 + 빈 상태/오류 배너 UX |
 | `lib/src/features/hymn/hymn_detail_page.dart` | 찬양 상세 + PNG 에셋 표시 + 즐겨찾기 + 메모 저장 |
-| `lib/src/features/history/history_page.dart` | 최근 열람 히스토리 목록 |
+| `lib/src/features/history/history_page.dart` | 최근 열람 히스토리 + 검색/기간 필터 + 빈 상태/오류 배너 UX |
 | `lib/src/app.dart` | 앱 부트스트랩, 세션 복구, 탭 네비게이션(찬양/히스토리), 로그아웃 |
 
 #### 화면/네비게이션
@@ -687,6 +687,7 @@ develop push → GitHub Actions
 **Mobile 앱 (Flutter MVP)**
 - 소셜 SDK 직접 로그인 (Kakao 모바일, Kakao 웹은 토큰 입력 fallback) + Dev 로그인
 - 찬양 목록/검색 + 상세 조회
+- 목록/히스토리 UX 개선 (검색어 즉시 지우기, 태그/기간 필터, 빈 상태 가이드, 소프트 에러 배너)
 - PNG 에셋 표시 + 메모 조회/저장 + MIDI 에셋 앱 내 재생 UX
 - 즐겨찾기 토글 + 최근 열람 히스토리
 - 오프라인 캐시 fallback + 오프라인 변경(메모/즐겨찾기) 동기화 큐
