@@ -983,3 +983,27 @@
 - `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 build apk --release --dart-define=API_BASE_URL=https://example.com/api/v1`
 - 로컬 환경에서 Android SDK 미설치로 release APK 빌드는 실패(`Android SDK could not be found`), CI 워크플로우에서 동일 단계로 검증 보완
 
+## 35. 이번 사이클 기록 (2026-02-16, changelog sync for merged mobile PRs)
+
+### 목표
+- 머지 완료된 모바일 작업(#89, #90)이 `docs/changelog-dev.md`에도 누락 없이 반영되도록 문서 싱크를 맞춘다.
+
+### 범위
+- 포함: changelog 최신화, 기준 문서(CLAUDE/WORK_CYCLE) 동기화
+- 제외: 애플리케이션 코드/워크플로우 동작 변경
+
+### 수행 작업
+1. changelog 누락분 반영
+- `docs/changelog-dev.md`에 `2026-02-16` 섹션 추가
+- PR #89(모바일 목록/히스토리 UX 개선)과 PR #90(Android release readiness) 반영
+- 머지 커밋(`0520074`, `35569af`) 기준으로 추적 정보 명시
+
+2. 기준 문서 동기화
+- `CLAUDE.md` 문서/준비도 점검 항목에 `docs/changelog-dev.md` 동기화 항목 추가
+- `docs/WORK_CYCLE.md`에 이번 사이클 기록 추가
+
+### 검증
+- `rg -n "2026-02-16|PR #89|PR #90|0520074|35569af" docs/changelog-dev.md`
+- `rg -n "changelog-dev.md" CLAUDE.md docs/WORK_CYCLE.md`
+- `rg -n "^(<<<<<<<|>>>>>>>|=======)$" docs/changelog-dev.md CLAUDE.md docs/WORK_CYCLE.md`
+
