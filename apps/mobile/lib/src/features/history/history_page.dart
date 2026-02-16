@@ -498,8 +498,11 @@ String _labelForRange(_HistoryRange range) {
 }
 
 bool _matchRange(_HistoryRange range, DateTime now, DateTime? itemDate) {
-  if (range == _HistoryRange.all || itemDate == null) {
+  if (range == _HistoryRange.all) {
     return true;
+  }
+  if (itemDate == null) {
+    return false;
   }
 
   final diff = now.difference(itemDate);
