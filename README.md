@@ -90,7 +90,7 @@ npm run dev
 | Storage | AWS S3 (presigned URL) |
 | Auth | Spring Security + JWT + Kakao OAuth |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS v4 |
-| CI/CD | GitHub Actions (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test) |
+| CI/CD | GitHub Actions (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test + Mobile release APK check + Staging 자동 배포) |
 
 ## API 엔드포인트
 

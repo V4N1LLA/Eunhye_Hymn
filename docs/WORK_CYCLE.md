@@ -1007,3 +1007,41 @@
 - `rg -n "changelog-dev.md" CLAUDE.md docs/WORK_CYCLE.md`
 - `rg -n "^(<<<<<<<|>>>>>>>|=======)$" docs/changelog-dev.md CLAUDE.md docs/WORK_CYCLE.md`
 
+## 36. 이번 사이클 기록 (2026-02-17, docs latest sync + pr/merge)
+
+### 목표
+- 최신 `develop` 기준으로 핵심 운영 문서를 동기화하고 PR 생성/머지까지 완료한다.
+
+### 범위
+- 포함: `README.md`, `docs/current-usable-scope.md`, `docs/deployment-readiness-audit.md` 최신화 + 추적 문서(`docs/changelog-dev.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`) 동기화
+- 제외: 애플리케이션 코드/인프라 동작 변경
+
+### 수행 작업
+1. 문서 기준점 최신화
+- `docs/current-usable-scope.md`
+- 작성일/기준 커밋을 `c578c3f` 기준으로 갱신
+- 근거 PR에 #91/#90/#89/#88/#87 반영
+- 스테이징/모바일 실행 증빙(run `22052664286`, `22052482140`) 반영
+
+2. 배포 준비도 리포트 최신화
+- `docs/deployment-readiness-audit.md`
+- 작성일/점검 브랜치 최신화
+- 최신 GitHub Actions 성공 run 근거 추가
+- 잔여 리스크를 "수동 스모크 정례화" 기준으로 명시
+
+3. 루트 문서 정합성 보강
+- `README.md` CI/CD 설명을 현재 워크플로우 구성(API/Admin/Mobile + mobile release + staging deploy)에 맞게 갱신
+
+4. 추적 문서 동기화
+- `docs/changelog-dev.md`에 2026-02-17 문서 동기화 이력 추가
+- `CLAUDE.md` 마지막 업데이트 날짜 및 문서/준비도 점검 항목 동기화
+- `docs/WORK_CYCLE.md`에 본 사이클 기록 추가
+
+### 검증
+- `git pull --ff-only origin develop`
+- `gh run list --repo V4N1LLA/Eunhye_Hymn --workflow deploy-staging.yml --limit 5 --json databaseId,headBranch,headSha,status,conclusion,url`
+- `gh run list --repo V4N1LLA/Eunhye_Hymn --workflow mobile-release-check.yml --limit 5 --json databaseId,headBranch,headSha,status,conclusion,url`
+- `rg -n "c578c3f|22052664286|22052482140|#91|#90|#89|#88|#87" docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md`
+- `rg -n "Mobile release APK check|Staging 자동 배포" README.md`
+- `rg -n "^(<<<<<<<|>>>>>>>|=======)$" README.md docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md CLAUDE.md docs/WORK_CYCLE.md`
+

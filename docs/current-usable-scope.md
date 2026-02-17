@@ -1,10 +1,10 @@
 # 현재 사용 가능 범위 정리
 
-- 작성일: 2026-02-14
+- 작성일: 2026-02-17
 - 기준 브랜치: `develop` (통합/배포 기준)
-- 기준 커밋: `5b08dc0` (2026-02-14 16:58 +09:00 기준 `develop` HEAD)
+- 기준 커밋: `c578c3f` (2026-02-16 15:36:26 +09:00 기준 `develop` HEAD)
 - 근거 문서: `README.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
-- 근거 PR: #56, #55, #54, #53, #52, #49, #48, #47, #46, #45, #43, #42, #41, #40, #38, #37, #36, #31
+- 근거 PR: #91, #90, #89, #88, #87, #56, #55, #54, #53, #52, #49, #48, #47, #46, #45, #43, #42, #41, #40, #38, #37, #36, #31
 
 ## 1. 요약
 
@@ -12,10 +12,10 @@
 
 - 로컬 기능: 관리자 웹(Admin) + 백엔드 API + 모바일 앱(MVP + 모바일 고도화 3건) 사용 가능
 - 배포 기능: AWS 스테이징 자동 배포 파이프라인 코드 구성 완료
-- CI 기능: API/Admin/Mobile 검증 워크플로우 구성 완료
+- CI 기능: API/Admin/Mobile 검증 + Mobile release APK 검증 워크플로우 구성 완료
 - 스테이징 리허설/롤백/복구 자동 실행 증빙 확보(run `22010284332`, `22010387328`, `22010470389`)
 - 현재 우선 과제: 운영 PC 기준 preflight 무스킵 통과 환경 유지 + Admin/Mobile 수동 스모크 정례화
-- 모바일 배포 상태: 현재 저장소 기준 웹 실행(`-d chrome`) 중심이며, 앱스토어 배포(Android/iOS)는 별도 준비가 필요
+- 모바일 배포 상태: Android release APK 빌드 검증 경로(CI) 확보, 앱스토어 배포(Android/iOS)는 별도 준비가 필요
 
 ## 2. 지금 바로 검증 가능한 범위 (로컬)
 
@@ -82,6 +82,7 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 
 - `develop` push 트리거
 - API 테스트 + Admin 타입체크/빌드 + Mobile analyze/test
+- Mobile release APK 빌드 검증(`mobile-release-check.yml`)
 - API/Admin Docker 이미지 ECR push
 - EC2 SSH 배포 및 헬스체크
 
@@ -89,18 +90,21 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 
 - `.github/workflows/deploy-staging.yml`
 - `.github/workflows/mobile-ci.yml`
+- `.github/workflows/mobile-release-check.yml`
 - `infra/aws/*`
 - `apps/admin/Dockerfile`
 - `apps/admin/nginx.conf`
 - `apps/api/Dockerfile`
 
-실행 상태(2026-02-14 기준):
+실행 상태(2026-02-17 기준):
 
 - [x] AWS 리소스 생성(Terraform)
 - [x] GitHub Secrets 설정(`AWS_*`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`, 선택: `ENABLE_AWSLOGS`)
 - [x] EC2 접근 가능 상태 및 배포 계정 권한 확인
 - [x] 배포 서버 `.env` 준비 (`DEPLOY_ENV_FILE` 기반)
 - [x] `develop` 배포 후 헬스체크 통과 (`deploy` verify 단계 성공)
+- [x] `develop` 최신 자동 배포 성공 (`deploy-staging.yml`, run `22052664286`, commit `c578c3f`)
+- [x] Android release APK 빌드 검증 성공 (`mobile-release-check.yml`, run `22052482140`, commit `35569af`)
 - [x] `docs/staging-smoke-checklist.md` 및 `docs/staging-rehearsal-log.md`에 결과 기록
 - [ ] Admin/Mobile 런타임 수동 스모크(실기기/실계정) 주기 실행
 
@@ -110,6 +114,26 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - IAM 권한 샘플: `infra/aws/terraform-deployer-iam-policy.json`
 
 ## 4. 최근 PR 기준 변경 포인트
+
+### PR #91 (changelog-sync-mobile-20260216)
+- PR #89/#90 머지 결과를 `docs/changelog-dev.md`에 반영
+- `docs/WORK_CYCLE.md`, `CLAUDE.md` 문서 싱크
+
+### PR #90 (mobile-release-readiness)
+- Android release APK 빌드 검증 워크플로우 추가
+- `workflow_dispatch` 입력(`api_base_url`) + artifact 업로드 경로 정리
+
+### PR #89 (mobile-friendly-ui-ux)
+- 모바일 목록/히스토리 화면 UX 개선(검색 즉시삭제, 필터, 빈 상태, soft error 배너)
+- 히스토리 기간 필터 처리 보정(날짜 없는 항목 제외)
+
+### PR #88 (staging-feedback-checklist)
+- 스테이징 수동 검수용 체크리스트 문서 추가
+- 사이클 종료 시 `Ship/Hold/Rollback` 판단 기록 템플릿 정리
+
+### PR #87 (mobile-ux-multipage-png)
+- 다중 페이지 PNG 악보 지원
+- 모바일 앱 탐색/표시 UX 보강
 
 ### PR #56 (export-csv-security-hardening)
 - 동기/비동기 CSV 내보내기 수식 주입 방어(`=`, `+`, `-`, `@`) 적용

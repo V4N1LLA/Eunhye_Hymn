@@ -1,7 +1,7 @@
 ﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-16
+> 마지막 업데이트: 2026-02-17
 
 ---
 
@@ -732,6 +732,9 @@ develop push → GitHub Actions
   - `docs/current-usable-scope.md`
   - `docs/mobile/README.md`
   - `README.md`
+- 최신 기준점 문서 동기화 (2026-02-17)
+  - `docs/current-usable-scope.md` (`c578c3f` 기준 커밋/근거 PR/실행 run 반영)
+  - `docs/deployment-readiness-audit.md` (최신 Actions 실행 근거/잔여 리스크 갱신)
 - 개발 변경 이력 동기화
   - `docs/changelog-dev.md`
 - 스테이징 실가동 체크리스트/런북 동기화
