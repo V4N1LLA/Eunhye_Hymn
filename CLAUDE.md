@@ -51,6 +51,7 @@ Eunhye_Hymn/
 │   ├── admin-ci.yml      # Admin 타입체크 + 빌드 (PR + develop push)
 │   ├── mobile-ci.yml     # Mobile lint/test (PR + develop push)
 │   ├── mobile-release-check.yml # Mobile Android release APK 빌드 검증 + artifact
+│   ├── mobile-store-release.yml # Mobile store release readiness (manual: android/ios)
 │   └── deploy-staging.yml # Staging 자동 배포 (develop push)
 ├── CLAUDE.md             # 이 파일
 ├── README.md
@@ -528,6 +529,14 @@ com.eunhyehymn/
 - **실행**: `flutter pub get` → `flutter build apk --release --dart-define=API_BASE_URL=...`
 - **산출물**: `app-release.apk`를 GitHub Actions artifact로 업로드
 
+### Mobile Store Release Readiness (`mobile-store-release.yml`)
+- **트리거**: `workflow_dispatch` (manual)
+- **입력**: `target=android|ios|both`, `api_base_url`
+- **Android 경로**: signed AAB 빌드(`flutter build appbundle --release`)
+  - required secrets: `MOBILE_ANDROID_KEYSTORE_BASE64`, `MOBILE_ANDROID_KEY_ALIAS`, `MOBILE_ANDROID_KEY_PASSWORD`, `MOBILE_ANDROID_STORE_PASSWORD`
+- **iOS 경로**: release no-codesign 빌드(`flutter build ios --release --no-codesign`)
+- **목적**: 스토어 업로드 전 빌드/서명 readiness 검증
+
 ### Deploy Staging (`deploy-staging.yml`)
 - **트리거**: develop push + `workflow_dispatch`
 - **Jobs**: `preflight-secrets` → `test-api` → `check-admin` → `build-and-push` → `deploy`
@@ -733,13 +742,15 @@ develop push → GitHub Actions
   - `docs/mobile/README.md`
   - `README.md`
 - 최신 기준점 문서 동기화 (2026-02-17)
-  - `docs/current-usable-scope.md` (`c578c3f` 기준 커밋/근거 PR/실행 run 반영)
+  - `docs/current-usable-scope.md` (`ee49a0e` 기준 커밋/근거 PR/실행 run 반영)
   - `docs/deployment-readiness-audit.md` (최신 Actions 실행 근거/잔여 리스크 갱신)
 - 개발 변경 이력 동기화
   - `docs/changelog-dev.md`
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`
+- 스테이징 운영 사이클 로그 문서 추가
+  - `docs/staging-smoke-log.md`
 - 스테이징 피드백 루프 체크리스트 추가
   - `docs/staging-feedback-checklist.md`
 - 스테이징 리허설 실행 로그 문서 추가
@@ -763,13 +774,14 @@ develop push → GitHub Actions
   - `scripts/staging-preflight.ps1`
   - `scripts/staging-sync-secrets.ps1`
   - `scripts/staging-rehearsal.ps1`
+  - `scripts/staging-ops-cycle.ps1`
 - IAM 정책 샘플:
   - `infra/aws/terraform-deployer-iam-policy.json`
 - 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
 
 **2. 운영 문서/절차 고도화**
 - `docs/runbook.md` + `docs/staging-smoke-checklist.md` + `docs/staging-feedback-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
-- 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`에 주기적으로 갱신
+- 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`, `docs/staging-smoke-log.md`에 주기적으로 갱신
 
 **3. 기능 백로그**
 - 비동기 export 운영 지표(실패율/처리시간/정리량) 정례화 완료 (2026-02-14)
@@ -778,7 +790,8 @@ develop push → GitHub Actions
 **4. 모바일 배포 패키징**
 - 현재 저장소 기준 실행은 `flutter run -d chrome` 중심
 - Android release APK 빌드 검증 워크플로우 추가 완료 (`mobile-release-check.yml`, 2026-02-16)
-- 앱스토어 배포(Android/iOS)를 위한 네이티브 프로젝트 디렉토리 및 서명/릴리즈 파이프라인 준비 필요
+- Android signed AAB / iOS no-codesign 수동 readiness 워크플로우 추가 완료 (`mobile-store-release.yml`, 2026-02-17)
+- 남은 과제: 스토어 업로드 자동화(서명/인증서/배포 트랙/릴리즈 노트) 파이프라인 확정
 
 ---
 

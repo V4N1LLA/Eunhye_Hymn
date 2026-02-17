@@ -10,6 +10,9 @@
 - [ ] GitHub Actions 배포 워크플로가 정상 완료되었는지 확인
   - `.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120`
   - 기록용 표가 필요하면 `-AsMarkdown` 옵션 사용
+- [ ] 운영 사이클 자동 점검 실행 (권장)
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자>`
+  - 결과는 `docs/staging-smoke-log.md`에 자동 기록
 - [ ] 점검 대상 커밋 SHA/배포 시각/담당자 확정
 - [ ] 자동 리허설 로그(`docs/staging-rehearsal-log.md`) 최신 행 확인
 - [ ] 관리자 계정 및 모바일 테스트 계정 준비
@@ -97,3 +100,16 @@
 1. `docs/runbook.md`의 롤백 절차 수행
 2. 장애 원인/영향 범위/복구 시각 기록
 3. `docs/changelog-dev.md`에 후속 조치 추가
+
+## 8. 운영 사이클 실행 기록 (2026-02-17)
+
+- 실행 명령:
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex`
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight`
+- 결과:
+  - 배포 게이트: PASS (`run 22119056042`, `deploy/verify success`)
+  - preflight: FAIL (`aws sts get-caller-identity`: session expired)
+  - 판정: `HOLD` (수동 스모크 시작 전 AWS 재인증 필요)
+  - `-SkipPreflight` 실행 시 판정: `CONDITIONAL_GO` (수동 스모크 `PENDING`)
+- 로그 문서:
+  - `docs/staging-smoke-log.md`

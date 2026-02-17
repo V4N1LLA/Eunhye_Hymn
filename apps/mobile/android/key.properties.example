@@ -1,0 +1,7 @@
+# Copy to `apps/mobile/android/key.properties` for signed release builds.
+# The file must not be committed.
+
+storeFile=keystore/release.jks
+storePassword=CHANGE_ME
+keyAlias=CHANGE_ME
+keyPassword=CHANGE_ME
