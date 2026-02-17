@@ -1073,6 +1073,7 @@
   - manual target 선택(`android|ios|both`)
   - Android signed AAB build
   - iOS release no-codesign build
+  - 리뷰 반영: keystore 생성 경로를 `android/app/keystore/release.jks`로 수정
 
 4. 문서 동기화
 - 운영 문서: `docs/staging-smoke-checklist.md`, `docs/staging-feedback-checklist.md`, `docs/runbook.md`, `infra/aws/README.md`

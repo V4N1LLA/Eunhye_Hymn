@@ -58,8 +58,8 @@ jobs:
 
       - name: Prepare Android keystore
         run: |
-          mkdir -p android/keystore
-          echo "$MOBILE_ANDROID_KEYSTORE_BASE64" | base64 --decode > android/keystore/release.jks
+          mkdir -p android/app/keystore
+          echo "$MOBILE_ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/keystore/release.jks
           cat > android/key.properties <<EOF
           storeFile=keystore/release.jks
           storePassword=$MOBILE_ANDROID_STORE_PASSWORD

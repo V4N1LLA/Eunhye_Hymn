@@ -18,6 +18,7 @@
   - Android release signing 설정(`apps/mobile/android/app/build.gradle.kts`) 개선
   - `apps/mobile/android/key.properties.example` 추가
   - `.github/workflows/mobile-store-release.yml` 추가 (manual: android signed AAB / ios no-codesign)
+  - PR 리뷰 코멘트 반영: Android keystore 생성 경로를 `android/app/keystore`로 수정
   - 모바일 문서 동기화 (`apps/mobile/README.md`, `docs/mobile/README.md`)
 - 기준 문서 동기화
   - `README.md`, `docs/current-usable-scope.md`, `docs/deployment-readiness-audit.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
