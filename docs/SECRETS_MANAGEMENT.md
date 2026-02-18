@@ -37,3 +37,13 @@
 3. Remove leaked values from history if needed.
 4. Record follow-up in `docs/changelog-dev.md`.
 
+## 6. Mobile Release Secrets (GitHub Actions)
+
+Android signing (`.github/workflows/mobile-store-release.yml`):
+- `MOBILE_ANDROID_KEYSTORE_BASE64`
+- `MOBILE_ANDROID_KEY_ALIAS`
+- `MOBILE_ANDROID_KEY_PASSWORD`
+- `MOBILE_ANDROID_STORE_PASSWORD`
+
+iOS 배포 시크릿은 현재 범위에서 제외(추후 iOS 배포 작업 시 별도 추가).
+

@@ -58,6 +58,7 @@ docs/       프로젝트 문서
 - 스테이징 운영 사이클 로그: [docs/staging-smoke-log.md](./docs/staging-smoke-log.md)
 - 스테이징 피드백 체크리스트: [docs/staging-feedback-checklist.md](./docs/staging-feedback-checklist.md)
 - 모바일 문서: [docs/mobile/README.md](./docs/mobile/README.md)
+- 모바일 최소 설치 QA 가이드: [docs/mobile/qa-minimal-tooling.md](./docs/mobile/qa-minimal-tooling.md)
 - 로컬 셋업 가이드: [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
 - 시크릿 관리 가이드: [docs/SECRETS_MANAGEMENT.md](./docs/SECRETS_MANAGEMENT.md)
 - 작업 사이클 기준서: [docs/WORK_CYCLE.md](./docs/WORK_CYCLE.md)

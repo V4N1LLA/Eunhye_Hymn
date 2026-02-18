@@ -81,12 +81,14 @@ lib/
 
 - Android release check: `.github/workflows/mobile-release-check.yml`
   - Builds `app-release.apk` and uploads artifact.
-- Store release readiness: `.github/workflows/mobile-store-release.yml` (manual)
-  - `target=android`: signed AAB build (`flutter build appbundle --release`)
-  - `target=ios`: release build without codesign (`flutter build ios --release --no-codesign`)
-  - `target=both`: runs both jobs
+- Store release readiness (Android only for now): `.github/workflows/mobile-store-release.yml` (manual)
+  - signed AAB build (`flutter build appbundle --release`)
+  - input: `api_base_url`
 
 Android signing config:
 - Copy `apps/mobile/android/key.properties.example` to `apps/mobile/android/key.properties`.
 - Fill `storeFile`, `storePassword`, `keyAlias`, `keyPassword`.
 - `key.properties` and keystore files are ignored by git.
+
+See also:
+- Minimal-tooling QA guide: `docs/mobile/qa-minimal-tooling.md`
