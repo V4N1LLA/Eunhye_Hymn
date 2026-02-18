@@ -1,11 +1,13 @@
 package com.eunhyehymn.infrastructure.persistence;
 
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface InviteCodeJpaRepository extends JpaRepository<InviteCodeEntity, String> {
+    Optional<InviteCodeEntity> findFirstByCodeIgnoreCaseOrderByCreatedAtAsc(String code);
 
     @Modifying
     @Query("UPDATE InviteCodeEntity e SET e.usedCount = e.usedCount + 1 " +
