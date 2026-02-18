@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'core/config/app_config.dart';
 import 'core/network/api_client.dart';
+import 'core/storage/onboarding_storage.dart';
 import 'core/storage/token_storage.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/login_page.dart';
+import 'features/auth/onboarding_page.dart';
 import 'features/auth/social_sdk_service.dart';
 import 'features/history/history_page.dart';
 import 'features/hymn/hymn_detail_page.dart';
@@ -23,11 +25,14 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
   late final ApiClient _apiClient;
   late final AuthRepository _authRepository;
   late final SocialSdkService _socialSdkService;
+  late final OnboardingStorage _onboardingStorage;
   late final HymnRepository _hymnRepository;
 
   bool _initializing = true;
   SessionProfile? _profile;
   String? _initError;
+  String? _loginError;
+  bool _needsOnboarding = false;
 
   @override
   void initState() {
@@ -42,6 +47,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       tokenStorage: _tokenStorage,
     );
     _socialSdkService = SocialSdkService()..initialize();
+    _onboardingStorage = OnboardingStorage();
     _hymnRepository = HymnRepository(apiClient: _apiClient);
     _bootstrap();
   }
@@ -58,6 +64,8 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
         _hymnRepository.bindSessionUser(null);
         setState(() {
           _profile = null;
+          _needsOnboarding = false;
+          _loginError = null;
         });
         return;
       }
@@ -68,13 +76,20 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
         _hymnRepository.bindSessionUser(null);
         setState(() {
           _profile = null;
+          _needsOnboarding = false;
+          _loginError = null;
         });
         return;
       }
 
+      final needsOnboarding =
+          !(await _onboardingStorage.isCompleted(profile.userId));
+
       _hymnRepository.bindSessionUser(profile.userId);
       setState(() {
         _profile = profile;
+        _needsOnboarding = needsOnboarding;
+        _loginError = null;
       });
       await _hymnRepository.syncPendingActions();
     } catch (e) {
@@ -83,6 +98,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       }
       setState(() {
         _initError = e.toString();
+        _loginError = null;
       });
     } finally {
       if (mounted) {
@@ -94,11 +110,25 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
   }
 
   Future<void> _onLoggedIn(SessionProfile profile) async {
+    final needsOnboarding =
+        !(await _onboardingStorage.isCompleted(profile.userId));
     _hymnRepository.bindSessionUser(profile.userId);
     setState(() {
       _profile = profile;
+      _needsOnboarding = needsOnboarding;
+      _loginError = null;
     });
     await _hymnRepository.syncPendingActions();
+  }
+
+  Future<void> _onOnboardingCompleted() async {
+    if (!mounted || _profile == null) {
+      return;
+    }
+    await _hymnRepository.syncPendingActions();
+    setState(() {
+      _needsOnboarding = false;
+    });
   }
 
   Future<void> _onLogout() async {
@@ -109,6 +139,8 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
     }
     setState(() {
       _profile = null;
+      _needsOnboarding = false;
+      _loginError = null;
     });
   }
 
@@ -170,7 +202,16 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       return LoginPage(
         authRepository: _authRepository,
         socialSdkService: _socialSdkService,
+        initialError: _loginError,
         onLoggedIn: _onLoggedIn,
+      );
+    }
+
+    if (_needsOnboarding) {
+      return OnboardingPage(
+        userId: _profile!.userId,
+        onboardingStorage: _onboardingStorage,
+        onCompleted: _onOnboardingCompleted,
       );
     }
 
@@ -243,7 +284,7 @@ class _HomeShellState extends State<_HomeShell> {
         onOpenHymnDetail: _openHymnDetail,
       ),
     ];
-    final titles = <String>['찬양 둘러보기', '최근 본 찬양'];
+    final titles = <String>['찬양', '히스토리'];
 
     return Scaffold(
       appBar: AppBar(
@@ -286,7 +327,7 @@ class _HomeShellState extends State<_HomeShell> {
           NavigationDestination(
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
-            label: '최근 본 항목',
+            label: '히스토리',
           ),
         ],
       ),

@@ -1,4 +1,4 @@
-﻿# Eunhye Hymn
+# Eunhye Hymn
 
 교회 찬양팀을 위한 악보(PNG) 및 파트 연습 음원(MIDI) 관리 시스템입니다.
 
@@ -61,6 +61,7 @@ docs/       프로젝트 문서
 - 모바일 최소 설치 QA 가이드: [docs/mobile/qa-minimal-tooling.md](./docs/mobile/qa-minimal-tooling.md)
 - 로컬 셋업 가이드: [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
 - 시크릿 관리 가이드: [docs/SECRETS_MANAGEMENT.md](./docs/SECRETS_MANAGEMENT.md)
+- 팀 로컬 재시작 가이드(다른 PC/Android 중심): [docs/TEAM_LOCAL_DEVELOPMENT.md](./docs/TEAM_LOCAL_DEVELOPMENT.md)
 - 작업 사이클 기준서: [docs/WORK_CYCLE.md](./docs/WORK_CYCLE.md)
 - AWS 무료 티어 온보딩: [docs/admin/aws-free-tier-onboarding.md](./docs/admin/aws-free-tier-onboarding.md)
 - 모바일 앱 README: [apps/mobile/README.md](./apps/mobile/README.md)

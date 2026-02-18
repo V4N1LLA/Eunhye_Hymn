@@ -16,6 +16,7 @@ import com.eunhyehymn.domain.repository.UserRepository;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -64,16 +65,15 @@ public class SocialLoginUseCase {
 
     @Transactional
     public LoginResult login(String provider, String token, String inviteCode) {
-        // 1. 소셜 토큰 검증 → 사용자 정보 추출
         String normalizedProvider = provider.toUpperCase();
         SocialUserInfo userInfo = socialTokenVerifier.verify(normalizedProvider, token);
+        String normalizedInviteCode = normalizeInviteCode(inviteCode);
 
         boolean isAdminCandidate = isAdminCandidate(normalizedProvider, userInfo);
         if (enforceAdminOnly && !isAdminCandidate) {
-            throw new AdminOnlyException("관리자만 로그인할 수 있습니다");
+            throw new AdminOnlyException("관리자만 이용 가능한 계정입니다.");
         }
 
-        // 2. AuthIdentity 조회
         Optional<AuthIdentity> existingIdentity = authIdentityRepository
             .findByProviderAndProviderSubject(normalizedProvider, userInfo.providerSubject());
 
@@ -81,10 +81,9 @@ public class SocialLoginUseCase {
         User user;
 
         if (existingIdentity.isPresent()) {
-            // 기존 사용자: 초대코드 검증 불필요, lastLoginAt 갱신
             User existing = userRepository.findById(existingIdentity.get().userId())
                 .orElseThrow(() -> new IllegalStateException(
-                    "AuthIdentity에 연결된 User를 찾을 수 없습니다: " + existingIdentity.get().userId()));
+                    "AuthIdentity에 해당하는 사용자 조회 실패: " + existingIdentity.get().userId()));
 
             Role effectiveRole = existing.role();
             if (isAdminCandidate && existing.role() != Role.ADMIN) {
@@ -102,30 +101,25 @@ public class SocialLoginUseCase {
             userRepository.save(user);
         } else {
             if (!isAdminCandidate) {
-                // 신규 사용자: 초대코드 검증 필수
-                if (inviteCode == null || inviteCode.isBlank()) {
-                    throw new InvalidInviteCodeException("초대코드가 필요합니다");
+                if (normalizedInviteCode == null || normalizedInviteCode.isBlank()) {
+                    throw new InvalidInviteCodeException("초대코드가 비어있습니다");
                 }
 
-                // 초대코드 존재 여부 확인
-                inviteCodeRepository.findByCode(inviteCode)
+                inviteCodeRepository.findByCode(normalizedInviteCode)
                     .orElseThrow(() -> new InvalidInviteCodeException("유효하지 않은 초대코드입니다"));
 
-                // 원자적으로 usedCount 증가 (enabled, maxUses, expiresAt 동시 검증)
-                boolean incremented = inviteCodeRepository.incrementUsedCount(inviteCode);
+                boolean incremented = inviteCodeRepository.incrementUsedCount(normalizedInviteCode);
                 if (!incremented) {
                     throw new InvalidInviteCodeException("유효하지 않은 초대코드입니다");
                 }
             }
 
-            // User 생성
             UUID userId = UUID.randomUUID();
             String displayName = userInfo.displayName() != null ? userInfo.displayName() : normalizedProvider + " User";
             Role role = isAdminCandidate ? Role.ADMIN : Role.USER;
             user = new User(userId, displayName, role, UserStatus.ACTIVE, now, now);
             userRepository.save(user);
 
-            // AuthIdentity 생성
             AuthIdentity identity = new AuthIdentity(
                 UUID.randomUUID(),
                 userId,
@@ -137,7 +131,6 @@ public class SocialLoginUseCase {
             authIdentityRepository.save(identity);
         }
 
-        // 3. JWT 발급
         String accessToken = tokenService.issueAccessToken(user.id().toString(), user.role().name());
         String refreshToken = tokenService.issueRefreshToken();
         String hash = tokenHashService.hash(refreshToken);
@@ -168,6 +161,13 @@ public class SocialLoginUseCase {
         }
 
         return false;
+    }
+
+    private String normalizeInviteCode(String inviteCode) {
+        if (inviteCode == null) {
+            return null;
+        }
+        return inviteCode.trim().toUpperCase(Locale.ROOT);
     }
 
     public record LoginResult(String accessToken, String refreshToken, boolean newUser) {

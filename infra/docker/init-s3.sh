@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-# init-s3.sh — Create S3 bucket in LocalStack (idempotent)
+# init-s3.sh - Create S3 bucket in LocalStack (idempotent)
 # ==============================================================
 set -euo pipefail
 

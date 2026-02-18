@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 @Configuration
@@ -29,6 +30,9 @@ public class AssetConfig {
         if (endpoint != null && !endpoint.isBlank()) {
             builder.endpointOverride(URI.create(endpoint));
         }
+        builder.serviceConfiguration(
+            S3Configuration.builder().pathStyleAccessEnabled(true).build()
+        );
         return new S3StorageService(
             builder.build(),
             bucket,
