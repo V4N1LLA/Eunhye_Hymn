@@ -45,5 +45,11 @@ Android signing (`.github/workflows/mobile-store-release.yml`):
 - `MOBILE_ANDROID_KEY_PASSWORD`
 - `MOBILE_ANDROID_STORE_PASSWORD`
 
-iOS 배포 시크릿은 현재 범위에서 제외(추후 iOS 배포 작업 시 별도 추가).
-
+iOS TestFlight upload (`.github/workflows/mobile-store-release.yml`):
+- `MOBILE_IOS_BUNDLE_ID`
+- `MOBILE_IOS_TEAM_ID`
+- `MOBILE_IOS_P12_BASE64`
+- `MOBILE_IOS_P12_PASSWORD`
+- `MOBILE_IOS_APPSTORE_ISSUER_ID`
+- `MOBILE_IOS_APPSTORE_API_KEY_ID`
+- `MOBILE_IOS_APPSTORE_API_PRIVATE_KEY`
