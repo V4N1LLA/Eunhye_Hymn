@@ -3,6 +3,7 @@ package com.eunhyehymn.application.usecases;
 import com.eunhyehymn.domain.model.InviteCode;
 import com.eunhyehymn.domain.repository.InviteCodeRepository;
 import java.time.Instant;
+import java.util.Locale;
 
 public class ValidateInviteCodeUseCase {
     private final InviteCodeRepository inviteCodeRepository;
@@ -12,7 +13,8 @@ public class ValidateInviteCodeUseCase {
     }
 
     public boolean validate(String code) {
-        return inviteCodeRepository.findByCode(code)
+        String normalizedCode = normalizeInviteCode(code);
+        return inviteCodeRepository.findByCode(normalizedCode)
             .map(this::isValid)
             .orElse(false);
     }
@@ -28,5 +30,12 @@ public class ValidateInviteCodeUseCase {
             return false;
         }
         return true;
+    }
+
+    private String normalizeInviteCode(String code) {
+        if (code == null) {
+            return "";
+        }
+        return code.trim().toUpperCase(Locale.ROOT);
     }
 }

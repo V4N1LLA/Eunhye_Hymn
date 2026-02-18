@@ -12,8 +12,9 @@ COPY gradlew.bat .
 COPY build.gradle .
 COPY settings.gradle .
 
-# Ensure gradlew is executable
-RUN chmod +x gradlew
+# Ensure gradlew works on Linux containers even on CRLF checkouts.
+RUN sed -i 's/\r$//' gradlew \
+    && chmod +x gradlew
 
 # Download dependencies (cached unless build files change)
 RUN ./gradlew dependencies --no-daemon || true

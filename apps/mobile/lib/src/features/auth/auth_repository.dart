@@ -31,7 +31,7 @@ class AuthRepository {
     try {
       final raw = await apiClient.get('/me/profile');
       if (raw is! Map<String, dynamic>) {
-        throw ApiException('프로필 응답 형식이 올바르지 않습니다.');
+        throw ApiException('Profile response is invalid.');
       }
       return _toSessionProfile(raw);
     } on ApiException catch (e) {
@@ -66,7 +66,7 @@ class AuthRepository {
     final profile = await fetchProfile();
     if (profile == null) {
       await tokenStorage.clear();
-      throw ApiException('로그인 후 프로필 조회에 실패했습니다.');
+      throw ApiException('Login response is not usable.');
     }
     return profile;
   }
@@ -95,7 +95,34 @@ class AuthRepository {
     final profile = await fetchProfile();
     if (profile == null) {
       await tokenStorage.clear();
-      throw ApiException('Dev 로그인 후 프로필 조회에 실패했습니다.');
+      throw ApiException('Login response is not usable.');
+    }
+    return profile;
+  }
+
+  Future<SessionProfile> loginWithAdmin({
+    required String loginId,
+    required String password,
+  }) async {
+    final raw = await apiClient.post(
+      '/auth/admin/login',
+      includeAuth: false,
+      body: {
+        'loginId': loginId,
+        'password': password,
+      },
+    );
+
+    final tokens = _extractTokens(raw);
+    await tokenStorage.saveTokens(
+      accessToken: tokens.$1,
+      refreshToken: tokens.$2,
+    );
+
+    final profile = await fetchProfile();
+    if (profile == null) {
+      await tokenStorage.clear();
+      throw ApiException('Login response is not usable.');
     }
     return profile;
   }
@@ -110,7 +137,7 @@ class AuthRepository {
           body: {'refreshToken': refreshToken},
         );
       } on ApiException {
-        // 토큰 만료/폐기 상태에서도 로컬 세션 정리는 계속 진행한다.
+        // ignore logout failures to ensure local tokens are cleared
       }
     }
     await tokenStorage.clear();
@@ -127,7 +154,7 @@ class AuthRepository {
         userId.isEmpty ||
         roleText == null ||
         roleText.isEmpty) {
-      throw ApiException('프로필 응답에 필수 값이 없습니다.');
+      throw ApiException('Profile response is invalid.');
     }
 
     final role = roleText == 'ADMIN' ? UserRole.admin : UserRole.user;
@@ -140,7 +167,7 @@ class AuthRepository {
 
   (String, String) _extractTokens(Object? raw) {
     if (raw is! Map<String, dynamic>) {
-      throw ApiException('토큰 응답 형식이 올바르지 않습니다.');
+      throw ApiException('API response is invalid.');
     }
 
     final accessToken = raw['accessToken']?.toString();
@@ -149,7 +176,7 @@ class AuthRepository {
         accessToken.isEmpty ||
         refreshToken == null ||
         refreshToken.isEmpty) {
-      throw ApiException('토큰 응답에 필수 값이 없습니다.');
+      throw ApiException('API response has invalid token data.');
     }
 
     return (accessToken, refreshToken);

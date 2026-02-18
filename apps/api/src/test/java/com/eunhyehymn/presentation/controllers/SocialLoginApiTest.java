@@ -199,4 +199,25 @@ class SocialLoginApiTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.newUser").value(true));
     }
+
+    @Test
+    void inviteCodeIsNormalizedBeforeValidation() throws Exception {
+        inviteCodeJpaRepository.save(new InviteCodeEntity(
+            "TRIM-CODE", null, "trim", null, 0, true, null, Instant.now()
+        ));
+
+        when(socialTokenVerifier.verify(eq("KAKAO"), eq("trim-token")))
+            .thenReturn(new SocialUserInfo("trim-sub", "trim@kakao.com", "Trim User"));
+
+        Map<String, String> request = new HashMap<>();
+        request.put("provider", "KAKAO");
+        request.put("token", "trim-token");
+        request.put("inviteCode", "  trim-code  ");
+
+        mockMvc.perform(post("/auth/social")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.newUser").value(true));
+    }
 }
