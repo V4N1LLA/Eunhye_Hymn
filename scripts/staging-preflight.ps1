@@ -33,6 +33,20 @@ function Add-Check {
   }
 }
 
+function Set-ProcessEnvVar {
+  param(
+    [string]$Name,
+    [string]$Value
+  )
+
+  if ([string]::IsNullOrWhiteSpace($Value)) {
+    Remove-Item ("Env:" + $Name) -ErrorAction SilentlyContinue
+    return
+  }
+
+  Set-Item ("Env:" + $Name) $Value
+}
+
 function Test-CommandExists {
   param([string]$Name)
   $cmd = Get-Command $Name -ErrorAction SilentlyContinue
@@ -118,6 +132,39 @@ function Build-AwsCommand {
   return "aws --profile $AwsProfile $Inner"
 }
 
+function Export-AwsCredentialsToEnvironment {
+  $exportArgs = @("configure", "export-credentials", "--format", "process")
+  if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) {
+    $exportArgs += @("--profile", $AwsProfile)
+  }
+
+  $output = & aws @exportArgs 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    return $false
+  }
+
+  $json = $output -join "`n"
+  if ([string]::IsNullOrWhiteSpace($json)) {
+    return $false
+  }
+
+  try {
+    $creds = $json | ConvertFrom-Json
+  } catch {
+    return $false
+  }
+
+  if ([string]::IsNullOrWhiteSpace($creds.AccessKeyId) -or [string]::IsNullOrWhiteSpace($creds.SecretAccessKey)) {
+    return $false
+  }
+
+  Set-ProcessEnvVar -Name "AWS_ACCESS_KEY_ID" -Value $creds.AccessKeyId
+  Set-ProcessEnvVar -Name "AWS_SECRET_ACCESS_KEY" -Value $creds.SecretAccessKey
+  Set-ProcessEnvVar -Name "AWS_SESSION_TOKEN" -Value $creds.SessionToken
+  Set-ProcessEnvVar -Name "AWS_CREDENTIAL_EXPIRATION" -Value $creds.Expiration
+  return $true
+}
+
 Add-Check "aws cli" (Test-CommandExists "aws") "required"
 Add-Check "terraform cli" (Test-CommandExists "terraform") "required"
 Add-Check "gh cli" (Test-CommandExists "gh") "required"
@@ -167,28 +214,53 @@ Test-AwsPermission "aws ec2 describe-availability-zones" (Build-AwsCommand "ec2 
 Test-AwsPermission "aws ec2 describe-images" (Build-AwsCommand "ec2 describe-images --owners amazon --query ""Images[0].ImageId"" --output text")
 Test-AwsPermission "aws ec2 describe-key-pairs" (Build-AwsCommand "ec2 describe-key-pairs --output json")
 
-$init = Run-CommandCapture "terraform -chdir=$TerraformDir init -backend=false -input=false"
-Add-Check "terraform init (backend=false)" ($init.ExitCode -eq 0) ($(if ($init.ExitCode -eq 0) { "ok" } else { "failed" }))
+$terraformEnvNames = @(
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_SESSION_TOKEN",
+  "AWS_CREDENTIAL_EXPIRATION",
+  "AWS_PROFILE",
+  "AWS_DEFAULT_PROFILE"
+)
+$terraformEnvBackup = @{}
+foreach ($name in $terraformEnvNames) {
+  $terraformEnvBackup[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
+}
 
-$validate = Run-CommandCapture "terraform -chdir=$TerraformDir validate"
-Add-Check "terraform validate" ($validate.ExitCode -eq 0) ($(if ($validate.ExitCode -eq 0) { "ok" } else { "failed" }))
+try {
+  $null = Export-AwsCredentialsToEnvironment
+  if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) {
+    Set-ProcessEnvVar -Name "AWS_PROFILE" -Value $AwsProfile
+    Set-ProcessEnvVar -Name "AWS_DEFAULT_PROFILE" -Value $AwsProfile
+  }
 
-if (-not $SkipTerraformPlan) {
-  $tfvarsPath = Join-Path $TerraformDir "terraform.tfvars"
-  if (-not (Test-Path $tfvarsPath)) {
-    Add-Check "terraform plan" $false "missing: $tfvarsPath"
-  } else {
-    $plan = Run-CommandCapture "terraform -chdir=$TerraformDir plan -detailed-exitcode -input=false -lock=false -out=tfplan.preflight"
-    if ($plan.ExitCode -eq 0) {
-      Add-Check "terraform plan" $true "no changes"
-    } elseif ($plan.ExitCode -eq 2) {
-      Add-Check "terraform plan" $true "changes detected"
+  $init = Run-CommandCapture ('terraform -chdir="{0}" init -backend=false -input=false' -f $TerraformDir)
+  Add-Check "terraform init (backend=false)" ($init.ExitCode -eq 0) ($(if ($init.ExitCode -eq 0) { "ok" } else { "failed" }))
+
+  $validate = Run-CommandCapture ('terraform -chdir="{0}" validate' -f $TerraformDir)
+  Add-Check "terraform validate" ($validate.ExitCode -eq 0) ($(if ($validate.ExitCode -eq 0) { "ok" } else { "failed" }))
+
+  if (-not $SkipTerraformPlan) {
+    $tfvarsPath = Join-Path $TerraformDir "terraform.tfvars"
+    if (-not (Test-Path $tfvarsPath)) {
+      Add-Check "terraform plan" $false "missing: $tfvarsPath"
     } else {
-      Add-Check "terraform plan" $false "failed (run terraform plan for details)"
+      $plan = Run-CommandCapture ('terraform -chdir="{0}" plan -detailed-exitcode -input=false -lock=false -out tfplan.preflight' -f $TerraformDir)
+      if ($plan.ExitCode -eq 0) {
+        Add-Check "terraform plan" $true "no changes"
+      } elseif ($plan.ExitCode -eq 2) {
+        Add-Check "terraform plan" $true "changes detected"
+      } else {
+        Add-Check "terraform plan" $false "failed (run terraform plan for details)"
+      }
+      if (Test-Path "$TerraformDir/tfplan.preflight") {
+        Remove-Item "$TerraformDir/tfplan.preflight" -Force
+      }
     }
-    if (Test-Path "$TerraformDir/tfplan.preflight") {
-      Remove-Item "$TerraformDir/tfplan.preflight" -Force
-    }
+  }
+} finally {
+  foreach ($name in $terraformEnvNames) {
+    Set-ProcessEnvVar -Name $name -Value $terraformEnvBackup[$name]
   }
 }
 
