@@ -124,9 +124,31 @@ cd apps/mobile
 ..\..\scripts\flutterw.ps1 build apk --release --dart-define=API_BASE_URL=https://example.com/api/v1
 ```
 
+## 6.2 Store release readiness
+
+- 워크플로우: `.github/workflows/mobile-store-release.yml`
+- 트리거: 수동 실행(`workflow_dispatch`)
+- 입력:
+  - `target`: `android` | `ios` | `both`
+  - `api_base_url`: 릴리즈 빌드 시 주입할 API URL
+- Android 경로:
+  - 서명형 AAB 빌드(`flutter build appbundle --release`)
+  - 필요한 Secrets:
+    - `MOBILE_ANDROID_KEYSTORE_BASE64`
+    - `MOBILE_ANDROID_KEY_ALIAS`
+    - `MOBILE_ANDROID_KEY_PASSWORD`
+    - `MOBILE_ANDROID_STORE_PASSWORD`
+- iOS 경로:
+  - 무서명 릴리즈 빌드(`flutter build ios --release --no-codesign`)
+  - 코드서명/배포는 Apple 계정/인증서 준비 후 별도 단계에서 수행
+- Android 서명 설정:
+  - `apps/mobile/android/key.properties.example`를 기준으로 `apps/mobile/android/key.properties` 구성
+  - `key.properties`가 없으면 로컬 릴리즈 체크는 debug signing fallback을 사용
+
 ## 7. 운영 연계 체크포인트
 
 - 스테이징 스모크 테스트는 `docs/staging-smoke-checklist.md` 기준으로 수행한다.
+- 운영 사이클 자동 점검은 `scripts/staging-ops-cycle.ps1`를 사용하고 결과를 `docs/staging-smoke-log.md`에 누적한다.
 - 모바일 결과(로그인/재생/동기화/Kakao fallback)는 `docs/runbook.md` 배포 기록과 함께 남긴다.
 - CI(`flutter analyze`, `flutter test`) 결과를 배포 승인 근거로 포함한다.
 

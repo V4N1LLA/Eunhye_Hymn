@@ -13,6 +13,7 @@
 ## 3. 참조 문서
 - `docs/staging-smoke-checklist.md`
 - `docs/staging-rehearsal-log.md`
+- `docs/staging-smoke-log.md`
 - `docs/deployment-readiness-audit.md`
 - `docs/staging-admin-login.md`
 - `infra/aws/README.md`
@@ -28,6 +29,9 @@
 - [ ] 배포 리허설 자동 실행(권장)
   - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>]`
   - 로컬 확인만 필요하면 `-DryRun` 사용
+- [ ] 운영 사이클 자동 점검(권장)
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자>`
+  - preflight + 최신 배포 게이트 + `docs/staging-smoke-log.md` 기록을 일괄 수행
 - [ ] GitHub Actions 필수 Secrets 등록 확인
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
 - [ ] GitHub Actions 배포 워크플로 최신 성공 이력 확인
@@ -50,7 +54,7 @@
    - `curl http://<EC2_HOST>/api/v1/ping`
 5. `docs/staging-smoke-checklist.md` 전 항목 수행
 6. 결과 기록
-   - 성공: 배포 시각, 커밋, 수행자, 체크 결과를 문서/티켓에 기록 (`docs/staging-rehearsal-log.md` 포함)
+   - 성공: 배포 시각, 커밋, 수행자, 체크 결과를 문서/티켓에 기록 (`docs/staging-rehearsal-log.md`, `docs/staging-smoke-log.md` 포함)
    - 실패: 즉시 롤백 후 장애 대응 절차로 전환
 
 ## 6. 롤백 절차
@@ -89,5 +93,6 @@
 
 ## 9. 정기 점검 (권장)
 - 주 1회 스테이징 배포 리허설 + 스모크 체크리스트 1회 수행
+- 주 1회 `staging-ops-cycle.ps1` 실행 결과를 기준으로 Go/Hold 근거를 `docs/staging-smoke-log.md`에 누적
 - 월 1회 시크릿 교체 상태 점검
 - 월 1회 롤백 시나리오 점검

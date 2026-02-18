@@ -4,6 +4,25 @@
 
 ## 2026-02-17
 
+### Staging 운영 사이클 자동화 + Mobile store readiness
+- 스테이징 운영 사이클 자동 점검 스크립트 추가
+  - `scripts/staging-ops-cycle.ps1`
+  - preflight + 최신 deploy 게이트 + 로그 기록(`docs/staging-smoke-log.md`) 일괄 실행
+- 스크립트 안정화
+  - `scripts/staging-preflight.ps1`: AWS 세션 만료 케이스를 `session expired`로 명확히 안내
+  - `scripts/staging-latest-status.ps1`: 진행 중 job의 `completedAt=0001-01-01` 처리로 음수 duration 방지
+- 스모크/운영 문서 동기화
+  - `docs/staging-smoke-checklist.md`, `docs/staging-feedback-checklist.md`, `docs/runbook.md`, `infra/aws/README.md`
+  - 실행 기록: `deploy-staging` run `22119056042` 게이트 PASS, preflight는 AWS 세션 만료로 HOLD
+- 모바일 배포 준비도 보강
+  - Android release signing 설정(`apps/mobile/android/app/build.gradle.kts`) 개선
+  - `apps/mobile/android/key.properties.example` 추가
+  - `.github/workflows/mobile-store-release.yml` 추가 (manual: android signed AAB / ios no-codesign)
+  - PR 리뷰 코멘트 반영: Android keystore 생성 경로를 `android/app/keystore`로 수정
+  - 모바일 문서 동기화 (`apps/mobile/README.md`, `docs/mobile/README.md`)
+- 기준 문서 동기화
+  - `README.md`, `docs/current-usable-scope.md`, `docs/deployment-readiness-audit.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
+
 ### 문서 최신화 동기화
 - 기준 범위 문서 최신화
   - `docs/current-usable-scope.md` 기준 커밋을 `c578c3f`로 갱신

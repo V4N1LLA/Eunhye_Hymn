@@ -76,3 +76,17 @@ lib/
   - `flutter pub get`
   - `flutter analyze`
   - `flutter test`
+
+## Release Readiness
+
+- Android release check: `.github/workflows/mobile-release-check.yml`
+  - Builds `app-release.apk` and uploads artifact.
+- Store release readiness: `.github/workflows/mobile-store-release.yml` (manual)
+  - `target=android`: signed AAB build (`flutter build appbundle --release`)
+  - `target=ios`: release build without codesign (`flutter build ios --release --no-codesign`)
+  - `target=both`: runs both jobs
+
+Android signing config:
+- Copy `apps/mobile/android/key.properties.example` to `apps/mobile/android/key.properties`.
+- Fill `storeFile`, `storePassword`, `keyAlias`, `keyPassword`.
+- `key.properties` and keystore files are ignored by git.

@@ -55,6 +55,7 @@ docs/       프로젝트 문서
 - 배포 준비도 점검 리포트: [docs/deployment-readiness-audit.md](./docs/deployment-readiness-audit.md)
 - 운영 런북(스테이징): [docs/runbook.md](./docs/runbook.md)
 - 스테이징 스모크 체크리스트: [docs/staging-smoke-checklist.md](./docs/staging-smoke-checklist.md)
+- 스테이징 운영 사이클 로그: [docs/staging-smoke-log.md](./docs/staging-smoke-log.md)
 - 스테이징 피드백 체크리스트: [docs/staging-feedback-checklist.md](./docs/staging-feedback-checklist.md)
 - 모바일 문서: [docs/mobile/README.md](./docs/mobile/README.md)
 - 로컬 셋업 가이드: [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
@@ -90,7 +91,7 @@ npm run dev
 | Storage | AWS S3 (presigned URL) |
 | Auth | Spring Security + JWT + Kakao OAuth |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS v4 |
-| CI/CD | GitHub Actions (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test + Mobile release APK check + Staging 자동 배포) |
+| CI/CD | GitHub Actions (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test + Mobile release APK check + Mobile store release readiness(manual) + Staging 자동 배포) |
 
 ## API 엔드포인트
 

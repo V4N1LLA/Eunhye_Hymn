@@ -1,0 +1,9 @@
+# Copy to `apps/mobile/android/key.properties` for signed release builds.
+# The file must not be committed.
+# `storeFile` is resolved from `apps/mobile/android/app`, so `keystore/release.jks`
+# points to `apps/mobile/android/app/keystore/release.jks`.
+
+storeFile=keystore/release.jks
+storePassword=CHANGE_ME
+keyAlias=CHANGE_ME
+keyPassword=CHANGE_ME

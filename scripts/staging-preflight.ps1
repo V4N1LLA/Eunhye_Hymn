@@ -55,6 +55,37 @@ function Run-CommandCapture {
   }
 }
 
+function Get-FirstUsefulLine {
+  param([string]$Output)
+
+  if ([string]::IsNullOrWhiteSpace($Output)) {
+    return ""
+  }
+
+  $lines = $Output -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+  if ($null -eq $lines -or $lines.Count -eq 0) {
+    return ""
+  }
+
+  foreach ($line in $lines) {
+    if ($line -eq "System.Management.Automation.RemoteException") {
+      continue
+    }
+    if ($line -like "At line:*") {
+      continue
+    }
+    if ($line -like "+ CategoryInfo:*") {
+      continue
+    }
+    if ($line -like "+ FullyQualifiedErrorId:*") {
+      continue
+    }
+    return $line
+  }
+
+  return $lines[0]
+}
+
 function Test-AwsPermission {
   param(
     [string]$Name,
@@ -72,7 +103,11 @@ function Test-AwsPermission {
     return
   }
 
-  Add-Check $Name $false ("failed: " + $result.Output.Split("`n")[0])
+  $detailLine = Get-FirstUsefulLine -Output $result.Output
+  if ([string]::IsNullOrWhiteSpace($detailLine)) {
+    $detailLine = "command failed"
+  }
+  Add-Check $Name $false ("failed: " + $detailLine)
 }
 
 function Build-AwsCommand {
@@ -98,10 +133,16 @@ if ($identityResult.ExitCode -ne 0) {
   $identityDetail = "failed"
   if ($identityResult.Output -match "Unable to locate credentials|NoCredentialProviders") {
     $identityDetail = "credentials missing (run aws configure / aws configure sso / aws login)"
+  } elseif ($identityResult.Output -match "Your session has expired|ExpiredToken|Token has expired and refresh failed|The SSO session associated with this profile has expired") {
+    $identityDetail = "session expired (run aws sso login / aws login)"
   } elseif ($identityResult.Output -match "The config profile .* could not be found") {
     $identityDetail = "aws profile not found"
   } elseif (-not [string]::IsNullOrWhiteSpace($identityResult.Output)) {
-    $identityDetail = "failed: " + $identityResult.Output.Split("`n")[0]
+    $detailLine = Get-FirstUsefulLine -Output $identityResult.Output
+    if ([string]::IsNullOrWhiteSpace($detailLine)) {
+      $detailLine = "command failed"
+    }
+    $identityDetail = "failed: " + $detailLine
   }
 
   Add-Check "aws sts get-caller-identity" $false $identityDetail

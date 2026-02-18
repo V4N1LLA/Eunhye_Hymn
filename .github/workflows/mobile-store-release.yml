@@ -1,0 +1,111 @@
+name: Mobile Store Release Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Release readiness target"
+        required: true
+        default: both
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+      api_base_url:
+        description: "API base URL passed to Flutter build"
+        required: false
+        default: "https://example.com/api/v1"
+
+concurrency:
+  group: mobile-store-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android-signed-aab:
+    if: ${{ inputs.target == 'android' || inputs.target == 'both' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url }}
+      MOBILE_ANDROID_KEYSTORE_BASE64: ${{ secrets.MOBILE_ANDROID_KEYSTORE_BASE64 }}
+      MOBILE_ANDROID_KEY_ALIAS: ${{ secrets.MOBILE_ANDROID_KEY_ALIAS }}
+      MOBILE_ANDROID_KEY_PASSWORD: ${{ secrets.MOBILE_ANDROID_KEY_PASSWORD }}
+      MOBILE_ANDROID_STORE_PASSWORD: ${{ secrets.MOBILE_ANDROID_STORE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Validate Android signing secrets
+        run: |
+          : "${MOBILE_ANDROID_KEYSTORE_BASE64:?Missing MOBILE_ANDROID_KEYSTORE_BASE64 secret}"
+          : "${MOBILE_ANDROID_KEY_ALIAS:?Missing MOBILE_ANDROID_KEY_ALIAS secret}"
+          : "${MOBILE_ANDROID_KEY_PASSWORD:?Missing MOBILE_ANDROID_KEY_PASSWORD secret}"
+          : "${MOBILE_ANDROID_STORE_PASSWORD:?Missing MOBILE_ANDROID_STORE_PASSWORD secret}"
+
+      - name: Prepare Android keystore
+        run: |
+          mkdir -p android/app/keystore
+          echo "$MOBILE_ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/keystore/release.jks
+          cat > android/key.properties <<EOF
+          storeFile=keystore/release.jks
+          storePassword=$MOBILE_ANDROID_STORE_PASSWORD
+          keyAlias=$MOBILE_ANDROID_KEY_ALIAS
+          keyPassword=$MOBILE_ANDROID_KEY_PASSWORD
+          EOF
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Android signed AAB
+        run: flutter build appbundle --release --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+
+      - name: Upload Android AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android-release-aab
+          path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
+  ios-release-no-codesign:
+    if: ${{ inputs.target == 'ios' || inputs.target == 'both' }}
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build iOS release (no codesign)
+        run: flutter build ios --release --no-codesign --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+
+      - name: Upload iOS app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ios-release-no-codesign
+          path: apps/mobile/build/ios/iphoneos/Runner.app
+          if-no-files-found: error
