@@ -220,4 +220,28 @@ class SocialLoginApiTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.newUser").value(true));
     }
+
+    @Test
+    void legacyLowercaseInviteCodeStillWorksAfterNormalization() throws Exception {
+        inviteCodeJpaRepository.save(new InviteCodeEntity(
+            "legacy-code", null, "legacy", null, 0, true, null, Instant.now()
+        ));
+
+        when(socialTokenVerifier.verify(eq("KAKAO"), eq("legacy-token")))
+            .thenReturn(new SocialUserInfo("legacy-sub", "legacy@kakao.com", "Legacy User"));
+
+        Map<String, String> request = new HashMap<>();
+        request.put("provider", "KAKAO");
+        request.put("token", "legacy-token");
+        request.put("inviteCode", "  LEGACY-CODE  ");
+
+        mockMvc.perform(post("/auth/social")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.newUser").value(true));
+
+        InviteCodeEntity updated = inviteCodeJpaRepository.findById("legacy-code").orElseThrow();
+        assertThat(updated.getUsedCount()).isEqualTo(1);
+    }
 }
