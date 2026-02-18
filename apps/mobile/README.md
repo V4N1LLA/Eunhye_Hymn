@@ -76,3 +76,32 @@ lib/
   - `flutter pub get`
   - `flutter analyze`
   - `flutter test`
+
+## Release Readiness
+
+- Android release check: `.github/workflows/mobile-release-check.yml`
+  - Builds `app-release.apk` and uploads artifact.
+- Store release readiness (Android only for now): `.github/workflows/mobile-store-release.yml` (manual)
+  - signed AAB build (`flutter build appbundle --release`)
+  - `android_distribution_mode=build_only`: build artifact only
+  - `android_distribution_mode=play_upload`: Google Play upload after AAB build
+  - required inputs for play upload:
+    - `android_track`: `internal | alpha | beta | production`
+    - `android_release_status`: `draft | completed | inProgress | halted`
+    - `android_changes_not_sent_for_review`: `true | false`
+  - optional input:
+    - `android_package_name` (empty -> `GOOGLE_PLAY_PACKAGE_NAME` secret)
+  - common input: `api_base_url`
+  - current ops policy (2026-02-18): run staging validation only; keep production publish ready but not executed
+
+Android signing config:
+- Copy `apps/mobile/android/key.properties.example` to `apps/mobile/android/key.properties`.
+- Fill `storeFile`, `storePassword`, `keyAlias`, `keyPassword`.
+- `key.properties` and keystore files are ignored by git.
+
+Google Play upload secrets:
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+- `GOOGLE_PLAY_PACKAGE_NAME`
+
+See also:
+- Minimal-tooling QA guide: `docs/mobile/qa-minimal-tooling.md`

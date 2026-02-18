@@ -1,0 +1,308 @@
+name: Mobile Store Release Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Release readiness target"
+        required: true
+        default: both
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+      android_distribution_mode:
+        description: "Android path: build-only or Google Play upload"
+        required: true
+        default: build_only
+        type: choice
+        options:
+          - build_only
+          - play_upload
+      android_package_name:
+        description: "Optional Android package name override (if empty, secret GOOGLE_PLAY_PACKAGE_NAME is used)"
+        required: false
+        default: ""
+      android_track:
+        description: "Google Play track for upload mode"
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      android_release_status:
+        description: "Google Play release status for upload mode"
+        required: true
+        default: draft
+        type: choice
+        options:
+          - draft
+          - completed
+          - inProgress
+          - halted
+      android_changes_not_sent_for_review:
+        description: "Google Play: keep changes pending review submission"
+        required: true
+        default: true
+        type: boolean
+      ios_distribution_mode:
+        description: "iOS path: build-only or TestFlight upload"
+        required: true
+        default: build_only
+        type: choice
+        options:
+          - build_only
+          - testflight
+      ios_bundle_id:
+        description: "Optional iOS bundle id override (if empty, secret MOBILE_IOS_BUNDLE_ID is used)"
+        required: false
+        default: ""
+      release_notes:
+        description: "Optional TestFlight release notes"
+        required: false
+        default: ""
+      api_base_url:
+        description: "API base URL passed to Flutter build"
+        required: false
+        default: "https://example.com/api/v1"
+
+concurrency:
+  group: mobile-store-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android-signed-aab:
+    if: ${{ inputs.target == 'android' || inputs.target == 'both' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url }}
+      MOBILE_ANDROID_KEYSTORE_BASE64: ${{ secrets.MOBILE_ANDROID_KEYSTORE_BASE64 }}
+      MOBILE_ANDROID_KEY_ALIAS: ${{ secrets.MOBILE_ANDROID_KEY_ALIAS }}
+      MOBILE_ANDROID_KEY_PASSWORD: ${{ secrets.MOBILE_ANDROID_KEY_PASSWORD }}
+      MOBILE_ANDROID_STORE_PASSWORD: ${{ secrets.MOBILE_ANDROID_STORE_PASSWORD }}
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+      ANDROID_PACKAGE_NAME: ${{ inputs.android_package_name || secrets.GOOGLE_PLAY_PACKAGE_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Validate Android signing secrets
+        run: |
+          : "${MOBILE_ANDROID_KEYSTORE_BASE64:?Missing MOBILE_ANDROID_KEYSTORE_BASE64 secret}"
+          : "${MOBILE_ANDROID_KEY_ALIAS:?Missing MOBILE_ANDROID_KEY_ALIAS secret}"
+          : "${MOBILE_ANDROID_KEY_PASSWORD:?Missing MOBILE_ANDROID_KEY_PASSWORD secret}"
+          : "${MOBILE_ANDROID_STORE_PASSWORD:?Missing MOBILE_ANDROID_STORE_PASSWORD secret}"
+          if [[ "${{ inputs.android_distribution_mode }}" == "play_upload" ]]; then
+            : "${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:?Missing GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret for play_upload mode}"
+            : "${ANDROID_PACKAGE_NAME:?Missing android_package_name input or GOOGLE_PLAY_PACKAGE_NAME secret for play_upload mode}"
+          fi
+
+      - name: Prepare Android keystore
+        run: |
+          mkdir -p android/app/keystore
+          echo "$MOBILE_ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/keystore/release.jks
+          cat > android/key.properties <<EOF
+          storeFile=keystore/release.jks
+          storePassword=$MOBILE_ANDROID_STORE_PASSWORD
+          keyAlias=$MOBILE_ANDROID_KEY_ALIAS
+          keyPassword=$MOBILE_ANDROID_KEY_PASSWORD
+          EOF
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Android signed AAB
+        run: flutter build appbundle --release --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+
+      - name: Upload Android AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android-release-aab
+          path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
+      - name: Upload Android AAB to Google Play
+        if: ${{ inputs.android_distribution_mode == 'play_upload' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.ANDROID_PACKAGE_NAME }}
+          releaseFiles: apps/mobile/build/app/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.android_track }}
+          status: ${{ inputs.android_release_status }}
+          changesNotSentForReview: ${{ inputs.android_changes_not_sent_for_review }}
+
+  ios-release-no-codesign:
+    if: ${{ (inputs.target == 'ios' || inputs.target == 'both') && inputs.ios_distribution_mode == 'build_only' }}
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build iOS release (no codesign)
+        run: flutter build ios --release --no-codesign --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+
+      - name: Upload iOS app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ios-release-no-codesign
+          path: apps/mobile/build/ios/iphoneos/Runner.app
+          if-no-files-found: error
+
+  ios-testflight-upload:
+    if: ${{ (inputs.target == 'ios' || inputs.target == 'both') && inputs.ios_distribution_mode == 'testflight' }}
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url }}
+      IOS_BUNDLE_ID: ${{ inputs.ios_bundle_id || secrets.MOBILE_IOS_BUNDLE_ID }}
+      MOBILE_IOS_TEAM_ID: ${{ secrets.MOBILE_IOS_TEAM_ID }}
+      MOBILE_IOS_P12_BASE64: ${{ secrets.MOBILE_IOS_P12_BASE64 }}
+      MOBILE_IOS_P12_PASSWORD: ${{ secrets.MOBILE_IOS_P12_PASSWORD }}
+      MOBILE_IOS_APPSTORE_ISSUER_ID: ${{ secrets.MOBILE_IOS_APPSTORE_ISSUER_ID }}
+      MOBILE_IOS_APPSTORE_API_KEY_ID: ${{ secrets.MOBILE_IOS_APPSTORE_API_KEY_ID }}
+      MOBILE_IOS_APPSTORE_API_PRIVATE_KEY: ${{ secrets.MOBILE_IOS_APPSTORE_API_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Validate iOS signing/TestFlight settings
+        run: |
+          : "${IOS_BUNDLE_ID:?Missing ios_bundle_id input or MOBILE_IOS_BUNDLE_ID secret}"
+          : "${MOBILE_IOS_TEAM_ID:?Missing MOBILE_IOS_TEAM_ID secret}"
+          : "${MOBILE_IOS_P12_BASE64:?Missing MOBILE_IOS_P12_BASE64 secret}"
+          : "${MOBILE_IOS_P12_PASSWORD:?Missing MOBILE_IOS_P12_PASSWORD secret}"
+          : "${MOBILE_IOS_APPSTORE_ISSUER_ID:?Missing MOBILE_IOS_APPSTORE_ISSUER_ID secret}"
+          : "${MOBILE_IOS_APPSTORE_API_KEY_ID:?Missing MOBILE_IOS_APPSTORE_API_KEY_ID secret}"
+          : "${MOBILE_IOS_APPSTORE_API_PRIVATE_KEY:?Missing MOBILE_IOS_APPSTORE_API_PRIVATE_KEY secret}"
+          if [[ "$IOS_BUNDLE_ID" == com.example.* ]]; then
+            echo "IOS_BUNDLE_ID is still a placeholder (com.example.*). Set a real App Store bundle id." >&2
+            exit 1
+          fi
+
+      - name: Import Apple code-sign certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ env.MOBILE_IOS_P12_BASE64 }}
+          p12-password: ${{ env.MOBILE_IOS_P12_PASSWORD }}
+
+      - name: Download App Store provisioning profile
+        id: provisioning
+        uses: apple-actions/download-provisioning-profiles@v4
+        with:
+          bundle-id: ${{ env.IOS_BUNDLE_ID }}
+          profile-type: IOS_APP_STORE
+          issuer-id: ${{ env.MOBILE_IOS_APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ env.MOBILE_IOS_APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ env.MOBILE_IOS_APPSTORE_API_PRIVATE_KEY }}
+
+      - name: Resolve provisioning profile name
+        env:
+          PROFILES_JSON: ${{ steps.provisioning.outputs.profiles }}
+        run: |
+          PROFILE_NAME=$(ruby -rjson -e 'profiles = JSON.parse(STDIN.read); raise "no provisioning profile downloaded" if profiles.empty?; print profiles.first.fetch("name")' <<< "$PROFILES_JSON")
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Build iOS signed archive and IPA
+        run: |
+          set -euo pipefail
+          flutter build ios --release --no-codesign --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -destination "generic/platform=iOS" \
+            DEVELOPMENT_TEAM="$MOBILE_IOS_TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$IOS_BUNDLE_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            clean archive
+
+          cat > ios/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>${MOBILE_IOS_TEAM_ID}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${IOS_BUNDLE_ID}</key>
+              <string>${PROFILE_NAME}</string>
+            </dict>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>compileBitcode</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -exportPath build/ios/ipa
+
+      - name: Upload iOS IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ios-release-ipa
+          path: apps/mobile/build/ios/ipa/Runner.ipa
+          if-no-files-found: error
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v3
+        with:
+          app-path: apps/mobile/build/ios/ipa/Runner.ipa
+          app-type: ios
+          issuer-id: ${{ env.MOBILE_IOS_APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ env.MOBILE_IOS_APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ env.MOBILE_IOS_APPSTORE_API_PRIVATE_KEY }}
+          release-notes: ${{ inputs.release_notes }}

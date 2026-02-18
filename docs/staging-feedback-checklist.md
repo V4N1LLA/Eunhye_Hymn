@@ -53,6 +53,7 @@
 
 - [ ] 최종 결정(`Ship | Hold | Rollback`)을 명확히 기록했다.
 - [ ] 남은 이슈의 우선순위와 다음 액션을 정리했다.
+- [ ] `docs/staging-smoke-log.md`의 동일 사이클 행(runId/판정/근거 URL)과 교차 확인했다.
 - [ ] 관련 문서(`docs/WORK_CYCLE.md`, 필요 시 `CLAUDE.md`)를 동기화했다.
 
 

@@ -5,6 +5,7 @@ param(
   [string]$Event = "",
   [int]$Limit = 1,
   [switch]$Wait,
+  [switch]$PreferCompleted,
   [int]$WatchIntervalSeconds = 10,
   [int]$MaxAgeMinutes = 0,
   [switch]$RequireSuccess,
@@ -49,8 +50,15 @@ function Get-DurationSeconds {
     return $null
   }
 
+  if ($CompletedAt -like "0001-01-01T00:00:00*") {
+    return $null
+  }
+
   $start = ([DateTime]$StartedAt).ToUniversalTime()
   $end = ([DateTime]$CompletedAt).ToUniversalTime()
+  if ($end -lt $start) {
+    return $null
+  }
   return [math]::Round(($end - $start).TotalSeconds, 1)
 }
 
@@ -117,7 +125,16 @@ if ($null -eq $runs -or $runs.Count -eq 0) {
   throw "No workflow runs found for $Repo / $Workflow (branch='$Branch', event='$Event')"
 }
 
-$selectedRun = $runs[0]
+$selectedRun = if ($PreferCompleted) {
+  $runs | Where-Object { $_.status -eq "completed" } | Select-Object -First 1
+} else {
+  $runs[0]
+}
+
+if ($null -eq $selectedRun) {
+  throw "No completed workflow runs found for $Repo / $Workflow (branch='$Branch', event='$Event')"
+}
+
 $runId = "$($selectedRun.databaseId)"
 
 if ($Wait -and $selectedRun.status -ne "completed") {

@@ -1007,3 +1007,84 @@
 - `rg -n "changelog-dev.md" CLAUDE.md docs/WORK_CYCLE.md`
 - `rg -n "^(<<<<<<<|>>>>>>>|=======)$" docs/changelog-dev.md CLAUDE.md docs/WORK_CYCLE.md`
 
+## 36. 이번 사이클 기록 (2026-02-17, docs latest sync + pr/merge)
+
+### 목표
+- 최신 `develop` 기준으로 핵심 운영 문서를 동기화하고 PR 생성/머지까지 완료한다.
+
+### 범위
+- 포함: `README.md`, `docs/current-usable-scope.md`, `docs/deployment-readiness-audit.md` 최신화 + 추적 문서(`docs/changelog-dev.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`) 동기화
+- 제외: 애플리케이션 코드/인프라 동작 변경
+
+### 수행 작업
+1. 문서 기준점 최신화
+- `docs/current-usable-scope.md`
+- 작성일/기준 커밋을 `c578c3f` 기준으로 갱신
+- 근거 PR에 #91/#90/#89/#88/#87 반영
+- 스테이징/모바일 실행 증빙(run `22052664286`, `22052482140`) 반영
+
+2. 배포 준비도 리포트 최신화
+- `docs/deployment-readiness-audit.md`
+- 작성일/점검 브랜치 최신화
+- 최신 GitHub Actions 성공 run 근거 추가
+- 잔여 리스크를 "수동 스모크 정례화" 기준으로 명시
+
+3. 루트 문서 정합성 보강
+- `README.md` CI/CD 설명을 현재 워크플로우 구성(API/Admin/Mobile + mobile release + staging deploy)에 맞게 갱신
+
+4. 추적 문서 동기화
+- `docs/changelog-dev.md`에 2026-02-17 문서 동기화 이력 추가
+- `CLAUDE.md` 마지막 업데이트 날짜 및 문서/준비도 점검 항목 동기화
+- `docs/WORK_CYCLE.md`에 본 사이클 기록 추가
+
+### 검증
+- `git pull --ff-only origin develop`
+- `gh run list --repo V4N1LLA/Eunhye_Hymn --workflow deploy-staging.yml --limit 5 --json databaseId,headBranch,headSha,status,conclusion,url`
+- `gh run list --repo V4N1LLA/Eunhye_Hymn --workflow mobile-release-check.yml --limit 5 --json databaseId,headBranch,headSha,status,conclusion,url`
+- `rg -n "c578c3f|22052664286|22052482140|#91|#90|#89|#88|#87" docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md`
+- `rg -n "Mobile release APK check|Staging 자동 배포" README.md`
+- `rg -n "^(<<<<<<<|>>>>>>>|=======)$" README.md docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md CLAUDE.md docs/WORK_CYCLE.md`
+
+## 37. 이번 사이클 기록 (2026-02-17, staging ops cycle + mobile store readiness)
+
+### 목표
+- 우선순위 1~3 항목(스테이징 수동 스모크 정례화, preflight 무스킵 유지, 모바일 스토어 배포 준비)을 한 사이클로 구현/검증/PR/머지까지 완료한다.
+
+### 범위
+- 포함: 운영 사이클 자동화 스크립트 + preflight/status 하드닝 + 모바일 릴리즈 readiness 워크플로우 및 서명 설정 + 문서 동기화
+- 제외: 실제 AWS 자격증명 재발급, 실제 앱스토어 업로드
+
+### 수행 작업
+1. 운영 사이클 자동화
+- `scripts/staging-ops-cycle.ps1` 추가
+- preflight + 최신 배포 게이트 + `docs/staging-smoke-log.md` 로그 적재를 일괄 수행
+
+2. preflight/status 하드닝
+- `scripts/staging-preflight.ps1`: 세션 만료/자격증명/프로필 오류 메시지 가시성 강화
+- `scripts/staging-latest-status.ps1`: 진행 중 job의 `completedAt=0001-01-01` 케이스에서 duration 음수 계산 방지
+- `-PreferCompleted` 옵션 추가로 최신 완료 run 기준 점검 지원
+
+3. 모바일 스토어 readiness
+- `apps/mobile/android/app/build.gradle.kts`
+  - `key.properties` 기반 release signing 지원
+  - 미구성 시 debug signing fallback 유지
+- `apps/mobile/android/key.properties.example` 추가
+- `.github/workflows/mobile-store-release.yml` 추가
+  - manual target 선택(`android|ios|both`)
+  - Android signed AAB build
+  - iOS release no-codesign build
+  - 리뷰 반영: keystore 생성 경로를 `android/app/keystore/release.jks`로 수정
+
+4. 문서 동기화
+- 운영 문서: `docs/staging-smoke-checklist.md`, `docs/staging-feedback-checklist.md`, `docs/runbook.md`, `infra/aws/README.md`
+- 모바일 문서: `apps/mobile/README.md`, `docs/mobile/README.md`
+- 기준 문서: `README.md`, `docs/current-usable-scope.md`, `docs/deployment-readiness-audit.md`, `docs/changelog-dev.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn`
+- `aws sts get-caller-identity` (현재 환경: session expired 확인)
+- `powershell -NoProfile -File .\\scripts\\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -AsJson`
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex`
+- `rg -n "staging-ops-cycle|session expired|22119056042|mobile-store-release|key.properties.example" scripts docs README.md CLAUDE.md apps/mobile`
+- `rg -n "^(<<<<<<<|>>>>>>>|=======)$" .github/workflows/mobile-store-release.yml apps/mobile/android/app/build.gradle.kts scripts/staging-preflight.ps1 scripts/staging-latest-status.ps1 scripts/staging-ops-cycle.ps1 docs/staging-smoke-checklist.md docs/staging-feedback-checklist.md docs/runbook.md docs/staging-smoke-log.md docs/mobile/README.md apps/mobile/README.md docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md CLAUDE.md docs/WORK_CYCLE.md README.md infra/aws/README.md`
+

@@ -37,3 +37,23 @@
 3. Remove leaked values from history if needed.
 4. Record follow-up in `docs/changelog-dev.md`.
 
+## 6. Mobile Release Secrets (GitHub Actions)
+
+Android signing (`.github/workflows/mobile-store-release.yml`):
+- `MOBILE_ANDROID_KEYSTORE_BASE64`
+- `MOBILE_ANDROID_KEY_ALIAS`
+- `MOBILE_ANDROID_KEY_PASSWORD`
+- `MOBILE_ANDROID_STORE_PASSWORD`
+
+Android Google Play upload (`.github/workflows/mobile-store-release.yml`):
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+- `GOOGLE_PLAY_PACKAGE_NAME`
+
+iOS TestFlight upload (`.github/workflows/mobile-store-release.yml`):
+- `MOBILE_IOS_BUNDLE_ID`
+- `MOBILE_IOS_TEAM_ID`
+- `MOBILE_IOS_P12_BASE64`
+- `MOBILE_IOS_P12_PASSWORD`
+- `MOBILE_IOS_APPSTORE_ISSUER_ID`
+- `MOBILE_IOS_APPSTORE_API_KEY_ID`
+- `MOBILE_IOS_APPSTORE_API_PRIVATE_KEY`
