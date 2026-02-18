@@ -1,4 +1,4 @@
-# Android QA With Minimal Local Tooling
+﻿# Android QA With Minimal Local Tooling
 
 ## Goal
 
@@ -45,6 +45,8 @@ adb install -r .tmp/mobile-apk/app-release.apk
 
 ```powershell
 gh workflow run mobile-store-release.yml `
+  -f target=android `
+  -f android_distribution_mode=build_only `
   -f api_base_url=http://13.209.200.12
 ```
 
@@ -62,7 +64,17 @@ Recommended sequence:
 
 1. Run `mobile-release-check.yml` with production `api_base_url` to verify APK release build.
 2. Run `mobile-store-release.yml` with production `api_base_url` to generate signed AAB.
-3. Complete Go/Hold decision in checklist and runbook.
+3. If you also want Play Console upload automation, run:
+
+```powershell
+gh workflow run mobile-store-release.yml `
+  -f target=android `
+  -f android_distribution_mode=play_upload `
+  -f android_track=internal `
+  -f android_release_status=draft `
+  -f android_changes_not_sent_for_review=true `
+  -f api_base_url=https://<prod-domain>
+```
 
 ## Notes
 
@@ -71,4 +83,6 @@ Recommended sequence:
   - `MOBILE_ANDROID_KEY_ALIAS`
   - `MOBILE_ANDROID_KEY_PASSWORD`
   - `MOBILE_ANDROID_STORE_PASSWORD`
-- iOS는 현재 문서 범위에서 제외하고 추후 별도 가이드로 분리한다.
+- Google Play upload secrets:
+  - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+  - `GOOGLE_PLAY_PACKAGE_NAME`

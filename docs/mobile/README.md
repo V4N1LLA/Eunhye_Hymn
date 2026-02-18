@@ -129,14 +129,23 @@ cd apps/mobile
 - 워크플로우: `.github/workflows/mobile-store-release.yml`
 - 트리거: 수동 실행(`workflow_dispatch`)
 - 입력:
+  - `target`: `android` | `ios` | `both`
+  - `android_distribution_mode`: `build_only` | `play_upload`
+  - `android_package_name`: Android package name 1회 오버라이드(미입력 시 `GOOGLE_PLAY_PACKAGE_NAME` 사용)
+  - `android_track`: `internal` | `alpha` | `beta` | `production` (play upload 시)
+  - `android_release_status`: `draft` | `completed` | `inProgress` | `halted` (play upload 시)
+  - `android_changes_not_sent_for_review`: `true` | `false` (play upload 시)
   - `api_base_url`: 릴리즈 빌드 시 주입할 API URL
 - Android 경로:
   - 서명형 AAB 빌드(`flutter build appbundle --release`)
+  - `android_distribution_mode=play_upload`면 AAB 업로드 후 Google Play에 배포 편집 생성
   - 필요한 Secrets:
     - `MOBILE_ANDROID_KEYSTORE_BASE64`
     - `MOBILE_ANDROID_KEY_ALIAS`
     - `MOBILE_ANDROID_KEY_PASSWORD`
     - `MOBILE_ANDROID_STORE_PASSWORD`
+    - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (play upload 시)
+    - `GOOGLE_PLAY_PACKAGE_NAME` (입력 미지정 시)
 - Android 서명 설정:
   - `apps/mobile/android/key.properties.example`를 기준으로 `apps/mobile/android/key.properties` 구성
   - `key.properties`가 없으면 로컬 릴리즈 체크는 debug signing fallback을 사용

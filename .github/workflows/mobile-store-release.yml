@@ -12,6 +12,43 @@ on:
           - android
           - ios
           - both
+      android_distribution_mode:
+        description: "Android path: build-only or Google Play upload"
+        required: true
+        default: build_only
+        type: choice
+        options:
+          - build_only
+          - play_upload
+      android_package_name:
+        description: "Optional Android package name override (if empty, secret GOOGLE_PLAY_PACKAGE_NAME is used)"
+        required: false
+        default: ""
+      android_track:
+        description: "Google Play track for upload mode"
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      android_release_status:
+        description: "Google Play release status for upload mode"
+        required: true
+        default: draft
+        type: choice
+        options:
+          - draft
+          - completed
+          - inProgress
+          - halted
+      android_changes_not_sent_for_review:
+        description: "Google Play: keep changes pending review submission"
+        required: true
+        default: true
+        type: boolean
       ios_distribution_mode:
         description: "iOS path: build-only or TestFlight upload"
         required: true
@@ -50,6 +87,8 @@ jobs:
       MOBILE_ANDROID_KEY_ALIAS: ${{ secrets.MOBILE_ANDROID_KEY_ALIAS }}
       MOBILE_ANDROID_KEY_PASSWORD: ${{ secrets.MOBILE_ANDROID_KEY_PASSWORD }}
       MOBILE_ANDROID_STORE_PASSWORD: ${{ secrets.MOBILE_ANDROID_STORE_PASSWORD }}
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+      ANDROID_PACKAGE_NAME: ${{ inputs.android_package_name || secrets.GOOGLE_PLAY_PACKAGE_NAME }}
     steps:
       - uses: actions/checkout@v4
 
@@ -71,6 +110,10 @@ jobs:
           : "${MOBILE_ANDROID_KEY_ALIAS:?Missing MOBILE_ANDROID_KEY_ALIAS secret}"
           : "${MOBILE_ANDROID_KEY_PASSWORD:?Missing MOBILE_ANDROID_KEY_PASSWORD secret}"
           : "${MOBILE_ANDROID_STORE_PASSWORD:?Missing MOBILE_ANDROID_STORE_PASSWORD secret}"
+          if [[ "${{ inputs.android_distribution_mode }}" == "play_upload" ]]; then
+            : "${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:?Missing GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret for play_upload mode}"
+            : "${ANDROID_PACKAGE_NAME:?Missing android_package_name input or GOOGLE_PLAY_PACKAGE_NAME secret for play_upload mode}"
+          fi
 
       - name: Prepare Android keystore
         run: |
@@ -95,6 +138,17 @@ jobs:
           name: mobile-android-release-aab
           path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
+
+      - name: Upload Android AAB to Google Play
+        if: ${{ inputs.android_distribution_mode == 'play_upload' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.ANDROID_PACKAGE_NAME }}
+          releaseFiles: apps/mobile/build/app/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.android_track }}
+          status: ${{ inputs.android_release_status }}
+          changesNotSentForReview: ${{ inputs.android_changes_not_sent_for_review }}
 
   ios-release-no-codesign:
     if: ${{ (inputs.target == 'ios' || inputs.target == 'both') && inputs.ios_distribution_mode == 'build_only' }}

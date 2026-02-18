@@ -45,6 +45,10 @@ Android signing (`.github/workflows/mobile-store-release.yml`):
 - `MOBILE_ANDROID_KEY_PASSWORD`
 - `MOBILE_ANDROID_STORE_PASSWORD`
 
+Android Google Play upload (`.github/workflows/mobile-store-release.yml`):
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+- `GOOGLE_PLAY_PACKAGE_NAME`
+
 iOS TestFlight upload (`.github/workflows/mobile-store-release.yml`):
 - `MOBILE_IOS_BUNDLE_ID`
 - `MOBILE_IOS_TEAM_ID`
