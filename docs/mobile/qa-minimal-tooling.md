@@ -2,7 +2,13 @@
 
 ## Goal
 
-Run Android staging and production QA with CI artifacts so local IDE installs are optional.
+Run Android staging QA with CI artifacts while keeping production release ready (without executing production deploy).
+
+## Current operation policy (2026-02-18)
+
+- Execute only staging validation and staging QA.
+- Do not run production deploy/publish now.
+- Keep production release inputs/secrets/documents ready so deployment can start immediately when approved.
 
 ## Minimal local setup
 
@@ -56,15 +62,15 @@ gh workflow run mobile-store-release.yml `
 - `docs/staging-feedback-checklist.md`
 - `docs/staging-smoke-log.md`
 
-## Production QA flow
+## Production release preparation (no deploy)
 
-Use the same flow with production API URL and release candidate commit.
+Keep the following items ready, but do not execute production publish yet:
 
-Recommended sequence:
+1. Verify secrets are present (`MOBILE_ANDROID_*`, `GOOGLE_PLAY_*`).
+2. Keep release commands ready with production API URL and release candidate commit.
+3. Wait for explicit go-ahead before running publish/upload commands.
 
-1. Run `mobile-release-check.yml` with production `api_base_url` to verify APK release build.
-2. Run `mobile-store-release.yml` with production `api_base_url` to generate signed AAB.
-3. If you also want Play Console upload automation, run:
+Ready-to-run command (execute only after approval):
 
 ```powershell
 gh workflow run mobile-store-release.yml `

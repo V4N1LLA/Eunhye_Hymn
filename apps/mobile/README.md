@@ -92,6 +92,7 @@ lib/
   - optional input:
     - `android_package_name` (empty -> `GOOGLE_PLAY_PACKAGE_NAME` secret)
   - common input: `api_base_url`
+  - current ops policy (2026-02-18): run staging validation only; keep production publish ready but not executed
 
 Android signing config:
 - Copy `apps/mobile/android/key.properties.example` to `apps/mobile/android/key.properties`.

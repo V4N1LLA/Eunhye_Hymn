@@ -128,6 +128,9 @@ cd apps/mobile
 
 - 워크플로우: `.github/workflows/mobile-store-release.yml`
 - 트리거: 수동 실행(`workflow_dispatch`)
+- 현재 운영 원칙(2026-02-18):
+  - 스테이징 검증만 실행하고 운영 배포/퍼블리시는 실행하지 않는다.
+  - 운영 배포는 승인 즉시 실행할 수 있도록 시크릿/입력값/절차만 준비한다.
 - 입력:
   - `target`: `android` | `ios` | `both`
   - `android_distribution_mode`: `build_only` | `play_upload`
