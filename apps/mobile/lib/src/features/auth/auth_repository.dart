@@ -71,33 +71,32 @@ class AuthRepository {
     return profile;
   }
 
-  Future<SessionProfile> loginWithDev({
-    required String displayName,
-    required String userId,
-    required UserRole role,
-  }) async {
-    final raw = await apiClient.post(
-      '/auth/dev/login',
-      includeAuth: false,
+  Future<SessionProfile> signupWithAccount({
+    required String loginId,
+    required String password,
+    required String inviteCode,
+  }) {
+    return _loginWithPasswordEndpoint(
+      '/auth/signup',
       body: {
-        'userId': userId,
-        'role': role == UserRole.admin ? 'ADMIN' : 'USER',
-        'displayName': displayName,
+        'loginId': loginId,
+        'password': password,
+        'inviteCode': inviteCode,
       },
     );
+  }
 
-    final tokens = _extractTokens(raw);
-    await tokenStorage.saveTokens(
-      accessToken: tokens.$1,
-      refreshToken: tokens.$2,
+  Future<SessionProfile> loginWithAccount({
+    required String loginId,
+    required String password,
+  }) {
+    return _loginWithPasswordEndpoint(
+      '/auth/login',
+      body: {
+        'loginId': loginId,
+        'password': password,
+      },
     );
-
-    final profile = await fetchProfile();
-    if (profile == null) {
-      await tokenStorage.clear();
-      throw ApiException('Login response is not usable.');
-    }
-    return profile;
   }
 
   Future<SessionProfile> loginWithAdmin({
@@ -145,6 +144,30 @@ class AuthRepository {
 
   Future<void> clearSession() {
     return tokenStorage.clear();
+  }
+
+  Future<SessionProfile> _loginWithPasswordEndpoint(
+    String path, {
+    required Map<String, Object?> body,
+  }) async {
+    final raw = await apiClient.post(
+      path,
+      includeAuth: false,
+      body: body,
+    );
+
+    final tokens = _extractTokens(raw);
+    await tokenStorage.saveTokens(
+      accessToken: tokens.$1,
+      refreshToken: tokens.$2,
+    );
+
+    final profile = await fetchProfile();
+    if (profile == null) {
+      await tokenStorage.clear();
+      throw ApiException('Login response is not usable.');
+    }
+    return profile;
   }
 
   SessionProfile _toSessionProfile(Map<String, dynamic> raw) {

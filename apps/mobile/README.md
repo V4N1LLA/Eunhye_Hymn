@@ -7,7 +7,7 @@
 - Social login
   - Kakao SDK login (mobile, redirect flow)
   - Invite code input (first login only)
-  - Hidden dev login switch (`ENABLE_DEV_LOGIN=true`)
+  - Account signup/login (`POST /auth/signup`, `POST /auth/login`)
 - Hymn
   - List and search
   - Detail view
@@ -52,7 +52,6 @@ Notes:
 - For physical devices, use the reachable host IP/domain instead of `10.0.2.2`.
 - Kakao Android callback scheme is `kakao<KAKAO_NATIVE_APP_KEY>`. If the key is missing/mismatched at run time, Kakao consent can stop at "Continue" without returning to the app.
 - Keep secrets (`KAKAO_NATIVE_APP_KEY`, signing keys) out of Git. See `docs/SECRETS_MANAGEMENT.md`.
-- `ENABLE_DEV_LOGIN=true` adds hidden local dev login panel on the login screen.
 
 ## Structure
 

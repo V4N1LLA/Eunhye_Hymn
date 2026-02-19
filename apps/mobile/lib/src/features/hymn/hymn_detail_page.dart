@@ -23,6 +23,8 @@ class HymnDetailPage extends StatefulWidget {
 }
 
 class _HymnDetailPageState extends State<HymnDetailPage> {
+  static const _assetPrefetchBatchSize = 3;
+
   final _noteController = TextEditingController();
   final _localAssetCache = LocalAssetCache();
   final Map<String, String> _localAssetPaths = {};
@@ -43,6 +45,7 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
 
   @override
   void dispose() {
+    _localAssetCache.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -86,23 +89,48 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
   }
 
   Future<void> _cacheAssets(List<HymnAsset> assets, int sequence) async {
-    final resolvedPaths = <String, String>{};
-    for (final asset in assets) {
-      final path = await _localAssetCache.getOrDownload(asset);
-      if (path != null) {
-        resolvedPaths[asset.id] = path;
-      }
-    }
-
-    if (!mounted || sequence != _assetLoadSequence) {
+    final sessionUserId = widget.hymnRepository.sessionUserId;
+    if (sessionUserId == null || sessionUserId.isEmpty || assets.isEmpty) {
       return;
     }
 
-    setState(() {
-      _localAssetPaths
-        ..clear()
-        ..addAll(resolvedPaths);
-    });
+    final resolvedPaths = <String, String>{};
+    for (var i = 0; i < assets.length; i += _assetPrefetchBatchSize) {
+      final batch = assets.skip(i).take(_assetPrefetchBatchSize).toList();
+      final batchEntries = await Future.wait(
+        batch.map(
+          (asset) => _cacheAssetPath(asset, sessionUserId: sessionUserId),
+        ),
+      );
+
+      if (!mounted || sequence != _assetLoadSequence) {
+        return;
+      }
+
+      for (final entry in batchEntries.whereType<MapEntry<String, String>>()) {
+        resolvedPaths[entry.key] = entry.value;
+      }
+
+      setState(() {
+        _localAssetPaths
+          ..clear()
+          ..addAll(resolvedPaths);
+      });
+    }
+  }
+
+  Future<MapEntry<String, String>?> _cacheAssetPath(
+    HymnAsset asset, {
+    required String sessionUserId,
+  }) async {
+    final path = await _localAssetCache.getOrDownload(
+      asset,
+      userId: sessionUserId,
+    );
+    if (path == null) {
+      return null;
+    }
+    return MapEntry(asset.id, path);
   }
 
   Future<void> _toggleFavorite() async {
