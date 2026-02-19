@@ -108,6 +108,25 @@ class UserPasswordAuthApiTest {
     }
 
     @Test
+    void signupWithInvalidInviteCodeDoesNotExposeLoginIdExistence() throws Exception {
+        inviteCodeJpaRepository.save(new InviteCodeEntity(
+            "VALID-CODE", null, "valid", null, 0, true, null, Instant.now()
+        ));
+
+        signup("member.one", "password-123!", "VALID-CODE");
+
+        mockMvc.perform(post("/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                    "loginId", "member.one",
+                    "password", "password-123!",
+                    "inviteCode", "INVALID-CODE"
+                ))))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error.code").value("invalid_invite_code"));
+    }
+
+    @Test
     void loginWithCreatedCredentialIssuesTokens() throws Exception {
         inviteCodeJpaRepository.save(new InviteCodeEntity(
             "LOGIN-CODE", null, "login", null, 0, true, null, Instant.now()

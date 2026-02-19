@@ -143,9 +143,13 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-    if (profile != null) {
-      await widget.onLoggedIn(profile);
+    if (!mounted || profile == null) {
+      return;
     }
+
+    await _runWithLoading(() async {
+      await widget.onLoggedIn(profile);
+    });
   }
 
   @override

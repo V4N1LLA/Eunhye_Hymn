@@ -69,12 +69,12 @@ public class UserPasswordSignupUseCase {
             throw new InvalidInviteCodeException("초대코드가 비어있습니다");
         }
 
+        inviteCodeRepository.findByCode(normalizedInviteCode)
+            .orElseThrow(() -> new InvalidInviteCodeException("유효하지 않은 초대코드입니다"));
+
         if (authIdentityRepository.findByProviderAndProviderSubject(PROVIDER_LOCAL_USER, normalizedLoginId).isPresent()) {
             throw new DuplicateLoginIdException("이미 사용 중인 로그인 ID입니다.");
         }
-
-        inviteCodeRepository.findByCode(normalizedInviteCode)
-            .orElseThrow(() -> new InvalidInviteCodeException("유효하지 않은 초대코드입니다"));
 
         boolean incremented = inviteCodeRepository.incrementUsedCount(normalizedInviteCode);
         if (!incremented) {
