@@ -15,8 +15,6 @@ Base URL: `/api/v1`
 
 ### 1.1 초대 코드 검증
 - `POST /auth/invite/validate`
-- `code` 입력값은 서버에서 `trim + uppercase` 정규화 후 검증한다.
-- 레거시 소문자 코드가 DB에 남아 있어도 대소문자 무관하게 검증/사용 처리가 가능하다.
 - 요청 `data` 예시:
 ```json
 {
@@ -32,12 +30,10 @@ Base URL: `/api/v1`
 
 ### 1.2 소셜 로그인 (Kakao)
 - `POST /auth/social`
-- `provider`는 대소문자 구분 없이 처리된다 (`kakao`, `KAKAO` 모두 허용).
-- 신규 사용자일 때 `inviteCode`는 초대코드 정규화 규칙(`trim + uppercase`)을 적용한다.
 - 요청 `data` 예시:
 ```json
 {
-  "provider": "KAKAO",
+  "provider": "kakao",
   "token": "social-token",
   "inviteCode": "ABC123"
 }

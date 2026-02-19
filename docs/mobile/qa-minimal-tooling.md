@@ -4,7 +4,7 @@
 
 Run Android staging QA with CI artifacts while keeping production release ready (without executing production deploy).
 
-## Current operation policy (2026-02-19)
+## Current operation policy (2026-02-18)
 
 - Execute only staging validation and staging QA.
 - Do not run production deploy/publish now.

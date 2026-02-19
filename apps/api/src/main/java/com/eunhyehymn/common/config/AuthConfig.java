@@ -9,10 +9,13 @@ import com.eunhyehymn.application.usecases.LogoutUseCase;
 import com.eunhyehymn.application.usecases.RefreshTokenUseCase;
 import com.eunhyehymn.application.usecases.SocialLoginUseCase;
 import com.eunhyehymn.application.usecases.UpdateAdminPasswordCredentialUseCase;
+import com.eunhyehymn.application.usecases.UserPasswordLoginUseCase;
+import com.eunhyehymn.application.usecases.UserPasswordSignupUseCase;
 import com.eunhyehymn.domain.repository.AdminPasswordCredentialRepository;
 import com.eunhyehymn.domain.repository.AuthIdentityRepository;
 import com.eunhyehymn.domain.repository.InviteCodeRepository;
 import com.eunhyehymn.domain.repository.RefreshTokenRepository;
+import com.eunhyehymn.domain.repository.UserPasswordCredentialRepository;
 import com.eunhyehymn.domain.repository.UserRepository;
 import com.eunhyehymn.infrastructure.security.JwtAuthenticationFilter;
 import com.eunhyehymn.infrastructure.security.JwtService;
@@ -170,6 +173,54 @@ public class AuthConfig {
             refreshTokenTtlSeconds,
             loginId,
             loginPassword
+        );
+    }
+
+    @Bean
+    UserPasswordSignupUseCase userPasswordSignupUseCase(
+        AuthIdentityRepository authIdentityRepository,
+        UserPasswordCredentialRepository userPasswordCredentialRepository,
+        UserRepository userRepository,
+        InviteCodeRepository inviteCodeRepository,
+        RefreshTokenRepository refreshTokenRepository,
+        TokenService tokenService,
+        TokenHashService tokenHashService,
+        PasswordEncoder passwordEncoder,
+        @Value("${security.jwt.refresh-token-ttl-seconds}") long refreshTokenTtlSeconds
+    ) {
+        return new UserPasswordSignupUseCase(
+            authIdentityRepository,
+            userPasswordCredentialRepository,
+            userRepository,
+            inviteCodeRepository,
+            refreshTokenRepository,
+            tokenService,
+            tokenHashService,
+            passwordEncoder,
+            refreshTokenTtlSeconds
+        );
+    }
+
+    @Bean
+    UserPasswordLoginUseCase userPasswordLoginUseCase(
+        AuthIdentityRepository authIdentityRepository,
+        UserPasswordCredentialRepository userPasswordCredentialRepository,
+        UserRepository userRepository,
+        RefreshTokenRepository refreshTokenRepository,
+        TokenService tokenService,
+        TokenHashService tokenHashService,
+        PasswordEncoder passwordEncoder,
+        @Value("${security.jwt.refresh-token-ttl-seconds}") long refreshTokenTtlSeconds
+    ) {
+        return new UserPasswordLoginUseCase(
+            authIdentityRepository,
+            userPasswordCredentialRepository,
+            userRepository,
+            refreshTokenRepository,
+            tokenService,
+            tokenHashService,
+            passwordEncoder,
+            refreshTokenTtlSeconds
         );
     }
 

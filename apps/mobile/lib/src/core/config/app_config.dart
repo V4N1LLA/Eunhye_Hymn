@@ -1,11 +1,17 @@
 class AppConfig {
   static const _defaultApiBaseUrl = 'http://10.0.2.2:8080/api/v1';
+  static const _defaultAppEnv = 'local';
 
   static final apiBaseUrl = normalizeApiBaseUrl(
     const String.fromEnvironment(
       'API_BASE_URL',
       defaultValue: _defaultApiBaseUrl,
     ),
+  );
+
+  static const appEnv = String.fromEnvironment(
+    'APP_ENV',
+    defaultValue: _defaultAppEnv,
   );
 
   static const kakaoNativeAppKey = String.fromEnvironment(

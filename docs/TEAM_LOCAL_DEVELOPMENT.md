@@ -102,13 +102,14 @@ Use `ADMIN_LOGIN_ID / ADMIN_LOGIN_PASSWORD` from `.env`.
 
 ## 6) Run mobile (Android emulator)
 ```bash
-.\scripts\run-mobile-emulator.ps1 -DeviceId emulator-5554
+.\scripts\run-mobile-emulator.ps1 -Environment local -DeviceId emulator-5554
 ```
 
 Flow in app:
 - Enter invite code then tap `카카오로 시작하기` for Kakao
-- Or tap `아이디/비밀번호로 시작하기` for DB user login check
-- Use DB user ID printed by `local-verify.ps1` for the ID field
+- Or tap `아이디/비밀번호로 시작하기` for `/auth/login`
+- If account does not exist yet, tap `회원가입` to create one via `/auth/signup`
+- Use an invite code created in local DB (from `local-verify.ps1` or admin page)
 
 ## 7) Useful DB checks
 ```bash

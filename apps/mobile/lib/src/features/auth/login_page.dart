@@ -101,7 +101,12 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
 
-      final token = await widget.socialSdkService.fetchToken();
+      final token = await widget.socialSdkService.fetchToken().timeout(
+        const Duration(seconds: 45),
+        onTimeout: () => throw ApiException(
+          '카카오 로그인 응답이 지연되고 있습니다. 다시 시도해 주세요.',
+        ),
+      );
       final profile = await widget.authRepository.loginWithSocial(
         token: token,
         inviteCode: _normalizedInviteCode,
@@ -111,14 +116,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleAccountLogin() async {
-    final inviteCodeError = _validateInviteCode();
-    if (inviteCodeError != null) {
-      setState(() {
-        _error = inviteCodeError;
-      });
-      return;
-    }
-
     final loginId = _accountIdController.text.trim();
     final password = _accountPasswordController.text;
     if (loginId.isEmpty || password.isEmpty) {
@@ -128,33 +125,31 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    if (!_isValidUuid(loginId)) {
-      setState(() {
-        _error = '현재는 DB에 저장된 사용자 ID(UUID) 형식만 사용 가능합니다.';
-      });
-      return;
-    }
-
     await _runWithLoading(() async {
-      final profile = await widget.authRepository.loginWithDev(
-        displayName: loginId,
-        userId: loginId,
-        role: UserRole.user,
+      final profile = await widget.authRepository.loginWithAccount(
+        loginId: loginId,
+        password: password,
       );
       await widget.onLoggedIn(profile);
     });
   }
 
-  bool _isValidUuid(String value) {
-    return RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(value);
-  }
-
   Future<void> _openSignUp() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const SignUpPage(),
+    final profile = await Navigator.of(context).push<SessionProfile>(
+      MaterialPageRoute<SessionProfile>(
+        builder: (_) => SignUpPage(
+          authRepository: widget.authRepository,
+          initialInviteCode: _inviteCodeController.text,
+        ),
       ),
     );
+    if (!mounted || profile == null) {
+      return;
+    }
+
+    await _runWithLoading(() async {
+      await widget.onLoggedIn(profile);
+    });
   }
 
   @override
@@ -191,7 +186,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            '초대 코드를 입력한 뒤 로그인 방법을 선택해 주세요.',
+                            '카카오 또는 계정 로그인을 선택해 주세요.',
                             style: TextStyle(color: Color(0xFF5B6572)),
                           ),
                           const SizedBox(height: 14),
@@ -326,7 +321,10 @@ class _LoginPageState extends State<LoginPage> {
                   const Center(
                     child: Text(
                       '회원/교회 정보는 첫 사용 시에만 입력합니다.',
-                      style: TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+                      style: TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],

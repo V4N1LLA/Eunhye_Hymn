@@ -7,6 +7,8 @@ import '../storage/token_storage.dart';
 import 'api_exception.dart';
 
 class ApiClient {
+  static const Duration _requestTimeout = Duration(seconds: 12);
+
   final String baseUrl;
   final TokenStorage tokenStorage;
 
@@ -130,19 +132,37 @@ class ApiClient {
       }
     }
 
-    switch (method) {
-      case 'GET':
-        return http.get(uri, headers: headers);
-      case 'POST':
-        return http.post(uri, headers: headers, body: _encodeBody(body));
-      case 'PUT':
-        return http.put(uri, headers: headers, body: _encodeBody(body));
-      case 'PATCH':
-        return http.patch(uri, headers: headers, body: _encodeBody(body));
-      case 'DELETE':
-        return http.delete(uri, headers: headers);
-      default:
-        throw ApiException('지원하지 않는 HTTP 메서드입니다: $method');
+    try {
+      switch (method) {
+        case 'GET':
+          return await http.get(uri, headers: headers).timeout(_requestTimeout);
+        case 'POST':
+          return await http
+              .post(uri, headers: headers, body: _encodeBody(body))
+              .timeout(_requestTimeout);
+        case 'PUT':
+          return await http
+              .put(uri, headers: headers, body: _encodeBody(body))
+              .timeout(_requestTimeout);
+        case 'PATCH':
+          return await http
+              .patch(uri, headers: headers, body: _encodeBody(body))
+              .timeout(_requestTimeout);
+        case 'DELETE':
+          return await http
+              .delete(uri, headers: headers)
+              .timeout(_requestTimeout);
+        default:
+          throw ApiException('지원하지 않는 HTTP 메서드입니다: $method');
+      }
+    } on TimeoutException {
+      throw ApiException(
+        '서버 응답이 지연되고 있습니다. 네트워크/API 주소를 확인해 주세요.',
+      );
+    } on http.ClientException {
+      throw ApiException(
+        '서버에 연결할 수 없습니다. 네트워크/API 주소를 확인해 주세요.',
+      );
     }
   }
 
@@ -175,11 +195,20 @@ class ApiClient {
     }
 
     final uri = Uri.parse('$baseUrl/auth/refresh');
-    final response = await http.post(
-      uri,
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({'refreshToken': refreshToken}),
-    );
+    http.Response response;
+    try {
+      response = await http
+          .post(
+            uri,
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({'refreshToken': refreshToken}),
+          )
+          .timeout(_requestTimeout);
+    } on TimeoutException {
+      return false;
+    } on http.ClientException {
+      return false;
+    }
 
     final envelope = _decodeJsonObject(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {

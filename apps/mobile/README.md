@@ -1,61 +1,58 @@
-﻿# Eunhye Hymn Mobile (Flutter)
+﻿# Eunhye Hymn Mobile (Flutter MVP)
 
-`apps/mobile` is the Flutter client for Eunhye Hymn.
+`apps/mobile` is the Flutter mobile app for Eunhye Hymn.
 
-## Scope (Current)
+## Scope
 
-- Login
-  - Kakao SDK login + invite code input
-  - Local verification account login path (currently UUID-based dev-login verification)
-- Onboarding
-  - First-login profile form (church/name/group)
-  - Stored locally via SharedPreferences
+- Social login
+  - Kakao SDK login (mobile, redirect flow)
+  - Invite code input (first login only)
+  - Hidden dev login switch (`ENABLE_DEV_LOGIN=true`)
 - Hymn
-  - List/search/filter
+  - List and search
   - Detail view
-  - PNG asset display (multi-page)
+  - PNG asset display (multi-page per hymn)
   - MIDI playback controls (play/pause/stop/speed)
 - Personalization
   - Favorites toggle
   - Notes read/write
   - Recent history
 - Offline
-  - Cache fallback for list/detail/note/favorites/history
-  - Pending actions sync when network returns
+  - Local cache fallback for list/detail/note/favorites/history
+  - Offline changes are synced when network is restored
 - Auth
   - Access/refresh token persistence
   - Automatic refresh + retry on 401
 
 ## Run
 
-Preferred reproducible flow from repo root:
+Use environment profiles under `apps/mobile/env/`:
+- `local.json`
+- `staging.json`
+- `release.json`
 
 ```powershell
-.\scripts\local-bootstrap.ps1
-.\scripts\run-mobile-emulator.ps1 -DeviceId emulator-5554
-```
-
-Manual flow:
-
-```powershell
+# first time from repo root
 .\scripts\flutterw.ps1 --version
 
 cd apps/mobile
 ..\..\scripts\flutterw.ps1 pub get
 
-# web
-..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+# local emulator run
+cd ..\..
+.\scripts\run-mobile-emulator.ps1 -Environment local -DeviceId emulator-5554
 
-# android emulator/device
-..\..\scripts\flutterw.ps1 run -d emulator-5554 `
-  --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1 `
-  --dart-define=KAKAO_NATIVE_APP_KEY=<kakao_native_app_key>
+# staging emulator run
+.\scripts\run-mobile-emulator.ps1 -Environment staging -DeviceId emulator-5554
 ```
 
 Notes:
-- `API_BASE_URL` auto-appends `/api/v1` if omitted.
-- For physical devices, use reachable host IP/domain instead of `10.0.2.2`.
-- Kakao callback scheme uses `kakao<KAKAO_NATIVE_APP_KEY>`.
+- `run-mobile-emulator.ps1` always injects `KAKAO_NATIVE_APP_KEY` from `apps/mobile/.env` (fallback: repo `.env`) unless overridden.
+- `API_BASE_URL` automatically appends `/api/v1` if omitted.
+- For physical devices, use the reachable host IP/domain instead of `10.0.2.2`.
+- Kakao Android callback scheme is `kakao<KAKAO_NATIVE_APP_KEY>`. If the key is missing/mismatched at run time, Kakao consent can stop at "Continue" without returning to the app.
+- Keep secrets (`KAKAO_NATIVE_APP_KEY`, signing keys) out of Git. See `docs/SECRETS_MANAGEMENT.md`.
+- `ENABLE_DEV_LOGIN=true` adds hidden local dev login panel on the login screen.
 
 ## Structure
 
@@ -67,8 +64,8 @@ lib/
     core/
       config/app_config.dart
       network/api_client.dart
+      network/api_exception.dart
       storage/token_storage.dart
-      storage/onboarding_storage.dart
     features/
       auth/
       hymn/
@@ -88,17 +85,30 @@ lib/
 
 - Android release check: `.github/workflows/mobile-release-check.yml`
   - Builds `app-release.apk` and uploads artifact.
+- Local APK build helper: `scripts/build-mobile-apk.ps1`
+  - debug APK (staging): `.\scripts\build-mobile-apk.ps1 -Environment staging -BuildMode debug -Install`
+  - release APK: `.\scripts\build-mobile-apk.ps1 -Environment release -BuildMode release -ApiBaseUrl https://<prod-domain>/api/v1`
+- Store release readiness (Android only for now): `.github/workflows/mobile-store-release.yml` (manual)
+  - signed AAB build (`flutter build appbundle --release`)
+  - `android_distribution_mode=build_only`: build artifact only
+  - `android_distribution_mode=play_upload`: Google Play upload after AAB build
+  - required inputs for play upload:
+    - `android_track`: `internal | alpha | beta | production`
+    - `android_release_status`: `draft | completed | inProgress | halted`
+    - `android_changes_not_sent_for_review`: `true | false`
+  - optional input:
+    - `android_package_name` (empty -> `GOOGLE_PLAY_PACKAGE_NAME` secret)
+  - common input: `api_base_url`
+  - current ops policy (2026-02-18): run staging validation only; keep production publish ready but not executed
 
-- Store release readiness: `.github/workflows/mobile-store-release.yml` (manual)
-  - Android:
-    - `android_distribution_mode=build_only`: signed AAB build artifact only
-    - `android_distribution_mode=play_upload`: Google Play upload
-  - iOS:
-    - `ios_distribution_mode=build_only`: no-codesign release build
-    - `ios_distribution_mode=testflight`: signed IPA + TestFlight upload
-  - Current policy (2026-02-19): staging validation first, production publish only after approval.
+Android signing config:
+- Copy `apps/mobile/android/key.properties.example` to `apps/mobile/android/key.properties`.
+- Fill `storeFile`, `storePassword`, `keyAlias`, `keyPassword`.
+- `key.properties` and keystore files are ignored by git.
+
+Google Play upload secrets:
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+- `GOOGLE_PLAY_PACKAGE_NAME`
 
 See also:
-- `docs/mobile/README.md`
-- `docs/mobile/qa-minimal-tooling.md`
-- `docs/TEAM_LOCAL_DEVELOPMENT.md`
+- Minimal-tooling QA guide: `docs/mobile/qa-minimal-tooling.md`
