@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../../core/network/api_exception.dart';
+import 'auth_repository.dart';
+
 class SignUpPage extends StatefulWidget {
-  const SignUpPage({super.key});
+  final AuthRepository authRepository;
+  final String initialInviteCode;
+
+  const SignUpPage({
+    super.key,
+    required this.authRepository,
+    this.initialInviteCode = '',
+  });
 
   @override
   State<SignUpPage> createState() => _SignUpPageState();
 }
 
 class _SignUpPageState extends State<SignUpPage> {
+  late final TextEditingController _inviteCodeController;
   final _loginIdController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -16,7 +27,16 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _submitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    _inviteCodeController = TextEditingController(
+      text: widget.initialInviteCode.trim(),
+    );
+  }
+
+  @override
   void dispose() {
+    _inviteCodeController.dispose();
     _loginIdController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -24,13 +44,21 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _handleSubmit() async {
+    final inviteCode = _inviteCodeController.text.trim().toUpperCase();
     final loginId = _loginIdController.text.trim();
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
 
-    if (loginId.isEmpty || password.isEmpty || confirm.isEmpty) {
+    if (inviteCode.isEmpty || loginId.isEmpty || password.isEmpty || confirm.isEmpty) {
       setState(() {
-        _error = '아이디와 비밀번호를 입력해 주세요.';
+        _error = '초대코드, 아이디, 비밀번호를 모두 입력해 주세요.';
+      });
+      return;
+    }
+
+    if (password.length < 8) {
+      setState(() {
+        _error = '비밀번호는 최소 8자 이상이어야 합니다.';
       });
       return;
     }
@@ -48,27 +76,29 @@ class _SignUpPageState extends State<SignUpPage> {
     });
 
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (!mounted) {
-        return;
-      }
-      await showDialog<void>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('알림'),
-          content: const Text('현재 회원가입은 준비 중입니다.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('확인'),
-            ),
-          ],
-        ),
+      final profile = await widget.authRepository.signupWithAccount(
+        loginId: loginId,
+        password: password,
+        inviteCode: inviteCode,
       );
       if (!mounted) {
         return;
       }
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(profile);
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = e.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = '회원가입 처리 중 오류가 발생했습니다. 다시 시도해 주세요.';
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -104,10 +134,19 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        '요청하신 계정 생성 API가 준비되면 바로 연결됩니다.',
+                        '초대코드가 확인되면 계정이 생성되고 바로 로그인됩니다.',
                         style: TextStyle(color: Color(0xFF5B6572)),
                       ),
                       const SizedBox(height: 16),
+                      TextField(
+                        controller: _inviteCodeController,
+                        enabled: !_submitting,
+                        decoration: const InputDecoration(
+                          labelText: '초대 코드',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       TextField(
                         controller: _loginIdController,
                         enabled: !_submitting,
