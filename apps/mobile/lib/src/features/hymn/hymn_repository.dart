@@ -174,6 +174,8 @@ class HymnRepository {
 
   HymnRepository({required this.apiClient});
 
+  String? get sessionUserId => _sessionUserId;
+
   static const _hymnListCacheKey = 'mobile.cache.hymn.list';
   static const _historyCacheKey = 'mobile.cache.history';
   static const _pendingActionsKey = 'mobile.cache.pending.actions';
