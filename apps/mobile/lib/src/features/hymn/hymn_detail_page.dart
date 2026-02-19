@@ -1,8 +1,12 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/api_exception.dart';
 import 'hymn_repository.dart';
+import 'local_asset_cache.dart';
 
 class HymnDetailPage extends StatefulWidget {
   final String hymnId;
@@ -20,6 +24,9 @@ class HymnDetailPage extends StatefulWidget {
 
 class _HymnDetailPageState extends State<HymnDetailPage> {
   final _noteController = TextEditingController();
+  final _localAssetCache = LocalAssetCache();
+  final Map<String, String> _localAssetPaths = {};
+  int _assetLoadSequence = 0;
 
   bool _loading = true;
   bool _favorite = false;
@@ -54,11 +61,14 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
       if (!mounted) {
         return;
       }
+      final sequence = ++_assetLoadSequence;
       setState(() {
         _detail = detail;
         _noteController.text = note ?? '';
         _favorite = favorite;
+        _localAssetPaths.clear();
       });
+      unawaited(_cacheAssets(detail.assets, sequence));
     } catch (e) {
       if (!mounted) {
         return;
@@ -73,6 +83,26 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
         });
       }
     }
+  }
+
+  Future<void> _cacheAssets(List<HymnAsset> assets, int sequence) async {
+    final resolvedPaths = <String, String>{};
+    for (final asset in assets) {
+      final path = await _localAssetCache.getOrDownload(asset);
+      if (path != null) {
+        resolvedPaths[asset.id] = path;
+      }
+    }
+
+    if (!mounted || sequence != _assetLoadSequence) {
+      return;
+    }
+
+    setState(() {
+      _localAssetPaths
+        ..clear()
+        ..addAll(resolvedPaths);
+    });
   }
 
   Future<void> _toggleFavorite() async {
@@ -223,7 +253,9 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
           ),
           const SizedBox(height: 8),
           if (imageAssets.isEmpty)
-            const _EmptyCard(message: '관리자가 악보를 등록하면 여기에서 바로 볼 수 있어요.')
+            const _EmptyCard(
+              message: '관리자가 악보를 등록하면 여기에서 바로 볼 수 있어요.',
+            )
           else
             ...List.generate(
               imageAssets.length,
@@ -231,6 +263,7 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: _ImageAssetCard(
                   asset: imageAssets[index],
+                  localPath: _localAssetPaths[imageAssets[index].id],
                   label: '악보 ${index + 1}페이지',
                 ),
               ),
@@ -253,11 +286,15 @@ class _HymnDetailPageState extends State<HymnDetailPage> {
                 child: _MidiCard(
                   title: '반주 ${index + 1}',
                   url: midiAssets[index].url,
+                  localPath: _localAssetPaths[midiAssets[index].id],
                 ),
               ),
             ),
           const SizedBox(height: 10),
-          const _SectionTitle(title: '메모', subtitle: '개인 메모를 저장해 보세요.'),
+          const _SectionTitle(
+            title: '메모',
+            subtitle: '개인 메모를 저장해 보세요.',
+          ),
           const SizedBox(height: 8),
           Card(
             child: Padding(
@@ -406,9 +443,11 @@ class _EmptyCard extends StatelessWidget {
 class _ImageAssetCard extends StatelessWidget {
   final HymnAsset asset;
   final String label;
+  final String? localPath;
 
   const _ImageAssetCard({
     required this.asset,
+    required this.localPath,
     required this.label,
   });
 
@@ -425,7 +464,25 @@ class _ImageAssetCard extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
-            if (asset.url.startsWith('http'))
+            if (localPath != null &&
+                localPath!.isNotEmpty &&
+                File(localPath!).existsSync())
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Image.file(
+                    File(localPath!),
+                    fit: BoxFit.fitWidth,
+                    errorBuilder: (_, __, ___) => const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('악보 이미지를 불러오지 못했습니다.'),
+                    ),
+                  ),
+                ),
+              )
+            else if (asset.url.startsWith('http'))
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: InteractiveViewer(
@@ -456,10 +513,12 @@ class _ImageAssetCard extends StatelessWidget {
 class _MidiCard extends StatelessWidget {
   final String title;
   final String url;
+  final String? localPath;
 
   const _MidiCard({
     required this.title,
     required this.url,
+    required this.localPath,
   });
 
   @override
@@ -475,7 +534,10 @@ class _MidiCard extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
-            _MidiAssetPlayer(url: url),
+            _MidiAssetPlayer(
+              url: url,
+              localPath: localPath,
+            ),
           ],
         ),
       ),
@@ -485,8 +547,12 @@ class _MidiCard extends StatelessWidget {
 
 class _MidiAssetPlayer extends StatefulWidget {
   final String url;
+  final String? localPath;
 
-  const _MidiAssetPlayer({required this.url});
+  const _MidiAssetPlayer({
+    required this.url,
+    required this.localPath,
+  });
 
   @override
   State<_MidiAssetPlayer> createState() => _MidiAssetPlayerState();
@@ -526,7 +592,7 @@ class _MidiAssetPlayerState extends State<_MidiAssetPlayer> {
         await _player.resume();
       } else {
         await _player.setPlaybackRate(_speed);
-        await _player.play(UrlSource(widget.url));
+        await _playFromBestSource();
       }
       if (!mounted) {
         return;
@@ -542,6 +608,21 @@ class _MidiAssetPlayerState extends State<_MidiAssetPlayer> {
         _error = '반주 재생에 실패했습니다.';
       });
     }
+  }
+
+  Future<void> _playFromBestSource() async {
+    final filePath = widget.localPath;
+    if (filePath != null &&
+        filePath.isNotEmpty &&
+        File(filePath).existsSync()) {
+      try {
+        await _player.play(DeviceFileSource(filePath));
+        return;
+      } catch (_) {
+        // Fallback to network when local file cannot be read.
+      }
+    }
+    await _player.play(UrlSource(widget.url));
   }
 
   Future<void> _stop() async {
