@@ -90,17 +90,39 @@ void main() {
     expect(path, isNull);
   });
 
-  test('rejects payloads larger than max cache size', () async {
+  test('rejects missing content-type for image assets', () async {
     final cache = _createCache(
       client: _MockHttpClient((_) async {
         return http.Response.bytes(
-          [0, 1, 2, 3, 4],
+          [1, 2, 3],
+          200,
+        );
+      }),
+      tempDirectory: tempDirectory,
+    );
+
+    final path = await cache.getOrDownload(
+      _imageAsset(id: 'asset-4', version: 'v1'),
+      userId: 'member-1',
+    );
+
+    expect(path, isNull);
+  });
+
+  test('rejects payloads larger than max cache size while streaming', () async {
+    final cache = _createCache(
+      client: _MockStreamingHttpClient((_) async {
+        return http.StreamedResponse(
+          Stream<List<int>>.fromIterable([
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],
+          ]),
           200,
           headers: const {'content-type': 'image/png'},
         );
       }),
       tempDirectory: tempDirectory,
-      maxAssetBytes: 4,
+      maxAssetBytes: 6,
     );
 
     final path = await cache.getOrDownload(
@@ -204,5 +226,16 @@ class _MockHttpClient extends http.BaseClient {
       reasonPhrase: response.reasonPhrase,
       request: request,
     );
+  }
+}
+
+class _MockStreamingHttpClient extends http.BaseClient {
+  final Future<http.StreamedResponse> Function(Uri uri) _handler;
+
+  _MockStreamingHttpClient(this._handler);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    return _handler(request.url);
   }
 }
