@@ -19,6 +19,7 @@
   - Recent history
 - Offline
   - Local cache fallback for list/detail/note/favorites/history
+  - Hymn score/MIDI downloads are cached per session user and rejected when content-type or size checks fail
   - Offline changes are synced when network is restored
 - Auth
   - Access/refresh token persistence

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -71,7 +72,9 @@ class LocalAssetCache {
     }
 
     try {
-      final response = await _httpClient.get(uri).timeout(_downloadTimeout);
+      final request = http.Request('GET', uri);
+      final response =
+          await _httpClient.send(request).timeout(_downloadTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
       }
@@ -85,8 +88,8 @@ class LocalAssetCache {
         return null;
       }
 
-      final bytes = response.bodyBytes;
-      if (bytes.length > _maxAssetBytes) {
+      final bytes = await _readResponseBytesWithinLimit(response);
+      if (bytes == null) {
         return null;
       }
 
@@ -107,6 +110,23 @@ class LocalAssetCache {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<Uint8List?> _readResponseBytesWithinLimit(
+    http.StreamedResponse response,
+  ) async {
+    final bytes = BytesBuilder(copy: false);
+    var totalBytes = 0;
+
+    await for (final chunk in response.stream.timeout(_downloadTimeout)) {
+      totalBytes += chunk.length;
+      if (totalBytes > _maxAssetBytes) {
+        return null;
+      }
+      bytes.add(chunk);
+    }
+
+    return bytes.takeBytes();
   }
 
   Future<String?> _resolveExistingPath(
@@ -202,7 +222,7 @@ class LocalAssetCache {
 
   bool _supportsContentType(HymnAsset asset, String? rawContentType) {
     if (rawContentType == null || rawContentType.isEmpty) {
-      return true;
+      return false;
     }
 
     final contentType = rawContentType.split(';').first.trim().toLowerCase();
