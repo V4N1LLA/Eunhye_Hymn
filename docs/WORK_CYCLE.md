@@ -1088,3 +1088,35 @@
 - `rg -n "staging-ops-cycle|session expired|22119056042|mobile-store-release|key.properties.example" scripts docs README.md CLAUDE.md apps/mobile`
 - `rg -n "^(<<<<<<<|>>>>>>>|=======)$" .github/workflows/mobile-store-release.yml apps/mobile/android/app/build.gradle.kts scripts/staging-preflight.ps1 scripts/staging-latest-status.ps1 scripts/staging-ops-cycle.ps1 docs/staging-smoke-checklist.md docs/staging-feedback-checklist.md docs/runbook.md docs/staging-smoke-log.md docs/mobile/README.md apps/mobile/README.md docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md CLAUDE.md docs/WORK_CYCLE.md README.md infra/aws/README.md`
 
+
+## 38. 이번 사이클 기록 (2026-02-19, project status sync + current_update)
+
+### 목표
+- 최신 `develop` 기준으로 "현재 어디까지 개발되었는지"와 "다음 작업 우선순위"를 단일 문서로 정리하고, 기준 문서를 현재 버전에 맞게 동기화한다.
+
+### 범위
+- 포함: 상태 문서 신규 작성(`current_update.md`) + 핵심 운영/가이드 문서 동기화
+- 제외: 애플리케이션 동작 변경
+
+### 수행 작업
+1. 기준점 확정
+- `develop` 최신 HEAD `e877f2f` 기준으로 상태 정리
+- 최신 실행 근거(run `22161011643`, `22158976340`, `22161011631`, `22158976375`) 반영
+
+2. 상태 문서 신규 작성
+- `current_update.md` 생성
+- 구현 완료 범위, 미완료 범위, 우선순위(P0/P1/P2) 명시
+
+3. 문서 동기화
+- 루트/기준 문서: `README.md`, `docs/current-usable-scope.md`, `docs/deployment-readiness-audit.md`, `docs/changelog-dev.md`
+- 모바일/로컬 문서: `docs/mobile/README.md`, `apps/mobile/README.md`, `docs/LOCAL_SETUP.md`
+- 운영 문서: `docs/admin/README.md`, `docs/api-contract.md`
+
+### 검증
+- `git log --oneline --decorate -5`
+- `gh run list --workflow deploy-staging.yml --branch develop --limit 5`
+- `gh run list --workflow mobile-release-check.yml --branch develop --limit 5`
+- `gh run list --workflow mobile-ci.yml --branch develop --limit 5`
+- `gh run list --workflow api-ci.yml --branch develop --limit 5`
+- `rg -n "ENABLE_DEV_LOGIN|작성일: 2026-02-17|기준 커밋" docs README.md apps/mobile/README.md`
+- `rg -n "^(<<<<<<<|>>>>>>>|=======)$" README.md current_update.md docs/*.md docs/mobile/*.md apps/mobile/README.md`

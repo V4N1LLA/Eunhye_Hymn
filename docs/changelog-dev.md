@@ -1,6 +1,49 @@
-# 개발 변경 이력
+﻿# 개발 변경 이력
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
+
+## 2026-02-19
+
+### 로컬 검증 재현성 강화 + 초대코드 호환성 보강
+- PR #97 `feat/local-verification-flow`
+  - 로컬 검증 자동화 스크립트 추가
+    - `scripts/local-bootstrap.ps1`
+    - `scripts/local-verify.ps1`
+    - `scripts/run-mobile-emulator.ps1`
+  - 팀 재현 가이드 추가: `docs/TEAM_LOCAL_DEVELOPMENT.md`
+  - 모바일 첫 로그인 온보딩 화면 추가
+    - `apps/mobile/lib/src/features/auth/onboarding_page.dart`
+    - `apps/mobile/lib/src/core/storage/onboarding_storage.dart`
+- PR #98 `fix(api): preserve legacy invite-code casing compatibility`
+  - 초대코드 조회/사용 카운트 증가 시 대소문자 레거시 코드 호환 처리
+  - 테스트 보강
+    - `apps/api/src/test/java/com/eunhyehymn/presentation/controllers/AdminInviteCodeApiTest.java`
+    - `apps/api/src/test/java/com/eunhyehymn/presentation/controllers/SocialLoginApiTest.java`
+- 문서 동기화(현재 작업)
+  - 신규 상태 문서: `current_update.md`
+  - 기준 문서 최신화:
+    - `README.md`
+    - `docs/current-usable-scope.md`
+    - `docs/deployment-readiness-audit.md`
+    - `docs/mobile/README.md`
+    - `apps/mobile/README.md`
+    - `docs/LOCAL_SETUP.md`
+    - `docs/admin/README.md`
+    - `docs/api-contract.md`
+
+## 2026-02-18
+
+### 모바일 스토어 릴리즈 준비도 고도화
+- PR #94/#95 반영
+  - `.github/workflows/mobile-store-release.yml`에 Android Play upload 및 iOS TestFlight 업로드 경로 정리
+  - 시크릿 가이드 확장: `docs/SECRETS_MANAGEMENT.md`
+  - 모바일 운영 문서 업데이트
+    - `apps/mobile/README.md`
+    - `docs/mobile/README.md`
+    - `docs/mobile/qa-minimal-tooling.md`
+- 운영 정책 명확화
+  - 현 시점은 staging 검증 중심 운영
+  - production publish는 승인 시점까지 준비 상태 유지
 
 ## 2026-02-17
 

@@ -1,177 +1,90 @@
-# 배포 준비도 점검 리포트
+﻿# 배포 준비도 점검 리포트
 
-- 작성일: 2026-02-17
-- 점검 브랜치: `feat/staging-ops-cycle-and-mobile-store-readiness` (base: `develop`)
-- 점검 목적: "현재 개발 상태가 문서와 일치하는지"와 "실제 배포 가능 여부"를 코드/실행 기준으로 확인
+- 작성일: 2026-02-19
+- 점검 브랜치: `develop`
+- 점검 커밋: `e877f2f`
+- 점검 목적: 현재 코드/문서/배포 파이프라인이 실제 운영 전환 가능한 수준인지 확인
 
 ## 1. 결론 요약
 
-- 로컬 개발/검증: **가능**
-- 스테이징 자동배포/모바일 release 검증 파이프라인: **코드 구성 완료 (조건부 가능)**
-- 모바일 스토어 readiness 파이프라인(android signed AAB / ios no-codesign): **수동 실행 경로 구성 완료**
-- 스테이징 실가동: **조건부 가능** (배포/롤백/복구 리허설 성공, 수동 스모크 정례화 필요)
-- 프로덕션 배포: **준비 전**
-- 모바일 스토어 배포(Android/iOS): **준비 전**
+- 로컬 개발/검증: **Go**
+- 스테이징 자동 배포: **Go**
+- 스테이징 운영 전환: **Conditional Go** (수동 스모크 정례화 필요)
+- 모바일 스토어 실배포(Android/iOS): **No-Go** (워크플로우 준비 완료, 실 publish 미실행)
+- 프로덕션 공개 배포: **No-Go**
 
-## 2. 실행 검증 결과
+## 2. 실행 검증 근거
 
-### 2.1 API
+### 2.1 최신 GitHub Actions 실행
 
-- 명령: `./gradlew.bat test --no-daemon --stacktrace`
-- 결과: 성공 (58 tests, 0 failed, 0 skipped)
-- 근거 파일:
-  - `apps/api/src/test/java/com/eunhyehymn/presentation/controllers/AdminEventApiTest.java`
-  - `apps/api/src/test/java/com/eunhyehymn/presentation/controllers/SocialLoginApiTest.java`
+- `deploy-staging.yml`: 성공
+  - run `22161011643`
+  - title: `Merge pull request #98 from V4N1LLA/feat/invite-code-case-compat`
+  - time: `2026-02-18T22:56:34Z`
+- `mobile-release-check.yml`: 성공
+  - run `22158976340`
+  - title: `Merge pull request #97 from V4N1LLA/feat/local-verification-flow`
+  - time: `2026-02-18T21:48:28Z`
+- `mobile-ci.yml`: 성공
+  - run `22158976375`
+- `api-ci.yml`: 성공
+  - run `22161011631`
 
-### 2.2 Admin
+### 2.2 배포/릴리즈 파이프라인 구성 상태
 
-- 명령: `npm run build` (`apps/admin`)
-- 결과: 성공 (Vite production build 완료)
-- 근거 파일:
-  - `apps/admin/package.json`
-  - `.github/workflows/admin-ci.yml`
+- 스테이징 배포 파이프라인
+  - API 테스트 -> Admin 빌드 -> ECR push -> EC2 배포/verify 흐름 구성 완료
+  - 파일: `.github/workflows/deploy-staging.yml`
+- 모바일 릴리즈 체크
+  - Android release APK 빌드 검증 구성 완료
+  - 파일: `.github/workflows/mobile-release-check.yml`
+- 모바일 스토어 readiness
+  - Android signed AAB + Google Play upload 모드
+  - iOS no-codesign build + TestFlight upload 모드
+  - 파일: `.github/workflows/mobile-store-release.yml`
 
-### 2.3 Mobile
+### 2.3 로컬 재현성 보강 상태
 
-- 명령:
-  - `..\..\scripts\flutterw.ps1 analyze`
-  - `..\..\scripts\flutterw.ps1 test --reporter expanded`
-- 결과: 성공 (`No issues found`, 테스트 통과)
-- 근거 파일:
-  - `apps/mobile/test/app_config_test.dart`
-  - `.github/workflows/mobile-ci.yml`
+- 신규 스크립트 기반 로컬 검증 플로우 추가
+  - `scripts/local-bootstrap.ps1`
+  - `scripts/local-verify.ps1`
+  - `scripts/run-mobile-emulator.ps1`
+- 관련 운영 가이드 추가
+  - `docs/TEAM_LOCAL_DEVELOPMENT.md`
 
-### 2.4 Infra (Terraform/Compose)
+## 3. 리스크/미완료 항목
 
-- 명령:
-  - `terraform -chdir=infra/aws init -backend=false -input=false`
-  - `terraform -chdir=infra/aws validate`
-  - `docker compose -f infra/docker/docker-compose.yml config`
-- 결과:
-  - Terraform config 유효성 통과
-  - 로컬 compose 파싱 통과
-  - 스테이징 compose는 `.env` 파일 없이 실행 불가 (`infra/aws/docker-compose.prod.yml`에서 `env_file: .env` 요구)
+1. 스테이징 수동 스모크 정례화
+- 배포 성공과 별개로 Admin/Mobile 런타임 검수 로그를 주기적으로 누적해야 함
 
-### 2.5 GitHub Actions 최신 실행 증빙 (2026-02-17)
+2. 모바일 계정/온보딩 실서비스 경로
+- 회원가입은 UI 안내 수준
+- 모바일 ID/PW 로그인은 dev-login 검증 경로 의존
+- 온보딩 정보는 서버가 아닌 로컬 저장 기반
 
-- `deploy-staging.yml` (`develop`, commit `ee49a0e`) 성공
-  - run: `22119056042`
-  - URL: `https://github.com/V4N1LLA/Eunhye_Hymn/actions/runs/22119056042`
-- `mobile-release-check.yml` (`develop`, commit `35569af`) 성공
-  - run: `22052482140`
-  - URL: `https://github.com/V4N1LLA/Eunhye_Hymn/actions/runs/22052482140`
-
-## 3. 문서 정합성 점검 결과
-
-- 일치:
-  - 로컬 기능 범위(관리자/API/모바일 MVP+고도화)
-  - 스테이징 배포 워크플로우 존재 및 단계 구성
-  - 선행 조건(Terraform/Secrets/EC2 접근) 필요
-- 보완:
-  - 기준 커밋/PR/실행 run ID를 문서(`docs/current-usable-scope.md`, 본 문서)에서 주기적으로 최신화 필요
-  - Admin/Mobile 런타임 수동 스모크를 정례 수행하고 증빙을 문서에 누적할 필요
-
-### 3.1 후속 반영 (2026-02-14 ~ 2026-02-17)
-- 아래 항목을 문서에 반영 완료:
-  - `docs/data-model.md`: events 인덱스(`V7__events_admin_indexes.sql`) 반영
-  - `docs/current-usable-scope.md`: 기준 커밋(`ee49a0e`)/근거 PR(#92~#87 포함) 최신화
-  - `docs/mobile/README.md`: 모바일 배포 범위/운영 연계 체크포인트 보강
-  - `README.md`: CI/CD 설명에 `mobile-release-check.yml` 및 staging 자동 배포 반영
-  - `docs/staging-smoke-log.md`: 운영 사이클 실행 로그 누적 기록 추가
+3. 스토어 실배포 이력 부재
+- `mobile-store-release.yml`는 준비되어 있으나 실제 publish run 근거가 아직 없음
 
 ## 4. 실배포 전 필수 체크리스트
 
-- [ ] `infra/aws`에 대해 `terraform apply` 완료
-- [ ] GitHub Actions Secrets 등록
-  - `AWS_ACCESS_KEY_ID`
-  - `AWS_SECRET_ACCESS_KEY`
-  - `AWS_REGION`
-  - `ECR_REGISTRY`
-  - `EC2_HOST`
-  - `EC2_SSH_KEY`
-  - `DEPLOY_ENV_FILE`
-  - `ENABLE_AWSLOGS` (선택)
-- [ ] EC2 SSH 접근 및 배포 계정 권한 확인
-- [ ] `develop` 기준 1회 자동배포 후 스모크 테스트
-  - `GET /api/v1/ping`
-  - 관리자 로그인
-  - 찬양 목록/상세, 에셋 업로드, 감사 로그 조회
-- [ ] 롤백 리허설 1회 수행 (`docs/runbook.md`)
+- [ ] 스테이징 수동 스모크 정례 수행 및 `docs/staging-smoke-log.md` 누적
+- [ ] 모바일 계정/회원가입/온보딩 정책 확정(서버 연동 포함)
+- [ ] Android `play_upload`, iOS `testflight` 모드 리허설 실행
+- [ ] 프로덕션 도메인/HTTPS/모바일 네트워크 정책 확정
+- [ ] 운영 승인 절차(Go/No-Go) 문서화 고정
 
-### 4.1 2026-02-13 진행 업데이트 (기록)
+## 5. 현재 판단
 
-- 완료:
-  - GitHub Secrets 일부 등록 완료
-    - `AWS_ACCESS_KEY_ID`
-    - `AWS_SECRET_ACCESS_KEY`
-    - `AWS_REGION`
-    - `ECR_REGISTRY`
-    - `ENABLE_AWSLOGS=false`
-- 미완료:
-  - `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
-- 차단 이슈:
-  - 현재 IAM 사용자(`terraform-deployer`)에서 아래 조회 권한 부족으로 `terraform plan/apply` 진행 불가
-    - `ec2:DescribeAvailabilityZones`
-    - `ec2:DescribeImages`
-    - `ec2:DescribeKeyPairs`
-- 조치:
-  - 권한 정책 샘플 추가: `infra/aws/terraform-deployer-iam-policy.json`
-  - 사전 점검 스크립트 추가: `scripts/staging-preflight.ps1`
-  - Secrets 동기화 스크립트 추가: `scripts/staging-sync-secrets.ps1`
-
-### 4.2 2026-02-14 진행 업데이트 (기록)
-
-- 완료:
-  - 스테이징 리허설 실행 성공 (`workflow_dispatch`)
-    - `22010284332` (`develop`)
-  - 롤백 리허설 실행 성공 (임시 브랜치 기준)
-    - `22010387328` (`tmp/staging-rollback-6fef282`)
-  - 최신 develop 재배포(복구) 성공
-    - `22010470389` (`develop`)
-  - 리허설 증빙 문서화 완료
-    - `docs/staging-rehearsal-log.md`
-    - `docs/staging-smoke-checklist.md`
-- 보강:
-  - `scripts/staging-rehearsal.ps1`에 SHA ref 가드 추가
-    - `workflow_dispatch` branch/tag 제약을 명확히 안내
-- 잔여:
-  - 운영 PC 기준 preflight 무스킵 통과 상태 유지 (`aws` 자격증명 + `terraform.tfvars`)
-  - Admin/Mobile 런타임 수동 스모크 정기 수행
-
-### 4.3 2026-02-16 진행 업데이트 (기록)
-
-- 완료:
-  - `develop` 최신 자동 배포 성공
-    - run `22052664286` (commit `c578c3f`)
-  - Mobile Android release APK 빌드 검증 성공
-    - run `22052482140` (commit `35569af`)
-- 잔여:
-  - Admin/Mobile 런타임 수동 스모크 정기 수행 및 결과 문서화
-
-### 4.4 2026-02-17 진행 업데이트 (기록)
-
-- 완료:
-  - 운영 사이클 자동 점검 스크립트 추가: `scripts/staging-ops-cycle.ps1`
-  - 최신 자동 배포 성공 확인
-    - run `22119056042` (commit `ee49a0e`)
-- 확인된 리스크:
-  - `staging-preflight.ps1` 무스킵 실행 시 AWS 세션 만료로 실패
-    - `aws sts get-caller-identity`: `session expired (run aws sso login / aws login)`
-- 잔여:
-  - AWS 재인증 후 preflight 무스킵 통과 상태 회복
-  - Admin/Mobile 런타임 수동 스모크 정기 수행 및 결과 문서화
-
-## 5. 현재 판단 (Go/No-Go)
-
-- 로컬 데모/개발: **Go**
-- 스테이징 실운영 검증: **Conditional Go** (배포/롤백 자동 리허설은 통과, Admin/Mobile 수동 스모크 정례화 필요)
-- 프로덕션 공개 배포: **No-Go**
-- 모바일 앱스토어 배포: **No-Go**
+- Staging 운영 검증: **Conditional Go**
+- Production 배포: **No-Go**
+- Mobile Store publish: **No-Go**
 
 ## 6. 관련 문서
 
+- `current_update.md`
 - `docs/current-usable-scope.md`
+- `docs/changelog-dev.md`
 - `docs/runbook.md`
-- `infra/aws/README.md`
-- `.github/workflows/deploy-staging.yml`
-- `CLAUDE.md`
+- `docs/staging-smoke-checklist.md`
+- `docs/staging-smoke-log.md`
+- `docs/TEAM_LOCAL_DEVELOPMENT.md`
