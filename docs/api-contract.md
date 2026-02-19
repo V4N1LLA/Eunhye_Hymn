@@ -93,16 +93,45 @@ Base URL: `/api/v1`
 }
 ```
 
-### 1.7 DEV 로그인 (개발 환경 전용)
-- `POST /auth/dev/login`
+### 1.7 사용자 회원가입
+- `POST /auth/signup`
 - 요청 `data` 예시:
 ```json
 {
-  "userId": "00000000-0000-0000-0000-000000000000",
-  "role": "USER",
-  "displayName": "개발 사용자"
+  "loginId": "member.one",
+  "password": "password-123!",
+  "inviteCode": "ABC123"
 }
 ```
+- 응답 `data` 예시:
+```json
+{
+  "accessToken": "jwt-access",
+  "refreshToken": "jwt-refresh",
+  "newUser": true
+}
+```
+
+### 1.8 사용자 로그인
+- `POST /auth/login`
+- 요청 `data` 예시:
+```json
+{
+  "loginId": "member.one",
+  "password": "password-123!"
+}
+```
+- 응답 `data` 예시:
+```json
+{
+  "accessToken": "jwt-access",
+  "refreshToken": "jwt-refresh",
+  "newUser": false
+}
+```
+
+### 1.9 DEV 로그인 (개발/테스트 전용, 운영 앱 미사용)
+- `POST /auth/dev/login`
 
 ## 2. 찬양
 

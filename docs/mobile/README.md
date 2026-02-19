@@ -10,7 +10,7 @@
   - 소셜 SDK 직접 로그인 (Kakao 모바일)
   - 로그인 화면에서 Kakao 버튼 클릭 시 provider 앱/브라우저로 리디렉션
   - 초대코드 입력 지원 (최초 1회)
-  - Dev 로그인은 `ENABLE_DEV_LOGIN=true`일 때만 노출
+  - 계정 회원가입/로그인(`POST /auth/signup`, `POST /auth/login`)
 - 찬양
   - 목록 조회 + 검색
   - 목록 화면 태그 필터 + 검색어/필터 초기화 + 빈 상태 가이드
@@ -48,7 +48,8 @@
 - Base URL: `/api/v1`
 - 사용 API:
   - `POST /auth/social`
-  - `POST /auth/dev/login`
+  - `POST /auth/signup`
+  - `POST /auth/login`
   - `POST /auth/refresh`
   - `POST /auth/logout`
   - `GET /me/profile`
@@ -81,7 +82,7 @@ Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
 `run-mobile-emulator.ps1`가 읽는 `apps/mobile/.env`(fallback: 루트 `.env`)의 키 값이 누락/불일치하면
 동의 화면의 "계속하기" 이후 앱으로 복귀하지 않을 수 있다.
 민감 정보 관리 원칙은 `docs/SECRETS_MANAGEMENT.md`를 따른다.
-로컬 개발용 로그인 화면이 필요하면 `--dart-define=ENABLE_DEV_LOGIN=true`를 함께 사용한다.
+계정 로그인/회원가입은 운영 API(`/auth/login`, `/auth/signup`)를 사용한다.
 
 ## 5.1 배포 범위 주의
 
