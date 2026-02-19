@@ -479,6 +479,13 @@ class _ImageAssetCard extends StatelessWidget {
     required this.label,
   });
 
+  bool get _hasLocalFile =>
+      localPath != null &&
+      localPath!.isNotEmpty &&
+      File(localPath!).existsSync();
+
+  bool get _hasRemoteUrl => asset.url.startsWith('http');
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -492,40 +499,10 @@ class _ImageAssetCard extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
-            if (localPath != null &&
-                localPath!.isNotEmpty &&
-                File(localPath!).existsSync())
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: InteractiveViewer(
-                  minScale: 1,
-                  maxScale: 4,
-                  child: Image.file(
-                    File(localPath!),
-                    fit: BoxFit.fitWidth,
-                    errorBuilder: (_, __, ___) => const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text('악보 이미지를 불러오지 못했습니다.'),
-                    ),
-                  ),
-                ),
-              )
-            else if (asset.url.startsWith('http'))
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: InteractiveViewer(
-                  minScale: 1,
-                  maxScale: 4,
-                  child: Image.network(
-                    asset.url,
-                    fit: BoxFit.fitWidth,
-                    errorBuilder: (_, __, ___) => const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text('악보 이미지를 불러오지 못했습니다.'),
-                    ),
-                  ),
-                ),
-              )
+            if (_hasLocalFile)
+              _buildLocalImage()
+            else if (_hasRemoteUrl)
+              _buildRemoteImage()
             else
               const Text(
                 '이미지 주소가 올바르지 않습니다.',
@@ -534,6 +511,51 @@ class _ImageAssetCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLocalImage() {
+    return _wrapZoomable(
+      Image.file(
+        File(localPath!),
+        fit: BoxFit.fitWidth,
+        errorBuilder: (_, __, ___) {
+          if (_hasRemoteUrl) {
+            return _buildRemoteImageContent();
+          }
+          return _buildImageLoadError();
+        },
+      ),
+    );
+  }
+
+  Widget _buildRemoteImage() {
+    return _wrapZoomable(_buildRemoteImageContent());
+  }
+
+  Widget _buildRemoteImageContent() {
+    return Image.network(
+      asset.url,
+      fit: BoxFit.fitWidth,
+      errorBuilder: (_, __, ___) => _buildImageLoadError(),
+    );
+  }
+
+  Widget _wrapZoomable(Widget child) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: InteractiveViewer(
+        minScale: 1,
+        maxScale: 4,
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildImageLoadError() {
+    return const Padding(
+      padding: EdgeInsets.all(12),
+      child: Text('악보 이미지를 불러오지 못했습니다.'),
     );
   }
 }
