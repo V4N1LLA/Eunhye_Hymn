@@ -1,9 +1,12 @@
 param(
     [ValidateSet("local", "staging", "release")]
     [string] $Environment = "local",
-    [string] $DeviceId = "emulator-5554",
+    [ValidateSet("debug", "release")]
+    [string] $BuildMode = "debug",
     [string] $ApiBaseUrl,
-    [string] $KakaoNativeAppKey
+    [string] $KakaoNativeAppKey,
+    [switch] $Install,
+    [string] $DeviceId = "emulator-5554"
 )
 
 $ErrorActionPreference = 'Stop'
@@ -74,23 +77,42 @@ function Read-JsonValue {
     return $value.ToString()
 }
 
-$profileApiBaseUrl = Read-JsonValue -Path $profileFile -Name "API_BASE_URL"
+function Resolve-AdbPath {
+    $fromCommand = Get-Command "adb" -ErrorAction SilentlyContinue
+    if ($fromCommand) {
+        return $fromCommand.Source
+    }
 
-$localEnvApiBaseUrl = $null
-if ($Environment -eq "local") {
-    $localEnvApiBaseUrl = Read-EnvValue -Path $mobileEnv -Name "API_BASE_URL"
+    $candidates = @(
+        [Environment]::GetEnvironmentVariable("LOCALAPPDATA", "User"),
+        $env:LOCALAPPDATA,
+        (Join-Path $env:USERPROFILE "AppData/Local")
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+
+    foreach ($base in $candidates) {
+        $candidate = Join-Path $base "Android/Sdk/platform-tools/adb.exe"
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+    return $null
 }
 
+$profileApiBaseUrl = Read-JsonValue -Path $profileFile -Name "API_BASE_URL"
 $resolvedApiBaseUrl = if (-not [string]::IsNullOrWhiteSpace($ApiBaseUrl)) {
     $ApiBaseUrl
-} elseif (-not [string]::IsNullOrWhiteSpace($localEnvApiBaseUrl)) {
-    $localEnvApiBaseUrl
 } else {
     $profileApiBaseUrl
 }
 
 if ([string]::IsNullOrWhiteSpace($resolvedApiBaseUrl)) {
     throw "API_BASE_URL is empty. Set it in $profileFile or pass -ApiBaseUrl."
+}
+
+if ($Environment -eq "release" -and
+    -not $ApiBaseUrl -and
+    $resolvedApiBaseUrl.Trim().ToLowerInvariant() -eq "https://example.com/api/v1") {
+    throw "Release API URL is placeholder. Pass -ApiBaseUrl for release build."
 }
 
 $resolvedKakaoKey = if ($KakaoNativeAppKey) {
@@ -117,10 +139,44 @@ if ($resolvedApiBaseUrl.Trim() -ne $profileApiBaseUrl) {
     $dartDefines += "--dart-define=API_BASE_URL=" + $resolvedApiBaseUrl.Trim()
 }
 
+$buildArgs = @("build", "apk")
+if ($BuildMode -eq "release") {
+    $buildArgs += "--release"
+} else {
+    $buildArgs += "--debug"
+}
+$buildArgs += $dartDefines
+
 Push-Location $mobileDir
 try {
-    Write-Host ("[run-mobile-emulator] environment={0} api={1}" -f $Environment, $resolvedApiBaseUrl.Trim())
-    & $flutter run -d $DeviceId @dartDefines
+    Write-Host ("[build-mobile-apk] environment={0} mode={1} api={2}" -f $Environment, $BuildMode, $resolvedApiBaseUrl.Trim())
+    & $flutter @buildArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Flutter build failed with exit code $LASTEXITCODE"
+    }
 } finally {
     Pop-Location
 }
+
+$apkPath = if ($BuildMode -eq "release") {
+    Join-Path $mobileDir "build/app/outputs/flutter-apk/app-release.apk"
+} else {
+    Join-Path $mobileDir "build/app/outputs/flutter-apk/app-debug.apk"
+}
+
+if (-not (Test-Path -LiteralPath $apkPath)) {
+    throw "APK not found: $apkPath"
+}
+
+if ($Install) {
+    $adb = Resolve-AdbPath
+    if (-not $adb) {
+        throw "adb not found. Install Android SDK platform-tools or add adb to PATH."
+    }
+    & $adb -s $DeviceId install -r $apkPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "adb install failed with exit code $LASTEXITCODE"
+    }
+}
+
+Write-Host ("APK_READY={0}" -f $apkPath)

@@ -1,0 +1,5 @@
+{
+  "APP_ENV": "release",
+  "API_BASE_URL": "https://example.com/api/v1",
+  "ENABLE_DEV_LOGIN": "false"
+}
