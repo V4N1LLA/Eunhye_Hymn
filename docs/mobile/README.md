@@ -69,23 +69,18 @@
 cd apps/mobile
 ..\..\scripts\flutterw.ps1 pub get
 
-# 웹 실행
-..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
-
-# Android 에뮬레이터/실기기 (staging)
-..\..\scripts\flutterw.ps1 run -d emulator-5554 --dart-define=API_BASE_URL=http://13.209.200.12
-
-# 소셜 로그인 포함 실행 (권장)
-..\..\scripts\flutterw.ps1 run -d emulator-5554 `
-  --dart-define=API_BASE_URL=http://13.209.200.12 `
-  --dart-define=KAKAO_NATIVE_APP_KEY=<kakao_native_app_key>
+# 환경 프로파일(local/staging/release) 기반 실행
+cd ..\..
+.\scripts\run-mobile-emulator.ps1 -Environment local -DeviceId emulator-5554
+.\scripts\run-mobile-emulator.ps1 -Environment staging -DeviceId emulator-5554
 ```
 
 실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.
 `API_BASE_URL`에 `/api/v1`를 생략해도 앱에서 자동으로 보정한다.
 Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
-앱 실행 시 `--dart-define=KAKAO_NATIVE_APP_KEY=...` 값이 누락/불일치하면
+`run-mobile-emulator.ps1`가 읽는 `apps/mobile/.env`(fallback: 루트 `.env`)의 키 값이 누락/불일치하면
 동의 화면의 "계속하기" 이후 앱으로 복귀하지 않을 수 있다.
+민감 정보 관리 원칙은 `docs/SECRETS_MANAGEMENT.md`를 따른다.
 로컬 개발용 로그인 화면이 필요하면 `--dart-define=ENABLE_DEV_LOGIN=true`를 함께 사용한다.
 
 ## 5.1 배포 범위 주의
@@ -120,8 +115,11 @@ Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
 예시:
 
 ```powershell
-cd apps/mobile
-..\..\scripts\flutterw.ps1 build apk --release --dart-define=API_BASE_URL=https://example.com/api/v1
+# staging debug APK + install
+.\scripts\build-mobile-apk.ps1 -Environment staging -BuildMode debug -Install
+
+# release APK (운영 URL 명시 필요)
+.\scripts\build-mobile-apk.ps1 -Environment release -BuildMode release -ApiBaseUrl https://<prod-domain>/api/v1
 ```
 
 ## 6.2 Store release readiness

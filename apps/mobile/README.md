@@ -26,7 +26,10 @@
 
 ## Run
 
-Use the repo wrapper script `scripts/flutterw.ps1`.
+Use environment profiles under `apps/mobile/env/`:
+- `local.json`
+- `staging.json`
+- `release.json`
 
 ```powershell
 # first time from repo root
@@ -35,19 +38,20 @@ Use the repo wrapper script `scripts/flutterw.ps1`.
 cd apps/mobile
 ..\..\scripts\flutterw.ps1 pub get
 
-# web
-..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
+# local emulator run
+cd ..\..
+.\scripts\run-mobile-emulator.ps1 -Environment local -DeviceId emulator-5554
 
-# android emulator/device (staging)
-..\..\scripts\flutterw.ps1 run -d emulator-5554 `
-  --dart-define=API_BASE_URL=http://13.209.200.12 `
-  --dart-define=KAKAO_NATIVE_APP_KEY=<kakao_native_app_key>
+# staging emulator run
+.\scripts\run-mobile-emulator.ps1 -Environment staging -DeviceId emulator-5554
 ```
 
 Notes:
+- `run-mobile-emulator.ps1` always injects `KAKAO_NATIVE_APP_KEY` from `apps/mobile/.env` (fallback: repo `.env`) unless overridden.
 - `API_BASE_URL` automatically appends `/api/v1` if omitted.
 - For physical devices, use the reachable host IP/domain instead of `10.0.2.2`.
 - Kakao Android callback scheme is `kakao<KAKAO_NATIVE_APP_KEY>`. If the key is missing/mismatched at run time, Kakao consent can stop at "Continue" without returning to the app.
+- Keep secrets (`KAKAO_NATIVE_APP_KEY`, signing keys) out of Git. See `docs/SECRETS_MANAGEMENT.md`.
 - `ENABLE_DEV_LOGIN=true` adds hidden local dev login panel on the login screen.
 
 ## Structure
@@ -81,6 +85,9 @@ lib/
 
 - Android release check: `.github/workflows/mobile-release-check.yml`
   - Builds `app-release.apk` and uploads artifact.
+- Local APK build helper: `scripts/build-mobile-apk.ps1`
+  - debug APK (staging): `.\scripts\build-mobile-apk.ps1 -Environment staging -BuildMode debug -Install`
+  - release APK: `.\scripts\build-mobile-apk.ps1 -Environment release -BuildMode release -ApiBaseUrl https://<prod-domain>/api/v1`
 - Store release readiness (Android only for now): `.github/workflows/mobile-store-release.yml` (manual)
   - signed AAB build (`flutter build appbundle --release`)
   - `android_distribution_mode=build_only`: build artifact only
