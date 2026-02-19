@@ -4,6 +4,8 @@ import com.eunhyehymn.application.usecases.AdminPasswordLoginUseCase;
 import com.eunhyehymn.application.usecases.LogoutUseCase;
 import com.eunhyehymn.application.usecases.RefreshTokenUseCase;
 import com.eunhyehymn.application.usecases.SocialLoginUseCase;
+import com.eunhyehymn.application.usecases.UserPasswordLoginUseCase;
+import com.eunhyehymn.application.usecases.UserPasswordSignupUseCase;
 import com.eunhyehymn.application.usecases.ValidateInviteCodeUseCase;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.common.response.ApiResponse;
@@ -25,19 +27,25 @@ public class AuthController {
     private final LogoutUseCase logoutUseCase;
     private final ValidateInviteCodeUseCase validateInviteCodeUseCase;
     private final SocialLoginUseCase socialLoginUseCase;
+    private final UserPasswordSignupUseCase userPasswordSignupUseCase;
+    private final UserPasswordLoginUseCase userPasswordLoginUseCase;
 
     public AuthController(
         AdminPasswordLoginUseCase adminPasswordLoginUseCase,
         RefreshTokenUseCase refreshTokenUseCase,
         LogoutUseCase logoutUseCase,
         ValidateInviteCodeUseCase validateInviteCodeUseCase,
-        SocialLoginUseCase socialLoginUseCase
+        SocialLoginUseCase socialLoginUseCase,
+        UserPasswordSignupUseCase userPasswordSignupUseCase,
+        UserPasswordLoginUseCase userPasswordLoginUseCase
     ) {
         this.adminPasswordLoginUseCase = adminPasswordLoginUseCase;
         this.refreshTokenUseCase = refreshTokenUseCase;
         this.logoutUseCase = logoutUseCase;
         this.validateInviteCodeUseCase = validateInviteCodeUseCase;
         this.socialLoginUseCase = socialLoginUseCase;
+        this.userPasswordSignupUseCase = userPasswordSignupUseCase;
+        this.userPasswordLoginUseCase = userPasswordLoginUseCase;
     }
 
     @PostMapping("/admin/login")
@@ -77,6 +85,45 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/signup")
+    public ApiResponse<SocialLoginResponse> signup(@RequestBody @Validated UserPasswordSignupRequest request) {
+        try {
+            UserPasswordSignupUseCase.LoginResult result = userPasswordSignupUseCase.signup(
+                request.loginId(),
+                request.password(),
+                request.inviteCode()
+            );
+            return ApiResponse.success(new SocialLoginResponse(
+                result.accessToken(),
+                result.refreshToken(),
+                result.newUser()
+            ));
+        } catch (UserPasswordSignupUseCase.InvalidInviteCodeException e) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "invalid_invite_code", e.getMessage(), null);
+        } catch (UserPasswordSignupUseCase.DuplicateLoginIdException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "login_id_exists", e.getMessage(), null);
+        } catch (UserPasswordSignupUseCase.InvalidCredentialFormatException e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_credential_format", e.getMessage(), null);
+        }
+    }
+
+    @PostMapping("/login")
+    public ApiResponse<SocialLoginResponse> login(@RequestBody @Validated UserPasswordLoginRequest request) {
+        try {
+            UserPasswordLoginUseCase.LoginResult result = userPasswordLoginUseCase.login(
+                request.loginId(),
+                request.password()
+            );
+            return ApiResponse.success(new SocialLoginResponse(
+                result.accessToken(),
+                result.refreshToken(),
+                result.newUser()
+            ));
+        } catch (UserPasswordLoginUseCase.InvalidCredentialsException e) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "user_login_failed", e.getMessage(), null);
+        }
+    }
+
     @PostMapping("/refresh")
     public ApiResponse<TokenResponse> refresh(@RequestBody @Validated RefreshRequest request) {
         RefreshTokenUseCase.TokenPair pair = refreshTokenUseCase.refresh(request.refreshToken());
@@ -106,6 +153,19 @@ public class AuthController {
     }
 
     public record AdminPasswordLoginRequest(
+        @NotBlank String loginId,
+        @NotBlank String password
+    ) {
+    }
+
+    public record UserPasswordSignupRequest(
+        @NotBlank String loginId,
+        @NotBlank String password,
+        @NotBlank String inviteCode
+    ) {
+    }
+
+    public record UserPasswordLoginRequest(
         @NotBlank String loginId,
         @NotBlank String password
     ) {
