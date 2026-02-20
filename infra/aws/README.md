@@ -193,7 +193,7 @@ JSON 출력이 필요하면 `-AsJson` 옵션을 사용한다.
   - `Use workflow from`: 검증 브랜치 선택
   - `enable_awslogs`: 기본 `false`로 실행
 - 운영 반영 시:
-  - `staging` 머지 후 push 트리거 자동 실행
+  - `develop` 머지 후 push 트리거 자동 실행
 
 ### DEPLOY_ENV_FILE 내용
 
