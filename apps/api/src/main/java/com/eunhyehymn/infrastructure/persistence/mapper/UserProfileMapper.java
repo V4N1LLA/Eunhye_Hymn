@@ -13,6 +13,7 @@ public final class UserProfileMapper {
             entity.getChurchName(),
             entity.getMemberName(),
             entity.getGroupName(),
+            entity.getGender(),
             entity.getUpdatedAt()
         );
     }
@@ -23,6 +24,7 @@ public final class UserProfileMapper {
             profile.churchName(),
             profile.name(),
             profile.groupName(),
+            profile.gender(),
             profile.updatedAt()
         );
     }

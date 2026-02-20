@@ -11,6 +11,28 @@ Base URL: `/api/v1`
 }
 ```
 
+## Auth verification flow update (2026-02)
+
+Social login and member verification are now separated:
+
+1. `POST /auth/social` (Kakao login, token issue)
+2. `POST /auth/invite/validate` (invite code validation + bind to authenticated user)
+3. `POST /auth/sms/request` (send SMS code, auth required)
+4. `POST /auth/sms/verify` (verify code, auth required)
+5. `POST /auth/withdraw` (self-withdraw, auth required)
+
+`GET /me/profile` now includes:
+
+```json
+{
+  "userId": "uuid",
+  "role": "USER",
+  "inviteVerified": true,
+  "phoneVerified": true,
+  "verified": true
+}
+```
+
 ## 1. 인증
 
 ### 1.1 초대 코드 검증
@@ -176,6 +198,32 @@ Base URL: `/api/v1`
 - `PATCH /admin/hymns/{id}` (수정)
 - `DELETE /admin/hymns/{id}` (삭제)
 - `GET /admin/hymns` (전체 목록)
+
+### 2.4 AI 찬송 추천 (인증 필요)
+- `POST /ai/hymn-recommendations`
+- 요청 `data` 예시:
+```json
+{
+  "situation": "주일 새벽 예배, 차분한 묵상 분위기",
+  "maxResults": 3
+}
+```
+- 응답 `data` 예시:
+```json
+{
+  "items": [
+    {
+      "id": "hymn-uuid",
+      "number": "101",
+      "title": "찬송 제목",
+      "tags": "grace,comfort",
+      "reason": "상황에 맞는 분위기와 가사 주제"
+    }
+  ],
+  "requestedMaxResults": 3,
+  "candidateCount": 25
+}
+```
 
 ## 3. 에셋 관리 (관리자)
 

@@ -1,27 +1,37 @@
 package com.eunhyehymn.common.config;
 
+import com.eunhyehymn.application.ports.SmsSender;
 import com.eunhyehymn.application.ports.SocialTokenVerifier;
 import com.eunhyehymn.application.ports.TokenHashService;
 import com.eunhyehymn.application.ports.TokenService;
 import com.eunhyehymn.application.usecases.AdminPasswordLoginUseCase;
+import com.eunhyehymn.application.usecases.ConfirmInviteCodeUseCase;
 import com.eunhyehymn.application.usecases.DevLoginUseCase;
 import com.eunhyehymn.application.usecases.LogoutUseCase;
 import com.eunhyehymn.application.usecases.RefreshTokenUseCase;
+import com.eunhyehymn.application.usecases.RequestSmsCodeUseCase;
 import com.eunhyehymn.application.usecases.SocialLoginUseCase;
 import com.eunhyehymn.application.usecases.UpdateAdminPasswordCredentialUseCase;
 import com.eunhyehymn.application.usecases.UserPasswordLoginUseCase;
 import com.eunhyehymn.application.usecases.UserPasswordSignupUseCase;
+import com.eunhyehymn.application.usecases.ValidateInviteCodeUseCase;
+import com.eunhyehymn.application.usecases.VerifySmsCodeUseCase;
+import com.eunhyehymn.application.usecases.WithdrawAccountUseCase;
 import com.eunhyehymn.domain.repository.AdminPasswordCredentialRepository;
 import com.eunhyehymn.domain.repository.AuthIdentityRepository;
 import com.eunhyehymn.domain.repository.InviteCodeRepository;
 import com.eunhyehymn.domain.repository.RefreshTokenRepository;
+import com.eunhyehymn.domain.repository.SmsVerificationRequestRepository;
 import com.eunhyehymn.domain.repository.UserPasswordCredentialRepository;
 import com.eunhyehymn.domain.repository.UserRepository;
+import com.eunhyehymn.domain.repository.UserVerificationRepository;
 import com.eunhyehymn.infrastructure.security.JwtAuthenticationFilter;
 import com.eunhyehymn.infrastructure.security.JwtService;
 import com.eunhyehymn.infrastructure.security.JwtTokenService;
+import com.eunhyehymn.infrastructure.security.LogOnlySmsSender;
 import com.eunhyehymn.infrastructure.security.Sha256TokenHashService;
 import com.eunhyehymn.infrastructure.security.SocialTokenVerifierImpl;
+import com.eunhyehymn.infrastructure.security.TwilioSmsSender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Arrays;
 import java.util.Set;
@@ -69,13 +79,32 @@ public class AuthConfig {
     }
 
     @Bean
-    JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService) {
-        return new JwtAuthenticationFilter(jwtService);
+    JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
+        return new JwtAuthenticationFilter(jwtService, userRepository);
     }
 
     @Bean
     SocialTokenVerifier socialTokenVerifier(ObjectMapper objectMapper) {
         return new SocialTokenVerifierImpl(objectMapper);
+    }
+
+    @Bean
+    SmsSender smsSender(
+        @Value("${sms.twilio.enabled:false}") boolean twilioEnabled,
+        @Value("${sms.twilio.account-sid:}") String accountSid,
+        @Value("${sms.twilio.auth-token:}") String authToken,
+        @Value("${sms.twilio.from-number:}") String fromNumber,
+        @Value("${sms.twilio.message-template:[Eunhye Hymn] Verification code is %s.}") String template
+    ) {
+        if (!twilioEnabled) {
+            return new LogOnlySmsSender();
+        }
+        if (accountSid == null || accountSid.isBlank() ||
+            authToken == null || authToken.isBlank() ||
+            fromNumber == null || fromNumber.isBlank()) {
+            throw new IllegalStateException("Twilio SMS is enabled but credentials are missing.");
+        }
+        return new TwilioSmsSender(accountSid.trim(), authToken.trim(), fromNumber.trim(), template);
     }
 
     @Bean
@@ -125,7 +154,6 @@ public class AuthConfig {
         SocialTokenVerifier socialTokenVerifier,
         AuthIdentityRepository authIdentityRepository,
         UserRepository userRepository,
-        InviteCodeRepository inviteCodeRepository,
         RefreshTokenRepository refreshTokenRepository,
         TokenService tokenService,
         TokenHashService tokenHashService,
@@ -138,7 +166,6 @@ public class AuthConfig {
             socialTokenVerifier,
             authIdentityRepository,
             userRepository,
-            inviteCodeRepository,
             refreshTokenRepository,
             tokenService,
             tokenHashService,
@@ -221,6 +248,78 @@ public class AuthConfig {
             tokenHashService,
             passwordEncoder,
             refreshTokenTtlSeconds
+        );
+    }
+
+    @Bean
+    ConfirmInviteCodeUseCase confirmInviteCodeUseCase(
+        ValidateInviteCodeUseCase validateInviteCodeUseCase,
+        InviteCodeRepository inviteCodeRepository,
+        UserRepository userRepository,
+        UserVerificationRepository userVerificationRepository
+    ) {
+        return new ConfirmInviteCodeUseCase(
+            validateInviteCodeUseCase,
+            inviteCodeRepository,
+            userRepository,
+            userVerificationRepository
+        );
+    }
+
+    @Bean
+    RequestSmsCodeUseCase requestSmsCodeUseCase(
+        SmsVerificationRequestRepository smsVerificationRequestRepository,
+        UserRepository userRepository,
+        UserVerificationRepository userVerificationRepository,
+        TokenHashService tokenHashService,
+        SmsSender smsSender,
+        @Value("${sms.verification.code-length:6}") int codeLength,
+        @Value("${sms.verification.expires-seconds:300}") long expiresSeconds,
+        @Value("${sms.verification.cooldown-seconds:30}") long cooldownSeconds
+    ) {
+        return new RequestSmsCodeUseCase(
+            smsVerificationRequestRepository,
+            userRepository,
+            userVerificationRepository,
+            tokenHashService,
+            smsSender,
+            codeLength,
+            expiresSeconds,
+            cooldownSeconds
+        );
+    }
+
+    @Bean
+    VerifySmsCodeUseCase verifySmsCodeUseCase(
+        SmsVerificationRequestRepository smsVerificationRequestRepository,
+        UserRepository userRepository,
+        UserVerificationRepository userVerificationRepository,
+        TokenHashService tokenHashService,
+        @Value("${sms.verification.code-length:6}") int codeLength,
+        @Value("${sms.verification.max-attempts:5}") int maxAttempts
+    ) {
+        return new VerifySmsCodeUseCase(
+            smsVerificationRequestRepository,
+            userRepository,
+            userVerificationRepository,
+            tokenHashService,
+            codeLength,
+            maxAttempts
+        );
+    }
+
+    @Bean
+    WithdrawAccountUseCase withdrawAccountUseCase(
+        UserRepository userRepository,
+        RefreshTokenRepository refreshTokenRepository,
+        UserVerificationRepository userVerificationRepository,
+        SmsVerificationRequestRepository smsVerificationRequestRepository
+    ) {
+        return new WithdrawAccountUseCase(
+            userRepository,
+            refreshTokenRepository,
+            userVerificationRepository,
+            smsVerificationRequestRepository
         );
     }
 

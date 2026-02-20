@@ -5,11 +5,13 @@ import 'hymn_repository.dart';
 class HymnListPage extends StatefulWidget {
   final HymnRepository hymnRepository;
   final void Function(String hymnId) onOpenHymnDetail;
+  final VoidCallback onOpenRecommendations;
 
   const HymnListPage({
     super.key,
     required this.hymnRepository,
     required this.onOpenHymnDetail,
+    required this.onOpenRecommendations,
   });
 
   @override
@@ -171,6 +173,11 @@ class _HymnListPageState extends State<HymnListPage> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                      ),
+                      TextButton.icon(
+                        onPressed: widget.onOpenRecommendations,
+                        icon: const Icon(Icons.auto_awesome, size: 18),
+                        label: const Text('AI 추천'),
                       ),
                       if (hasActiveFilter)
                         TextButton.icon(

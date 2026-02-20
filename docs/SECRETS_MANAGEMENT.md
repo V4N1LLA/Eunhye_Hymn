@@ -12,11 +12,13 @@
    - Example: third-party app keys that can be abused (`KAKAO_NATIVE_APP_KEY`).
 3. Real secrets (must never be committed)
    - Example: `JWT_SECRET`, DB password, cloud credentials, signing keys.
+   - SMS provider credentials (`SMS_TWILIO_ACCOUNT_SID`, `SMS_TWILIO_AUTH_TOKEN`).
 
 ## 3) Environment separation policy
 - local
   - Use local `.env` / `apps/mobile/.env` only.
   - Non-production values only.
+  - Keep `SMS_TWILIO_ENABLED=false` unless local end-to-end SMS test is required.
 - staging
   - Use GitHub Actions environment secrets + managed secret store.
   - Separate credentials from production.

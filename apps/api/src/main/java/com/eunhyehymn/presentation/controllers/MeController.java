@@ -3,12 +3,17 @@ package com.eunhyehymn.presentation.controllers;
 import com.eunhyehymn.application.usecases.GetFavoriteUseCase;
 import com.eunhyehymn.application.usecases.GetHistoryUseCase;
 import com.eunhyehymn.application.usecases.GetHymnNoteUseCase;
+import com.eunhyehymn.application.usecases.GetLatestMyProfileChangeRequestUseCase;
 import com.eunhyehymn.application.usecases.GetMyProfileUseCase;
+import com.eunhyehymn.application.usecases.RequestMyProfileChangeUseCase;
 import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
 import com.eunhyehymn.application.usecases.UpsertMyProfileUseCase;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.common.response.ApiResponse;
+import com.eunhyehymn.domain.model.ProfileChangeRequest;
+import com.eunhyehymn.domain.model.Role;
+import com.eunhyehymn.domain.repository.UserVerificationRepository;
 import jakarta.validation.constraints.NotBlank;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -33,6 +38,9 @@ public class MeController {
     private final GetHistoryUseCase getHistoryUseCase;
     private final GetMyProfileUseCase getMyProfileUseCase;
     private final UpsertMyProfileUseCase upsertMyProfileUseCase;
+    private final RequestMyProfileChangeUseCase requestMyProfileChangeUseCase;
+    private final GetLatestMyProfileChangeRequestUseCase getLatestMyProfileChangeRequestUseCase;
+    private final UserVerificationRepository userVerificationRepository;
 
     public MeController(
         ToggleFavoriteUseCase toggleFavoriteUseCase,
@@ -41,7 +49,10 @@ public class MeController {
         SaveHymnNoteUseCase saveHymnNoteUseCase,
         GetHistoryUseCase getHistoryUseCase,
         GetMyProfileUseCase getMyProfileUseCase,
-        UpsertMyProfileUseCase upsertMyProfileUseCase
+        UpsertMyProfileUseCase upsertMyProfileUseCase,
+        RequestMyProfileChangeUseCase requestMyProfileChangeUseCase,
+        GetLatestMyProfileChangeRequestUseCase getLatestMyProfileChangeRequestUseCase,
+        UserVerificationRepository userVerificationRepository
     ) {
         this.toggleFavoriteUseCase = toggleFavoriteUseCase;
         this.getFavoriteUseCase = getFavoriteUseCase;
@@ -50,13 +61,17 @@ public class MeController {
         this.getHistoryUseCase = getHistoryUseCase;
         this.getMyProfileUseCase = getMyProfileUseCase;
         this.upsertMyProfileUseCase = upsertMyProfileUseCase;
+        this.requestMyProfileChangeUseCase = requestMyProfileChangeUseCase;
+        this.getLatestMyProfileChangeRequestUseCase = getLatestMyProfileChangeRequestUseCase;
+        this.userVerificationRepository = userVerificationRepository;
     }
 
     @GetMapping("/profile")
     public ApiResponse<ProfileResponse> profile(Authentication authentication) {
         UUID userId = parseUserId(authentication);
         GetMyProfileUseCase.Result profile = getMyProfileUseCase.get(userId);
-        return ApiResponse.success(toProfileResponse(profile));
+        VerificationStatus verificationStatus = resolveVerificationStatus(profile.role(), userId);
+        return ApiResponse.success(toProfileResponse(profile, verificationStatus));
     }
 
     @PutMapping("/profile")
@@ -69,10 +84,35 @@ public class MeController {
             userId,
             request.churchName(),
             request.name(),
-            request.group()
+            request.group(),
+            request.gender()
         );
         GetMyProfileUseCase.Result updated = getMyProfileUseCase.get(userId);
-        return ApiResponse.success(toProfileResponse(updated));
+        VerificationStatus verificationStatus = resolveVerificationStatus(updated.role(), userId);
+        return ApiResponse.success(toProfileResponse(updated, verificationStatus));
+    }
+
+    @PostMapping("/profile-change-requests")
+    public ApiResponse<ProfileChangeRequestResponse> requestProfileChange(
+        @RequestBody @Validated ProfileChangeRequestRequest request,
+        Authentication authentication
+    ) {
+        UUID userId = parseUserId(authentication);
+        ProfileChangeRequest saved = requestMyProfileChangeUseCase.request(
+            userId,
+            request.churchName(),
+            request.name(),
+            request.group(),
+            request.gender()
+        );
+        return ApiResponse.success(toProfileChangeRequestResponse(saved));
+    }
+
+    @GetMapping("/profile-change-requests/latest")
+    public ApiResponse<ProfileChangeRequestResponse> latestProfileChangeRequest(Authentication authentication) {
+        UUID userId = parseUserId(authentication);
+        ProfileChangeRequest latest = getLatestMyProfileChangeRequestUseCase.get(userId);
+        return ApiResponse.success(toProfileChangeRequestResponse(latest));
     }
 
     @PostMapping("/favorites/{hymnId}")
@@ -122,7 +162,18 @@ public class MeController {
         return ApiResponse.success(items);
     }
 
-    private ProfileResponse toProfileResponse(GetMyProfileUseCase.Result profile) {
+    private VerificationStatus resolveVerificationStatus(Role role, UUID userId) {
+        if (role == Role.ADMIN) {
+            return new VerificationStatus(true, true);
+        }
+
+        var verification = userVerificationRepository.findByUserId(userId).orElse(null);
+        boolean inviteVerified = verification != null && verification.isInviteVerified();
+        boolean phoneVerified = verification != null && verification.isPhoneVerified();
+        return new VerificationStatus(inviteVerified, phoneVerified);
+    }
+
+    private ProfileResponse toProfileResponse(GetMyProfileUseCase.Result profile, VerificationStatus verificationStatus) {
         return new ProfileResponse(
             profile.userId().toString(),
             profile.role().name(),
@@ -130,8 +181,27 @@ public class MeController {
             profile.churchName(),
             profile.name(),
             profile.group(),
+            profile.gender(),
             profile.profileCompleted(),
-            profile.profileUpdatedAt()
+            profile.profileUpdatedAt(),
+            verificationStatus.inviteVerified(),
+            verificationStatus.phoneVerified(),
+            verificationStatus.inviteVerified() && verificationStatus.phoneVerified()
+        );
+    }
+
+    private ProfileChangeRequestResponse toProfileChangeRequestResponse(ProfileChangeRequest request) {
+        return new ProfileChangeRequestResponse(
+            request.id().toString(),
+            request.status().name(),
+            request.churchName(),
+            request.name(),
+            request.groupName(),
+            request.gender().name(),
+            request.requestedAt(),
+            request.reviewedBy() == null ? null : request.reviewedBy().toString(),
+            request.reviewedAt(),
+            request.rejectReason()
         );
     }
 
@@ -157,15 +227,42 @@ public class MeController {
         String churchName,
         String name,
         String group,
+        String gender,
         boolean profileCompleted,
-        java.time.Instant profileUpdatedAt
+        java.time.Instant profileUpdatedAt,
+        boolean inviteVerified,
+        boolean phoneVerified,
+        boolean verified
     ) {
     }
 
     public record UpsertProfileRequest(
         @NotBlank String churchName,
         @NotBlank String name,
-        @NotBlank String group
+        @NotBlank String group,
+        String gender
+    ) {
+    }
+
+    public record ProfileChangeRequestRequest(
+        @NotBlank String churchName,
+        @NotBlank String name,
+        @NotBlank String group,
+        String gender
+    ) {
+    }
+
+    public record ProfileChangeRequestResponse(
+        String id,
+        String status,
+        String churchName,
+        String name,
+        String group,
+        String gender,
+        java.time.Instant requestedAt,
+        String reviewedBy,
+        java.time.Instant reviewedAt,
+        String rejectReason
     ) {
     }
 
@@ -182,5 +279,8 @@ public class MeController {
         String tags,
         java.time.Instant lastOpenedAt
     ) {
+    }
+
+    private record VerificationStatus(boolean inviteVerified, boolean phoneVerified) {
     }
 }

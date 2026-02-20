@@ -8,6 +8,7 @@ public record UserProfile(
     String churchName,
     String name,
     String groupName,
+    Gender gender,
     Instant updatedAt
 ) {
 }

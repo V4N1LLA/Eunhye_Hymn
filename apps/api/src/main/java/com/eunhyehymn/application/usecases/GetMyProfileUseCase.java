@@ -31,6 +31,7 @@ public class GetMyProfileUseCase {
             profile == null ? null : profile.churchName(),
             profile == null ? null : profile.name(),
             profile == null ? null : profile.groupName(),
+            profile == null ? null : profile.gender().name(),
             profile == null ? null : profile.updatedAt()
         );
     }
@@ -42,6 +43,7 @@ public class GetMyProfileUseCase {
         String churchName,
         String name,
         String group,
+        String gender,
         Instant profileUpdatedAt
     ) {
         public boolean profileCompleted() {

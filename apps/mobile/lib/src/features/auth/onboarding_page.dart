@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/storage/onboarding_storage.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/storage/onboarding_storage.dart';
 import 'auth_repository.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -27,6 +27,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   final _nameController = TextEditingController();
   final _groupController = TextEditingController();
 
+  UserGender _gender = UserGender.unknown;
   String? _error;
   bool _saving = false;
 
@@ -54,6 +55,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       _churchController.text = profile.churchName;
       _nameController.text = profile.name;
       _groupController.text = profile.group;
+      _gender = _parseGender(profile.gender);
     });
   }
 
@@ -69,6 +71,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
       return;
     }
 
+    if (_gender == UserGender.unknown) {
+      setState(() {
+        _error = '성별을 선택해 주세요.';
+      });
+      return;
+    }
+
     setState(() {
       _saving = true;
       _error = null;
@@ -79,12 +88,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
         churchName: churchName,
         name: name,
         group: group,
+        gender: _gender,
       );
       await widget.onboardingStorage.saveProfile(
         userId: widget.userId,
         churchName: churchName,
         name: name,
         group: group,
+        gender: _genderApiValue(_gender),
       );
       await widget.onCompleted(updatedProfile);
     } on ApiException catch (e) {
@@ -99,7 +110,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         return;
       }
       setState(() {
-        _error = '프로필 저장 중 문제가 발생했습니다. 다시 시도해 주세요.';
+        _error = '정보 저장 중 문제가 발생했습니다. 다시 시도해 주세요.';
       });
     } finally {
       if (mounted) {
@@ -110,86 +121,116 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
   }
 
+  UserGender _parseGender(String raw) {
+    return switch (raw.trim().toUpperCase()) {
+      'MALE' => UserGender.male,
+      'FEMALE' => UserGender.female,
+      _ => UserGender.unknown,
+    };
+  }
+
+  String _genderApiValue(UserGender gender) {
+    return switch (gender) {
+      UserGender.male => 'MALE',
+      UserGender.female => 'FEMALE',
+      UserGender.unknown => 'UNKNOWN',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7F9),
       appBar: AppBar(title: const Text('회원 정보 입력')),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        '교회 / 구역 / 이름을 입력해 주세요.',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        '입력값은 계정 프로필로 저장되어 다른 기기에서도 동기화됩니다.',
-                        style: TextStyle(color: Color(0xFF5B6572)),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _churchController,
-                        enabled: !_saving,
-                        decoration: const InputDecoration(
-                          labelText: '교회',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _nameController,
-                        enabled: !_saving,
-                        decoration: const InputDecoration(
-                          labelText: '이름',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _groupController,
-                        enabled: !_saving,
-                        decoration: const InputDecoration(
-                          labelText: '구역',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 52,
-                        child: FilledButton(
-                          onPressed: _saving ? null : _handleSubmit,
-                          child: Text(_saving ? '처리 중...' : '완료'),
-                        ),
-                      ),
-                      if (_error != null) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          _error!,
-                          style: const TextStyle(
-                            color: Color(0xFFC2291E),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          children: [
+            const Text(
+              '기본 정보를 입력해 주세요.',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ),
+            const SizedBox(height: 6),
+            const Text(
+              '입력한 정보는 관리자 승인 및 안내 표시에 사용됩니다.',
+              style: TextStyle(color: Color(0xFF6B7280)),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _churchController,
+              enabled: !_saving,
+              decoration: const InputDecoration(
+                labelText: '교회',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _nameController,
+              enabled: !_saving,
+              decoration: const InputDecoration(
+                labelText: '이름',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _groupController,
+              enabled: !_saving,
+              decoration: const InputDecoration(
+                labelText: '구역',
+              ),
+            ),
+            const SizedBox(height: 12),
+            InputDecorator(
+              decoration: const InputDecoration(
+                labelText: '성별',
+              ),
+              child: SegmentedButton<UserGender>(
+                showSelectedIcon: false,
+                selected: {_gender},
+                onSelectionChanged: _saving
+                    ? null
+                    : (selection) {
+                        if (selection.isEmpty) {
+                          return;
+                        }
+                        setState(() {
+                          _gender = selection.first;
+                        });
+                      },
+                segments: const [
+                  ButtonSegment<UserGender>(
+                    value: UserGender.unknown,
+                    label: Text('미선택'),
+                  ),
+                  ButtonSegment<UserGender>(
+                    value: UserGender.male,
+                    label: Text('남성'),
+                  ),
+                  ButtonSegment<UserGender>(
+                    value: UserGender.female,
+                    label: Text('여성'),
+                  ),
+                ],
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: const TextStyle(
+                  color: Color(0xFFC2291E),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _saving ? null : _handleSubmit,
+              child: Text(_saving ? '저장 중...' : '완료'),
+            ),
+          ],
         ),
       ),
     );

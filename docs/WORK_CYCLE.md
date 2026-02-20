@@ -1219,3 +1219,49 @@
 - `gh run view 22210175274 --repo V4N1LLA/Eunhye_Hymn --json conclusion,status,url,headSha`
 - `rg -n "mobile-store|22210175274|22210322592|MOBILE_IOS_" scripts docs apps/mobile CLAUDE.md`
 
+## 42. 이번 사이클 기록 (2026-02-20, mobile UX restructure + profile change approval flow)
+
+### 목표
+- 사용자 요청 기준으로 모바일 정보구조/문구를 정리하고, 개인정보 변경 요청을 관리자 승인 플로우로 연결한 뒤 스테이징 배포까지 완료한다.
+
+### 범위
+- 포함: mobile UI/UX 개편, 인증/프로필 확장, admin 승인 화면, API/usecase/migration 추가, 문서화, 스테이징 배포
+- 제외: 결제 실연동(후원/구독), 운영 정책 결정(반려 기준/알림 채널)
+
+### 수행 작업
+1. 모바일 UX/네비게이션 개편
+- 하단 탭 중심 구조를 드로어 메뉴 구조로 변경
+- 상단 중복 헤더(찬양/히스토리/내 정보) 제거
+- 홈 뒤로가기 동작을 "한 번 더 누르면 종료" 패턴으로 통일
+- 로그인 CTA 개선: Kakao 아이콘 + `카카오로 시작하기`, 이메일 로그인 진입 복원
+- 설정 카피를 일반 사용자 관점 문구로 정리하고 화면 단위를 분리
+
+2. 개인정보 변경 요청 승인 플로우
+- 사용자 요청 API 추가
+  - `POST /me/profile-change-requests`
+  - `GET /me/profile-change-requests/latest`
+- 관리자 처리 API 추가
+  - `GET /admin/profile-change-requests`
+  - `PATCH /admin/profile-change-requests/{id}`
+- Admin 웹에 `개인정보 변경 요청` 페이지/네비게이션 추가
+- DB migration 추가
+  - `V15__profile_change_requests.sql`
+  - `V16__add_gender_to_profiles.sql`
+
+3. 인증/프로필 안정화 + AI 추천 확장
+- 가입 이후 인증 흐름을 invite/phone/sms 단계로 분리하고 모바일 플로우 연결
+- 프로필/온보딩 성별 필드 추가 및 기존 계정 호환(`UNKNOWN`) 처리
+- `SegmentedButton` 선택 집합 비어있음 assertion 재발 방지
+- AI 찬송 추천 API/클라이언트/UI 진입점 추가
+
+4. 문서화
+- `docs/changelog-dev.md`에 기능/수정/검증 내역 추가
+- API 계약 문서와 모바일 README 동기화(`docs/api-contract.md`, `docs/mobile/README.md`, `apps/mobile/README.md`)
+
+### 검증
+- `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 analyze`
+- `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 test`
+- `cd apps/api && .\\gradlew.bat test`
+- `cd apps/admin && npm run build`
+- `powershell -NoProfile -File .\\scripts\\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -AsJson`
+

@@ -45,6 +45,28 @@
   - `docs/runbook.md`, `infra/aws/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`
   - AutoLogin/WaitForCompletion 표준 명령 및 주간 운영 사이클 규칙 반영
 
+### Mobile IA refresh + profile approval workflow + verification flow hardening
+- Mobile app UX refresh
+  - Replaced bottom tab layout with top-left drawer navigation and removed redundant top section headers.
+  - Added home back-press guard: first back shows a bottom message, second back within the window exits app.
+  - Login CTA updated to Kakao icon + `카카오로 시작하기`; email login entry restored.
+  - Settings copy rewritten to plain language and profile sub-pages split into focused screens.
+- Member profile workflow
+  - Added gender selection in onboarding/profile flow with `UNKNOWN` compatibility state for existing accounts.
+  - Added member-side profile change request flow:
+    - `POST /me/profile-change-requests`
+    - `GET /me/profile-change-requests/latest`
+  - Added admin review flow:
+    - `GET /admin/profile-change-requests`
+    - `PATCH /admin/profile-change-requests/{id}`
+  - Added admin page wiring for profile change request handling.
+- Verification + recommendation extensions
+  - Added invite+SMS verification steps in mobile auth flow (`invite -> phone -> sms`).
+  - Added AI hymn recommendation endpoint/client wiring and admin/mobile UI entry points.
+- Runtime/error fixes
+  - Fixed `SegmentedButton` assertion by ensuring gender selection set is never empty and mapping legacy missing gender to `UNKNOWN`.
+  - Confirmed mobile analyze/test and API/admin build checks pass locally before staging deployment.
+
 ## 2026-02-17
 
 ### Staging 운영 사이클 자동화 + Mobile store readiness

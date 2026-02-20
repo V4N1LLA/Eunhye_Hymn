@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'core/config/app_config.dart';
 import 'core/network/api_client.dart';
 import 'core/storage/onboarding_storage.dart';
 import 'core/storage/token_storage.dart';
 import 'features/auth/auth_repository.dart';
+import 'features/auth/auth_verification_flow.dart';
 import 'features/auth/login_page.dart';
 import 'features/auth/onboarding_page.dart';
 import 'features/auth/social_sdk_service.dart';
 import 'features/history/history_page.dart';
 import 'features/hymn/hymn_detail_page.dart';
 import 'features/hymn/hymn_list_page.dart';
+import 'features/hymn/hymn_recommendation_page.dart';
 import 'features/hymn/hymn_repository.dart';
 import 'features/profile/profile_settings_page.dart';
 
@@ -84,7 +87,6 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
       }
 
       final resolved = await _resolveProfile(profile);
-
       _hymnRepository.bindSessionUser(resolved.profile.userId);
       setState(() {
         _profile = resolved.profile;
@@ -120,6 +122,17 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
     await _hymnRepository.syncPendingActions();
   }
 
+  Future<void> _onVerificationCompleted(SessionProfile profile) async {
+    final resolved = await _resolveProfile(profile);
+    _hymnRepository.bindSessionUser(resolved.profile.userId);
+    setState(() {
+      _profile = resolved.profile;
+      _needsOnboarding = resolved.needsOnboarding;
+      _loginError = null;
+    });
+    await _hymnRepository.syncPendingActions();
+  }
+
   Future<void> _onOnboardingCompleted(SessionProfile profile) async {
     if (!mounted) {
       return;
@@ -132,9 +145,21 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
     });
   }
 
+  Future<void> _onReturnToLogin() async {
+    _hymnRepository.bindSessionUser(null);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _profile = null;
+      _needsOnboarding = false;
+      _loginError = null;
+    });
+  }
+
   Future<_ProfileResolution> _resolveProfile(SessionProfile profile) async {
     var effective = profile;
-    if (!profile.isProfileCompleted) {
+    if (profile.verified && !profile.isProfileCompleted) {
       final local = await _onboardingStorage.getProfile(profile.userId);
       if (local != null) {
         try {
@@ -142,6 +167,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
             churchName: local.churchName,
             name: local.name,
             group: local.group,
+            gender: _toUserGender(local.gender),
           );
           effective = synced;
         } catch (_) {
@@ -152,8 +178,16 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
 
     return _ProfileResolution(
       profile: effective,
-      needsOnboarding: !effective.isProfileCompleted,
+      needsOnboarding: effective.verified && !effective.isProfileCompleted,
     );
+  }
+
+  UserGender _toUserGender(String raw) {
+    return switch (raw.trim().toUpperCase()) {
+      'MALE' => UserGender.male,
+      'FEMALE' => UserGender.female,
+      _ => UserGender.unknown,
+    };
   }
 
   void _onProfileUpdated(SessionProfile profile) {
@@ -162,7 +196,7 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
     }
     setState(() {
       _profile = profile;
-      _needsOnboarding = !profile.isProfileCompleted;
+      _needsOnboarding = profile.verified && !profile.isProfileCompleted;
     });
   }
 
@@ -199,6 +233,43 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
           margin: EdgeInsets.zero,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          labelStyle: const TextStyle(color: Color(0xFF4B5563)),
+          hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFFB923C), width: 1.2),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            side: const BorderSide(color: Color(0xFFD1D5DB)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         ),
       ),
       home: _buildHome(),
@@ -239,6 +310,15 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
         socialSdkService: _socialSdkService,
         initialError: _loginError,
         onLoggedIn: _onLoggedIn,
+      );
+    }
+
+    if (!_profile!.verified) {
+      return AuthVerificationFlow(
+        authRepository: _authRepository,
+        profile: _profile!,
+        onVerified: _onVerificationCompleted,
+        onReturnToLogin: _onReturnToLogin,
       );
     }
 
@@ -284,7 +364,11 @@ class _HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<_HomeShell> {
+  static const _exitSnackBarDuration = Duration(seconds: 2);
+
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   int _index = 0;
+  DateTime? _lastBackPressedAt;
   late SessionProfile _profile;
 
   @override
@@ -322,10 +406,94 @@ class _HomeShellState extends State<_HomeShell> {
     widget.onProfileUpdated(profile);
   }
 
+  String get _memberLabel {
+    final suffix = switch (_profile.gender) {
+      UserGender.male => '형제',
+      UserGender.female => '자매',
+      UserGender.unknown => '형제/자매',
+    };
+    final name = _profile.name?.trim();
+    if (name != null && name.isNotEmpty) {
+      return '$name $suffix';
+    }
+
+    final displayName = _profile.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      return '$displayName $suffix';
+    }
+    return '이름 미등록';
+  }
+
+  String get _churchLabel {
+    final churchName = _profile.churchName?.trim();
+    if (churchName == null || churchName.isEmpty) {
+      return '교회 정보 없음';
+    }
+    return churchName;
+  }
+
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openDrawer();
+  }
+
+  void _changeSection(int index) {
+    Navigator.of(context).pop();
+    if (_index == index) {
+      return;
+    }
+    setState(() {
+      _index = index;
+    });
+  }
+
+  void _openAiTab() {
+    if (_index == 1) {
+      return;
+    }
+    setState(() {
+      _index = 1;
+    });
+  }
+
+  Future<void> _handleSystemBack() async {
+    final scaffoldState = _scaffoldKey.currentState;
+    if (scaffoldState?.isDrawerOpen ?? false) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    final now = DateTime.now();
+    if (_lastBackPressedAt != null &&
+        now.difference(_lastBackPressedAt!) <= _exitSnackBarDuration) {
+      await SystemNavigator.pop();
+      return;
+    }
+
+    _lastBackPressedAt = now;
+    if (!mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('뒤로 버튼을 한번 더 누르시면 종료됩니다.'),
+        duration: _exitSnackBarDuration,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
       HymnListPage(
+        hymnRepository: widget.hymnRepository,
+        onOpenHymnDetail: _openHymnDetail,
+        onOpenRecommendations: _openAiTab,
+      ),
+      HymnRecommendationPage(
         hymnRepository: widget.hymnRepository,
         onOpenHymnDetail: _openHymnDetail,
       ),
@@ -342,37 +510,138 @@ class _HomeShellState extends State<_HomeShell> {
         onLogout: widget.onLogout,
       ),
     ];
-    final titles = <String>['찬양', '히스토리', '내 정보'];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(titles[_index]),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) {
+          return;
+        }
+        await _handleSystemBack();
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          toolbarHeight: 48,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            onPressed: _openDrawer,
+            icon: const Icon(Icons.menu),
+            tooltip: '메뉴 열기',
+          ),
+        ),
+        drawer: Drawer(
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Color(0xFFFFEDD5),
+                        child: Icon(Icons.person, color: Color(0xFFEA580C)),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _memberLabel,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _churchLabel,
+                        style: const TextStyle(
+                          color: Color(0xFF4B5563),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _DrawerMenuTile(
+                  icon: Icons.library_music_outlined,
+                  label: '찬양',
+                  selected: _index == 0,
+                  onTap: () => _changeSection(0),
+                ),
+                _DrawerMenuTile(
+                  icon: Icons.auto_awesome_outlined,
+                  label: 'AI 추천',
+                  selected: _index == 1,
+                  onTap: () => _changeSection(1),
+                ),
+                _DrawerMenuTile(
+                  icon: Icons.history_outlined,
+                  label: '히스토리',
+                  selected: _index == 2,
+                  onTap: () => _changeSection(2),
+                ),
+                _DrawerMenuTile(
+                  icon: Icons.settings_outlined,
+                  label: '설정',
+                  selected: _index == 3,
+                  onTap: () => _changeSection(3),
+                ),
+              ],
+            ),
+          ),
+        ),
+        body: IndexedStack(
+          index: _index,
+          children: pages,
+        ),
       ),
-      body: pages[_index],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (index) {
-          setState(() {
-            _index = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.library_music_outlined),
-            selectedIcon: Icon(Icons.library_music),
-            label: '찬양',
+    );
+  }
+}
+
+class _DrawerMenuTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DrawerMenuTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final itemColor =
+        selected ? const Color(0xFFEA580C) : const Color(0xFF374151);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        selected: selected,
+        selectedTileColor: const Color(0xFFFFF7ED),
+        leading: Icon(icon, color: itemColor),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: itemColor,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history),
-            label: '히스토리',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: '내 정보',
-          ),
-        ],
+        ),
+        onTap: onTap,
       ),
     );
   }

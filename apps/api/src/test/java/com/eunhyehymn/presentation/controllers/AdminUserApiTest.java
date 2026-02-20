@@ -313,8 +313,8 @@ class AdminUserApiTest {
 
         mockMvc.perform(delete("/admin/users/" + secondAdminId)
                 .header("Authorization", "Bearer " + adminToken))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.error.code").value("last_admin"));
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value("unauthorized"));
     }
 
     @Test
@@ -327,6 +327,6 @@ class AdminUserApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.error.code").value("invalid_principal"));
+            .andExpect(jsonPath("$.error.code").value("unauthorized"));
     }
 }

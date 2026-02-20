@@ -26,9 +26,12 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/ping", "/actuator/health", "/auth/**").permitAll()
+                .requestMatchers("/ping", "/actuator/health").permitAll()
+                .requestMatchers("/auth/sms/**", "/auth/withdraw").authenticated()
+                .requestMatchers("/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/hymns").permitAll()
                 .requestMatchers("/hymns/**").authenticated()
+                .requestMatchers("/ai/**").authenticated()
                 .requestMatchers("/events").authenticated()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/me/**").authenticated()

@@ -49,6 +49,19 @@ security:
     login-id: ${ADMIN_LOGIN_ID:}
     login-password: ${ADMIN_LOGIN_PASSWORD:}
 
+sms:
+  verification:
+    code-length: ${SMS_CODE_LENGTH:6}
+    expires-seconds: ${SMS_EXPIRES_SECONDS:300}
+    cooldown-seconds: ${SMS_COOLDOWN_SECONDS:30}
+    max-attempts: ${SMS_MAX_ATTEMPTS:5}
+  twilio:
+    enabled: ${SMS_TWILIO_ENABLED:false}
+    account-sid: ${SMS_TWILIO_ACCOUNT_SID:}
+    auth-token: ${SMS_TWILIO_AUTH_TOKEN:}
+    from-number: ${SMS_TWILIO_FROM_NUMBER:}
+    message-template: ${SMS_TWILIO_MESSAGE_TEMPLATE:[Eunhye Hymn] Verification code is %s.}
+
 storage:
   s3:
     bucket: ${S3_BUCKET:local-bucket}
@@ -76,3 +89,18 @@ events:
         max-p95-seconds: ${EVENT_EXPORT_JOB_ALERT_MAX_P95_SECONDS:120}
         cron: ${EVENT_EXPORT_JOB_ALERT_CRON:0 */10 * * * *}
         zone: ${EVENT_EXPORT_JOB_ALERT_ZONE:UTC}
+
+ai:
+  gemini:
+    enabled: ${AI_GEMINI_ENABLED:false}
+    api-key: ${AI_GEMINI_API_KEY:}
+    base-url: ${AI_GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+    model: ${AI_GEMINI_MODEL:gemini-2.5-flash-lite}
+    connect-timeout-seconds: ${AI_GEMINI_CONNECT_TIMEOUT_SECONDS:3}
+    read-timeout-seconds: ${AI_GEMINI_READ_TIMEOUT_SECONDS:8}
+    temperature: ${AI_GEMINI_TEMPERATURE:0.1}
+    max-output-tokens: ${AI_GEMINI_MAX_OUTPUT_TOKENS:160}
+  recommendations:
+    max-candidate-hymns: ${AI_RECOMMEND_MAX_CANDIDATE_HYMNS:25}
+    max-results: ${AI_RECOMMEND_MAX_RESULTS:3}
+    max-situation-chars: ${AI_RECOMMEND_MAX_SITUATION_CHARS:180}

@@ -1,16 +1,20 @@
 package com.eunhyehymn.common.config;
 
+import com.eunhyehymn.application.ports.HymnRecommendationClient;
 import com.eunhyehymn.application.usecases.AdminCreateHymnUseCase;
 import com.eunhyehymn.application.usecases.AdminCreateUserUseCase;
 import com.eunhyehymn.application.usecases.AdminDeleteUserUseCase;
 import com.eunhyehymn.application.usecases.AdminEventExportJobUseCase;
 import com.eunhyehymn.application.usecases.AdminListEventsUseCase;
+import com.eunhyehymn.application.usecases.AdminListProfileChangeRequestsUseCase;
 import com.eunhyehymn.application.usecases.AdminDeleteHymnUseCase;
 import com.eunhyehymn.application.usecases.AdminListHymnsUseCase;
 import com.eunhyehymn.application.usecases.AdminListUsersUseCase;
+import com.eunhyehymn.application.usecases.AdminReviewProfileChangeRequestUseCase;
 import com.eunhyehymn.application.usecases.AdminUpdateHymnUseCase;
 import com.eunhyehymn.application.usecases.AdminUpdateUserUseCase;
 import com.eunhyehymn.application.usecases.CleanupEventExportJobsUseCase;
+import com.eunhyehymn.application.usecases.GetLatestMyProfileChangeRequestUseCase;
 import com.eunhyehymn.application.usecases.GetEventExportOpsMetricsUseCase;
 import com.eunhyehymn.application.usecases.GetFavoriteUseCase;
 import com.eunhyehymn.application.usecases.GetHistoryUseCase;
@@ -19,6 +23,8 @@ import com.eunhyehymn.application.usecases.GetHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.GetMyProfileUseCase;
 import com.eunhyehymn.application.usecases.ListHymnsUseCase;
 import com.eunhyehymn.application.usecases.RecordEventsUseCase;
+import com.eunhyehymn.application.usecases.RecommendHymnsUseCase;
+import com.eunhyehymn.application.usecases.RequestMyProfileChangeUseCase;
 import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
 import com.eunhyehymn.application.usecases.UpsertMyProfileUseCase;
@@ -28,6 +34,7 @@ import com.eunhyehymn.domain.repository.EventExportJobRepository;
 import com.eunhyehymn.domain.repository.EventRepository;
 import com.eunhyehymn.domain.repository.HymnNoteRepository;
 import com.eunhyehymn.domain.repository.HymnRepository;
+import com.eunhyehymn.domain.repository.ProfileChangeRequestRepository;
 import com.eunhyehymn.domain.repository.UserHymnStateRepository;
 import com.eunhyehymn.domain.repository.UserProfileRepository;
 import com.eunhyehymn.domain.repository.UserRepository;
@@ -40,6 +47,23 @@ public class UseCaseConfig {
     @Bean
     ListHymnsUseCase listHymnsUseCase(HymnRepository hymnRepository) {
         return new ListHymnsUseCase(hymnRepository);
+    }
+
+    @Bean
+    RecommendHymnsUseCase recommendHymnsUseCase(
+        HymnRepository hymnRepository,
+        HymnRecommendationClient hymnRecommendationClient,
+        @Value("${ai.recommendations.max-candidate-hymns:25}") int maxCandidateHymns,
+        @Value("${ai.recommendations.max-results:3}") int defaultMaxResults,
+        @Value("${ai.recommendations.max-situation-chars:180}") int maxSituationChars
+    ) {
+        return new RecommendHymnsUseCase(
+            hymnRepository,
+            hymnRecommendationClient,
+            maxCandidateHymns,
+            defaultMaxResults,
+            maxSituationChars
+        );
     }
 
     @Bean
@@ -90,6 +114,22 @@ public class UseCaseConfig {
         UserProfileRepository userProfileRepository
     ) {
         return new UpsertMyProfileUseCase(userRepository, userProfileRepository);
+    }
+
+    @Bean
+    RequestMyProfileChangeUseCase requestMyProfileChangeUseCase(
+        UserRepository userRepository,
+        ProfileChangeRequestRepository profileChangeRequestRepository
+    ) {
+        return new RequestMyProfileChangeUseCase(userRepository, profileChangeRequestRepository);
+    }
+
+    @Bean
+    GetLatestMyProfileChangeRequestUseCase getLatestMyProfileChangeRequestUseCase(
+        UserRepository userRepository,
+        ProfileChangeRequestRepository profileChangeRequestRepository
+    ) {
+        return new GetLatestMyProfileChangeRequestUseCase(userRepository, profileChangeRequestRepository);
     }
 
     @Bean
@@ -170,5 +210,25 @@ public class UseCaseConfig {
     @Bean
     AdminDeleteUserUseCase adminDeleteUserUseCase(UserRepository userRepository) {
         return new AdminDeleteUserUseCase(userRepository);
+    }
+
+    @Bean
+    AdminListProfileChangeRequestsUseCase adminListProfileChangeRequestsUseCase(
+        ProfileChangeRequestRepository profileChangeRequestRepository
+    ) {
+        return new AdminListProfileChangeRequestsUseCase(profileChangeRequestRepository);
+    }
+
+    @Bean
+    AdminReviewProfileChangeRequestUseCase adminReviewProfileChangeRequestUseCase(
+        UserRepository userRepository,
+        UserProfileRepository userProfileRepository,
+        ProfileChangeRequestRepository profileChangeRequestRepository
+    ) {
+        return new AdminReviewProfileChangeRequestUseCase(
+            userRepository,
+            userProfileRepository,
+            profileChangeRequestRepository
+        );
     }
 }

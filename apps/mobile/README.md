@@ -6,10 +6,12 @@
 
 - Social login
   - Kakao SDK login (mobile, redirect flow)
-  - Invite code input (first login only)
-  - Account signup/login (`POST /auth/signup`, `POST /auth/login`)
+  - Invite code verification (`POST /auth/invite/validate`)
+  - Phone number + SMS code verification (`POST /auth/sms/request`, `POST /auth/sms/verify`)
+  - Withdrawal from verification screen (`POST /auth/withdraw`)
 - Hymn
   - List and search
+  - AI recommendation by situation (`POST /ai/hymn-recommendations`)
   - Detail view
   - PNG asset display (multi-page per hymn)
   - MIDI playback controls (play/pause/stop/speed)
@@ -22,8 +24,10 @@
   - Hymn score/MIDI downloads are cached per session user and rejected when content-type or size checks fail
   - Offline changes are synced when network is restored
 - Auth
+  - Login flow: `Login -> InviteCode -> PhoneNumber -> SmsCode -> Home`
   - Access/refresh token persistence
   - Automatic refresh + retry on 401
+  - `/me/profile` verification flags (`inviteVerified`, `phoneVerified`, `verified`)
 
 ## Run
 

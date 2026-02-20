@@ -11,7 +11,9 @@ import AdminAssetUploadPage from "./pages/AdminAssetUploadPage";
 import UserListPage from "./pages/UserListPage";
 import InviteCodePage from "./pages/InviteCodePage";
 import AdminEventPage from "./pages/AdminEventPage";
+import ProfileChangeRequestPage from "./pages/ProfileChangeRequestPage";
 import HelpPage from "./pages/HelpPage";
+import AiRecommendationPage from "./pages/AiRecommendationPage";
 
 export default function App() {
   return (
@@ -28,8 +30,13 @@ export default function App() {
               <Route path="/hymns/:id/edit" element={<HymnEditPage />} />
               <Route path="/assets/upload" element={<AdminAssetUploadPage />} />
               <Route path="/users" element={<UserListPage />} />
+              <Route
+                path="/profile-change-requests"
+                element={<ProfileChangeRequestPage />}
+              />
               <Route path="/invite-codes" element={<InviteCodePage />} />
               <Route path="/events" element={<AdminEventPage />} />
+              <Route path="/ai/recommendations" element={<AiRecommendationPage />} />
               <Route path="/help" element={<HelpPage />} />
             </Route>
           </Route>

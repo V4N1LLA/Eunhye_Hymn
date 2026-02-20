@@ -10,13 +10,11 @@ import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.User;
 import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.domain.repository.AuthIdentityRepository;
-import com.eunhyehymn.domain.repository.InviteCodeRepository;
 import com.eunhyehymn.domain.repository.RefreshTokenRepository;
 import com.eunhyehymn.domain.repository.UserRepository;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -26,7 +24,6 @@ public class SocialLoginUseCase {
     private final SocialTokenVerifier socialTokenVerifier;
     private final AuthIdentityRepository authIdentityRepository;
     private final UserRepository userRepository;
-    private final InviteCodeRepository inviteCodeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final TokenService tokenService;
     private final TokenHashService tokenHashService;
@@ -39,7 +36,6 @@ public class SocialLoginUseCase {
         SocialTokenVerifier socialTokenVerifier,
         AuthIdentityRepository authIdentityRepository,
         UserRepository userRepository,
-        InviteCodeRepository inviteCodeRepository,
         RefreshTokenRepository refreshTokenRepository,
         TokenService tokenService,
         TokenHashService tokenHashService,
@@ -51,7 +47,6 @@ public class SocialLoginUseCase {
         this.socialTokenVerifier = socialTokenVerifier;
         this.authIdentityRepository = authIdentityRepository;
         this.userRepository = userRepository;
-        this.inviteCodeRepository = inviteCodeRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.tokenService = tokenService;
         this.tokenHashService = tokenHashService;
@@ -67,11 +62,10 @@ public class SocialLoginUseCase {
     public LoginResult login(String provider, String token, String inviteCode) {
         String normalizedProvider = provider.toUpperCase();
         SocialUserInfo userInfo = socialTokenVerifier.verify(normalizedProvider, token);
-        String normalizedInviteCode = normalizeInviteCode(inviteCode);
 
         boolean isAdminCandidate = isAdminCandidate(normalizedProvider, userInfo);
         if (enforceAdminOnly && !isAdminCandidate) {
-            throw new AdminOnlyException("관리자만 이용 가능한 계정입니다.");
+            throw new AdminOnlyException("Only allowlisted admin accounts can log in.");
         }
 
         Optional<AuthIdentity> existingIdentity = authIdentityRepository
@@ -83,7 +77,11 @@ public class SocialLoginUseCase {
         if (existingIdentity.isPresent()) {
             User existing = userRepository.findById(existingIdentity.get().userId())
                 .orElseThrow(() -> new IllegalStateException(
-                    "AuthIdentity에 해당하는 사용자 조회 실패: " + existingIdentity.get().userId()));
+                    "Auth identity has no matching user: " + existingIdentity.get().userId()
+                ));
+            if (existing.status() != UserStatus.ACTIVE) {
+                throw new AccountDisabledException("Disabled account.");
+            }
 
             Role effectiveRole = existing.role();
             if (isAdminCandidate && existing.role() != Role.ADMIN) {
@@ -100,20 +98,6 @@ public class SocialLoginUseCase {
             );
             userRepository.save(user);
         } else {
-            if (!isAdminCandidate) {
-                if (normalizedInviteCode == null || normalizedInviteCode.isBlank()) {
-                    throw new InvalidInviteCodeException("초대코드가 비어있습니다");
-                }
-
-                inviteCodeRepository.findByCode(normalizedInviteCode)
-                    .orElseThrow(() -> new InvalidInviteCodeException("유효하지 않은 초대코드입니다"));
-
-                boolean incremented = inviteCodeRepository.incrementUsedCount(normalizedInviteCode);
-                if (!incremented) {
-                    throw new InvalidInviteCodeException("유효하지 않은 초대코드입니다");
-                }
-            }
-
             UUID userId = UUID.randomUUID();
             String displayName = userInfo.displayName() != null ? userInfo.displayName() : normalizedProvider + " User";
             Role role = isAdminCandidate ? Role.ADMIN : Role.USER;
@@ -163,24 +147,17 @@ public class SocialLoginUseCase {
         return false;
     }
 
-    private String normalizeInviteCode(String inviteCode) {
-        if (inviteCode == null) {
-            return null;
-        }
-        return inviteCode.trim().toUpperCase(Locale.ROOT);
-    }
-
     public record LoginResult(String accessToken, String refreshToken, boolean newUser) {
-    }
-
-    public static class InvalidInviteCodeException extends RuntimeException {
-        public InvalidInviteCodeException(String message) {
-            super(message);
-        }
     }
 
     public static class AdminOnlyException extends RuntimeException {
         public AdminOnlyException(String message) {
+            super(message);
+        }
+    }
+
+    public static class AccountDisabledException extends RuntimeException {
+        public AccountDisabledException(String message) {
             super(message);
         }
     }

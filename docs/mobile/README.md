@@ -9,10 +9,13 @@
 - 로그인
   - 소셜 SDK 직접 로그인 (Kakao 모바일)
   - 로그인 화면에서 Kakao 버튼 클릭 시 provider 앱/브라우저로 리디렉션
-  - 초대코드 입력 지원 (최초 1회)
-  - 계정 회원가입/로그인(`POST /auth/signup`, `POST /auth/login`)
+  - 성도 인증 플로우: `Login -> InviteCode -> PhoneNumber -> SmsCode -> Home`
+  - 초대코드 인증(`POST /auth/invite/validate`)
+  - 휴대폰 인증번호 발송/검증(`POST /auth/sms/request`, `POST /auth/sms/verify`)
+  - 회원탈퇴(`POST /auth/withdraw`)
 - 찬양
   - 목록 조회 + 검색
+  - AI 상황 기반 찬송 추천 (`POST /ai/hymn-recommendations`)
   - 목록 화면 태그 필터 + 검색어/필터 초기화 + 빈 상태 가이드
   - 상세 조회
   - PNG 에셋 이미지 표시 (한 곡 다중 페이지 지원)
@@ -33,15 +36,20 @@
 ## 2. 화면 인벤토리
 
 1. 로그인 화면
-2. 찬양 목록 화면
-3. 찬양 상세 화면
-4. 최근 열람 히스토리 화면
+2. 초대코드 입력 화면
+3. 휴대폰 번호 입력 화면
+4. SMS 인증코드 입력 화면
+5. 찬양 목록 화면
+6. AI 찬송 추천 화면
+7. 찬양 상세 화면
+8. 최근 열람 히스토리 화면
 
 ## 3. 네비게이션
 
-- 로그인 성공 후 Home 진입
+- 로그인 + 성도 인증 완료 후 Home 진입
 - Home 하단 탭:
   - 찬양 목록
+  - AI 추천
   - 최근 열람
 - 목록/히스토리에서 상세 화면으로 이동
 
@@ -50,8 +58,10 @@
 - Base URL: `/api/v1`
 - 사용 API:
   - `POST /auth/social`
-  - `POST /auth/signup`
-  - `POST /auth/login`
+  - `POST /auth/invite/validate`
+  - `POST /auth/sms/request`
+  - `POST /auth/sms/verify`
+  - `POST /auth/withdraw`
   - `POST /auth/refresh`
   - `POST /auth/logout`
   - `GET /me/profile`
@@ -59,6 +69,7 @@
   - `GET /me/favorites/{hymnId}`
   - `GET /hymns`
   - `GET /hymns/{id}`
+  - `POST /ai/hymn-recommendations`
   - `POST /me/favorites/{hymnId}`
   - `GET /me/hymns/{hymnId}/note`
   - `PUT /me/hymns/{hymnId}/note`
@@ -85,7 +96,8 @@ Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
 `run-mobile-emulator.ps1`가 읽는 `apps/mobile/.env`(fallback: 루트 `.env`)의 키 값이 누락/불일치하면
 동의 화면의 "계속하기" 이후 앱으로 복귀하지 않을 수 있다.
 민감 정보 관리 원칙은 `docs/SECRETS_MANAGEMENT.md`를 따른다.
-계정 로그인/회원가입은 운영 API(`/auth/login`, `/auth/signup`)를 사용한다.
+프로필 API(`/me/profile`)의 `inviteVerified`, `phoneVerified`, `verified` 값을 기준으로
+인증 완료 여부를 판단한다.
 
 ## 5.1 배포 범위 주의
 

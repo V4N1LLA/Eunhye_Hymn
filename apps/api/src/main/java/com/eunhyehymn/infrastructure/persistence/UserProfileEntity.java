@@ -1,7 +1,10 @@
 package com.eunhyehymn.infrastructure.persistence;
 
+import com.eunhyehymn.domain.model.Gender;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
@@ -23,17 +26,29 @@ public class UserProfileEntity {
     @Column(name = "group_name", nullable = false)
     private String groupName;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender", nullable = false)
+    private Gender gender;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     protected UserProfileEntity() {
     }
 
-    public UserProfileEntity(UUID userId, String churchName, String memberName, String groupName, Instant updatedAt) {
+    public UserProfileEntity(
+        UUID userId,
+        String churchName,
+        String memberName,
+        String groupName,
+        Gender gender,
+        Instant updatedAt
+    ) {
         this.userId = userId;
         this.churchName = churchName;
         this.memberName = memberName;
         this.groupName = groupName;
+        this.gender = gender;
         this.updatedAt = updatedAt;
     }
 
@@ -51,6 +66,10 @@ public class UserProfileEntity {
 
     public String getGroupName() {
         return groupName;
+    }
+
+    public Gender getGender() {
+        return gender;
     }
 
     public Instant getUpdatedAt() {

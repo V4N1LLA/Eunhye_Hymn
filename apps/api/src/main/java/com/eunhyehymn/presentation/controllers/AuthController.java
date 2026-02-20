@@ -1,12 +1,16 @@
 package com.eunhyehymn.presentation.controllers;
 
 import com.eunhyehymn.application.usecases.AdminPasswordLoginUseCase;
+import com.eunhyehymn.application.usecases.ConfirmInviteCodeUseCase;
 import com.eunhyehymn.application.usecases.LogoutUseCase;
 import com.eunhyehymn.application.usecases.RefreshTokenUseCase;
+import com.eunhyehymn.application.usecases.RequestSmsCodeUseCase;
 import com.eunhyehymn.application.usecases.SocialLoginUseCase;
 import com.eunhyehymn.application.usecases.UserPasswordLoginUseCase;
 import com.eunhyehymn.application.usecases.UserPasswordSignupUseCase;
 import com.eunhyehymn.application.usecases.ValidateInviteCodeUseCase;
+import com.eunhyehymn.application.usecases.VerifySmsCodeUseCase;
+import com.eunhyehymn.application.usecases.WithdrawAccountUseCase;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.common.response.ApiResponse;
 import com.eunhyehymn.infrastructure.security.AuthRateLimitService;
@@ -14,8 +18,10 @@ import com.eunhyehymn.infrastructure.security.SocialLoginException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 import java.util.Locale;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,6 +36,10 @@ public class AuthController {
     private final RefreshTokenUseCase refreshTokenUseCase;
     private final LogoutUseCase logoutUseCase;
     private final ValidateInviteCodeUseCase validateInviteCodeUseCase;
+    private final ConfirmInviteCodeUseCase confirmInviteCodeUseCase;
+    private final RequestSmsCodeUseCase requestSmsCodeUseCase;
+    private final VerifySmsCodeUseCase verifySmsCodeUseCase;
+    private final WithdrawAccountUseCase withdrawAccountUseCase;
     private final SocialLoginUseCase socialLoginUseCase;
     private final UserPasswordSignupUseCase userPasswordSignupUseCase;
     private final UserPasswordLoginUseCase userPasswordLoginUseCase;
@@ -41,6 +51,10 @@ public class AuthController {
         RefreshTokenUseCase refreshTokenUseCase,
         LogoutUseCase logoutUseCase,
         ValidateInviteCodeUseCase validateInviteCodeUseCase,
+        ConfirmInviteCodeUseCase confirmInviteCodeUseCase,
+        RequestSmsCodeUseCase requestSmsCodeUseCase,
+        VerifySmsCodeUseCase verifySmsCodeUseCase,
+        WithdrawAccountUseCase withdrawAccountUseCase,
         SocialLoginUseCase socialLoginUseCase,
         UserPasswordSignupUseCase userPasswordSignupUseCase,
         UserPasswordLoginUseCase userPasswordLoginUseCase,
@@ -51,6 +65,10 @@ public class AuthController {
         this.refreshTokenUseCase = refreshTokenUseCase;
         this.logoutUseCase = logoutUseCase;
         this.validateInviteCodeUseCase = validateInviteCodeUseCase;
+        this.confirmInviteCodeUseCase = confirmInviteCodeUseCase;
+        this.requestSmsCodeUseCase = requestSmsCodeUseCase;
+        this.verifySmsCodeUseCase = verifySmsCodeUseCase;
+        this.withdrawAccountUseCase = withdrawAccountUseCase;
         this.socialLoginUseCase = socialLoginUseCase;
         this.userPasswordSignupUseCase = userPasswordSignupUseCase;
         this.userPasswordLoginUseCase = userPasswordLoginUseCase;
@@ -104,9 +122,9 @@ public class AuthController {
         } catch (SocialLoginUseCase.AdminOnlyException e) {
             authRateLimitService.recordOutcome("social_login", false);
             throw new ApiException(HttpStatus.FORBIDDEN, "admin_only", e.getMessage(), null);
-        } catch (SocialLoginUseCase.InvalidInviteCodeException e) {
+        } catch (SocialLoginUseCase.AccountDisabledException e) {
             authRateLimitService.recordOutcome("social_login", false);
-            throw new ApiException(HttpStatus.FORBIDDEN, "invalid_invite_code", e.getMessage(), null);
+            throw new ApiException(HttpStatus.FORBIDDEN, "account_disabled", e.getMessage(), null);
         }
     }
 
@@ -164,6 +182,9 @@ public class AuthController {
         } catch (UserPasswordLoginUseCase.InvalidCredentialsException e) {
             authRateLimitService.recordOutcome("user_login", false);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "user_login_failed", e.getMessage(), null);
+        } catch (UserPasswordLoginUseCase.AccountDisabledException e) {
+            authRateLimitService.recordOutcome("user_login", false);
+            throw new ApiException(HttpStatus.FORBIDDEN, "account_disabled", e.getMessage(), null);
         }
     }
 
@@ -182,12 +203,57 @@ public class AuthController {
     @PostMapping("/invite/validate")
     public ApiResponse<InviteValidateResponse> validateInvite(
         @RequestBody @Validated InviteValidateRequest request,
+        Authentication authentication,
         HttpServletRequest httpRequest
     ) {
         authRateLimitService.checkOrThrow("invite_validate", keyByIp(httpRequest));
-        boolean valid = validateInviteCodeUseCase.validate(request.code());
+        boolean valid = authentication == null
+            ? validateInviteCodeUseCase.validate(request.code())
+            : confirmInviteCodeUseCase.confirm(authenticatedUserId(authentication), request.code());
         authRateLimitService.recordOutcome("invite_validate", valid);
         return ApiResponse.success(new InviteValidateResponse(valid));
+    }
+
+    @PostMapping("/sms/request")
+    public ApiResponse<SmsRequestResponse> requestSmsCode(
+        @RequestBody @Validated SmsRequest request,
+        Authentication authentication
+    ) {
+        RequestSmsCodeUseCase.RequestResult result = requestSmsCodeUseCase.request(
+            authenticatedUserId(authentication),
+            request.phoneNumber()
+        );
+        return ApiResponse.success(new SmsRequestResponse(
+            result.verificationId(),
+            result.expiresInSeconds(),
+            result.cooldownSeconds()
+        ));
+    }
+
+    @PostMapping("/sms/verify")
+    public ApiResponse<SmsVerifyResponse> verifySmsCode(
+        @RequestBody @Validated SmsVerifyRequest request,
+        Authentication authentication
+    ) {
+        UUID verificationId;
+        try {
+            verificationId = UUID.fromString(request.verificationId().trim());
+        } catch (RuntimeException e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_verification_id", "Invalid verification ID.", null);
+        }
+
+        VerifySmsCodeUseCase.VerifyResult result = verifySmsCodeUseCase.verify(
+            authenticatedUserId(authentication),
+            verificationId,
+            request.code()
+        );
+        return ApiResponse.success(new SmsVerifyResponse(result.verified(), result.completed()));
+    }
+
+    @PostMapping("/withdraw")
+    public ApiResponse<Void> withdraw(Authentication authentication) {
+        withdrawAccountUseCase.withdraw(authenticatedUserId(authentication));
+        return ApiResponse.success(null);
     }
 
     private String keyByIp(HttpServletRequest request) {
@@ -226,6 +292,17 @@ public class AuthController {
             return "";
         }
         return source.trim();
+    }
+
+    private UUID authenticatedUserId(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "Authentication required.", null);
+        }
+        try {
+            return UUID.fromString(authentication.getName());
+        } catch (RuntimeException e) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "Invalid authentication subject.", null);
+        }
     }
 
     public record SocialLoginRequest(
@@ -270,5 +347,17 @@ public class AuthController {
     }
 
     public record InviteValidateResponse(boolean valid) {
+    }
+
+    public record SmsRequest(@NotBlank String phoneNumber) {
+    }
+
+    public record SmsRequestResponse(String verificationId, long expiresInSeconds, long cooldownSeconds) {
+    }
+
+    public record SmsVerifyRequest(@NotBlank String verificationId, @NotBlank String code) {
+    }
+
+    public record SmsVerifyResponse(boolean verified, boolean completed) {
     }
 }
