@@ -4,6 +4,18 @@
 
 ## 2026-02-20
 
+### Documentation full sync (env/API/data-model)
+- 문서 기준선 재정렬
+  - `README.md`, `docs/current-usable-scope.md`, `current_update.md`
+  - `docs/api-contract.md`, `docs/data-model.md`, `docs/requirements.md`
+  - `docs/LOCAL_SETUP.md`, `docs/dev-guide.md`, `docs/SECRETS_MANAGEMENT.md`
+  - `docs/admin/README.md`, `docs/usecases/README.md`
+  - `infra/docker/README.md`, `infra/aws/README.md`, `docs/runbook.md`
+- 반영 내용
+  - 인증 플로우(초대코드/SMS/탈퇴), 개인정보 변경 요청, AI 추천 엔드포인트 문서화
+  - AI Gemini Flash-Lite 저비용 기본값 및 `AI_*` 환경변수 반영
+  - Flyway 마이그레이션(`V1`~`V16`) 기준 데이터 모델 최신화
+
 ### Mobile store release cycle automation + Android build-only verification
 - 스크립트 추가
   - `scripts/mobile-store-preflight.ps1`
