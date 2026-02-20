@@ -2,6 +2,7 @@ param(
   [string]$Repo = "V4N1LLA/Eunhye_Hymn",
   [string]$TerraformDir = "infra/aws",
   [string]$AwsProfile = "",
+  [switch]$AutoLogin,
   [switch]$SkipTerraformPlan
 )
 
@@ -132,6 +133,116 @@ function Build-AwsCommand {
   return "aws --profile $AwsProfile $Inner"
 }
 
+function Get-AwsIdentityErrorInfo {
+  param([string]$Output)
+
+  if ($Output -match "Unable to locate credentials|NoCredentialProviders") {
+    return [PSCustomObject]@{
+      Code = "missing_credentials"
+      Detail = "credentials missing (run aws configure / aws configure sso / aws login)"
+    }
+  }
+
+  if ($Output -match "Your session has expired|ExpiredToken|Token has expired and refresh failed|The SSO session associated with this profile has expired|The security token included in the request is expired") {
+    return [PSCustomObject]@{
+      Code = "session_expired"
+      Detail = "session expired (run aws sso login / aws login)"
+    }
+  }
+
+  if ($Output -match "The config profile .* could not be found") {
+    return [PSCustomObject]@{
+      Code = "profile_not_found"
+      Detail = "aws profile not found"
+    }
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($Output)) {
+    $detailLine = Get-FirstUsefulLine -Output $Output
+    if ([string]::IsNullOrWhiteSpace($detailLine)) {
+      $detailLine = "command failed"
+    }
+    return [PSCustomObject]@{
+      Code = "command_failed"
+      Detail = "failed: $detailLine"
+    }
+  }
+
+  return [PSCustomObject]@{
+    Code = "unknown"
+    Detail = "failed"
+  }
+}
+
+function Get-AwsConfigureValue {
+  param([string]$Key)
+
+  $args = @("configure", "get", $Key)
+  if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) {
+    $args += @("--profile", $AwsProfile)
+  }
+
+  $output = & aws @args 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    return ""
+  }
+
+  $firstLine = $output | Select-Object -First 1
+  if ($null -eq $firstLine) {
+    return ""
+  }
+
+  return "$firstLine".Trim()
+}
+
+function Test-AwsSsoConfigured {
+  $ssoStartUrl = Get-AwsConfigureValue -Key "sso_start_url"
+  return -not [string]::IsNullOrWhiteSpace($ssoStartUrl)
+}
+
+function Invoke-AwsSsoLogin {
+  $args = @("sso", "login")
+  if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) {
+    $args += @("--profile", $AwsProfile)
+  }
+
+  $output = & aws @args 2>&1
+  return [PSCustomObject]@{
+    ExitCode = $LASTEXITCODE
+    Output = (($output -join "`n") -replace "`e\[[\d;]*[A-Za-z]", "")
+  }
+}
+
+function Try-RecoverAwsSession {
+  param([string]$ReasonCode)
+
+  $profileLabel = if ([string]::IsNullOrWhiteSpace($AwsProfile)) { "default" } else { $AwsProfile }
+  if (-not (Test-AwsSsoConfigured)) {
+    return [PSCustomObject]@{
+      Success = $false
+      Detail = "auto-login unavailable (profile '$profileLabel' has no sso_start_url)"
+    }
+  }
+
+  $loginResult = Invoke-AwsSsoLogin
+  if ($loginResult.ExitCode -eq 0) {
+    return [PSCustomObject]@{
+      Success = $true
+      Detail = "aws sso login success (profile '$profileLabel')"
+    }
+  }
+
+  $detailLine = Get-FirstUsefulLine -Output $loginResult.Output
+  if ([string]::IsNullOrWhiteSpace($detailLine)) {
+    $detailLine = "aws sso login failed"
+  }
+
+  return [PSCustomObject]@{
+    Success = $false
+    Detail = "aws sso login failed: $detailLine"
+  }
+}
+
 function Export-AwsCredentialsToEnvironment {
   $exportArgs = @("configure", "export-credentials", "--format", "process")
   if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) {
@@ -177,24 +288,25 @@ if (-not (Test-CommandExists "aws") -or -not (Test-CommandExists "terraform") -o
 $identityCommand = Build-AwsCommand "sts get-caller-identity"
 $identityResult = Run-CommandCapture $identityCommand
 if ($identityResult.ExitCode -ne 0) {
-  $identityDetail = "failed"
-  if ($identityResult.Output -match "Unable to locate credentials|NoCredentialProviders") {
-    $identityDetail = "credentials missing (run aws configure / aws configure sso / aws login)"
-  } elseif ($identityResult.Output -match "Your session has expired|ExpiredToken|Token has expired and refresh failed|The SSO session associated with this profile has expired") {
-    $identityDetail = "session expired (run aws sso login / aws login)"
-  } elseif ($identityResult.Output -match "The config profile .* could not be found") {
-    $identityDetail = "aws profile not found"
-  } elseif (-not [string]::IsNullOrWhiteSpace($identityResult.Output)) {
-    $detailLine = Get-FirstUsefulLine -Output $identityResult.Output
-    if ([string]::IsNullOrWhiteSpace($detailLine)) {
-      $detailLine = "command failed"
+  $identityError = Get-AwsIdentityErrorInfo -Output $identityResult.Output
+
+  if ($AutoLogin -and ($identityError.Code -eq "missing_credentials" -or $identityError.Code -eq "session_expired")) {
+    $recovery = Try-RecoverAwsSession -ReasonCode $identityError.Code
+    Add-Check "aws session recovery" $recovery.Success $recovery.Detail
+
+    if ($recovery.Success) {
+      $identityResult = Run-CommandCapture $identityCommand
+      if ($identityResult.ExitCode -ne 0) {
+        $identityError = Get-AwsIdentityErrorInfo -Output $identityResult.Output
+      }
     }
-    $identityDetail = "failed: " + $detailLine
   }
 
-  Add-Check "aws sts get-caller-identity" $false $identityDetail
-  $checks | Format-Table -AutoSize
-  exit 1
+  if ($identityResult.ExitCode -ne 0) {
+    Add-Check "aws sts get-caller-identity" $false $identityError.Detail
+    $checks | Format-Table -AutoSize
+    exit 1
+  }
 }
 
 try {
@@ -205,6 +317,7 @@ try {
   exit 1
 }
 
+Add-Check "aws sts get-caller-identity" $true "ok"
 Add-Check "aws identity" $true ("arn=" + $identity.Arn)
 
 gh auth status 1>$null 2>$null

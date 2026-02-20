@@ -555,7 +555,7 @@ com.eunhyehymn/
 | `ENABLE_AWSLOGS` | CloudWatch 로그 전송 활성화 여부 (`true` 시 활성화, 미설정 시 기본 `false`) |
 
 - **수동 검증 실행**: `workflow_dispatch`로 브랜치 기준 배포 검증 가능 (`enable_awslogs` 입력)
-- **리허설 자동 실행**: `scripts/staging-rehearsal.ps1`로 preflight + workflow_dispatch + run 대기 + 로그 기록 자동화
+- **리허설 자동 실행**: `scripts/staging-rehearsal.ps1`로 preflight + workflow_dispatch + run 대기 + 로그 기록 자동화 (`-AutoLogin` 지원)
 
 ---
 
@@ -778,6 +778,7 @@ develop push → GitHub Actions
 - IAM 정책 샘플:
   - `infra/aws/terraform-deployer-iam-policy.json`
 - 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
+- 최신 점검(2026-02-20): deploy run `22206920873`는 `deploy/verify success`였으나 preflight는 `profile 'default' has no sso_start_url`로 `HOLD`.
 
 **2. 운영 문서/절차 고도화**
 - `docs/runbook.md` + `docs/staging-smoke-checklist.md` + `docs/staging-feedback-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영

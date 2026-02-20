@@ -25,12 +25,13 @@
 - [ ] 환경 변수 파일 최신화 (`DB_*`, `JWT_*`, `INVITE_CODE`, `S3_*`)
 - [ ] 롤백 기준 버전(이전 이미지 태그) 확인
 - [ ] 사전 점검 스크립트 통과
-  - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile <profile>]`
+  - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile <profile>] [-AutoLogin]`
+  - AWS SSO 세션 만료가 잦은 환경은 `-AutoLogin`을 기본으로 사용
 - [ ] 배포 리허설 자동 실행(권장)
-  - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>]`
+  - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>] [-AutoLogin]`
   - 로컬 확인만 필요하면 `-DryRun` 사용
 - [ ] 운영 사이클 자동 점검(권장)
-  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자>`
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자> [-AutoLogin] [-WaitForCompletion]`
   - preflight + 최신 배포 게이트 + `docs/staging-smoke-log.md` 기록을 일괄 수행
 - [ ] GitHub Actions 필수 Secrets 등록 확인
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
@@ -93,6 +94,6 @@
 
 ## 9. 정기 점검 (권장)
 - 주 1회 스테이징 배포 리허설 + 스모크 체크리스트 1회 수행
-- 주 1회 `staging-ops-cycle.ps1` 실행 결과를 기준으로 Go/Hold 근거를 `docs/staging-smoke-log.md`에 누적
+- 주 1회 `staging-ops-cycle.ps1 -WaitForCompletion -AutoLogin` 실행 결과를 기준으로 Go/Hold 근거를 `docs/staging-smoke-log.md`에 누적
 - 월 1회 시크릿 교체 상태 점검
 - 월 1회 롤백 시나리오 점검

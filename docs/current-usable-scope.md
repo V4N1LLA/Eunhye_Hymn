@@ -190,6 +190,7 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 
 - 스테이징 실가동 전환
   - 운영 PC 기준 `staging-preflight.ps1` 무스킵 통과 상태 유지 (`aws` 자격증명 + `infra/aws/terraform.tfvars`)
+  - 세션 만료 환경은 `staging-preflight.ps1 -AutoLogin` 또는 `staging-ops-cycle.ps1 -AutoLogin` 우선 사용
   - 배포/롤백/장애 대응 리허설의 정기 반복 및 증빙 누적
 - 운영 문서/절차 실행 검증
   - `docs/runbook.md` + `docs/staging-smoke-checklist.md` 기준 Admin/Mobile 수동 스모크 실행

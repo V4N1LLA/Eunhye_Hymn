@@ -137,7 +137,7 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 사전 점검:
 
 ```powershell
-.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile eunhye-staging]
+.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile eunhye-staging] [-AutoLogin]
 ```
 
 리허설 자동 실행(권장):
@@ -146,7 +146,8 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 .\scripts\staging-rehearsal.ps1 `
   -Repo V4N1LLA/Eunhye_Hymn `
   -Ref develop `
-  [-AwsProfile eunhye-staging]
+  [-AwsProfile eunhye-staging] `
+  [-AutoLogin]
 ```
 
 이 스크립트는 `staging-preflight.ps1` 실행 후 `deploy-staging.yml`을 `workflow_dispatch`로 트리거하고 run 완료까지 대기한 다음 `docs/staging-rehearsal-log.md`에 결과를 기록한다.
@@ -159,7 +160,9 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 .\scripts\staging-ops-cycle.ps1 `
   -Repo V4N1LLA/Eunhye_Hymn `
   -Branch develop `
-  -Owner <operator>
+  -Owner <operator> `
+  [-AutoLogin] `
+  [-WaitForCompletion]
 ```
 
 이 스크립트는 preflight와 최신 배포 게이트를 함께 확인하고 `docs/staging-smoke-log.md`에 판정(`CONDITIONAL_GO`/`HOLD`)을 기록한다.

@@ -3,6 +3,7 @@ param(
   [string]$Branch = "develop",
   [int]$MaxAgeMinutes = 120,
   [string]$AwsProfile = "",
+  [switch]$AutoLogin,
   [string]$Owner = "codex",
   [string]$LogFile = "docs/staging-smoke-log.md",
   [switch]$SkipPreflight,
@@ -98,6 +99,9 @@ if (-not $SkipPreflight) {
   if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) {
     $preflightArgs += @("-AwsProfile", $AwsProfile)
   }
+  if ($AutoLogin) {
+    $preflightArgs += "-AutoLogin"
+  }
   if ($SkipTerraformPlan) {
     $preflightArgs += "-SkipTerraformPlan"
   }
@@ -128,11 +132,12 @@ $statusArgs = @(
   "-Repo", $Repo,
   "-Branch", $Branch,
   "-Limit", "10",
-  "-PreferCompleted",
   "-AsJson"
 )
 if ($WaitForCompletion) {
-  $statusArgs += "-Wait"
+  $statusArgs += @("-Wait", "-WatchIntervalSeconds", "10")
+} else {
+  $statusArgs += "-PreferCompleted"
 }
 
 $statusResult = Invoke-PowerShellFile -ScriptPath $statusScript -Arguments $statusArgs
