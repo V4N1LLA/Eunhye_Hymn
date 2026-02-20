@@ -6,6 +6,7 @@
 
 - Social login
   - Kakao SDK login (mobile, redirect flow)
+  - ID/PW login and signup
   - Invite code verification (`POST /auth/invite/validate`)
   - Phone number + SMS code verification (`POST /auth/sms/request`, `POST /auth/sms/verify`)
   - Withdrawal from verification screen (`POST /auth/withdraw`)
@@ -16,6 +17,8 @@
   - PNG asset display (multi-page per hymn)
   - MIDI playback controls (play/pause/stop/speed)
 - Personalization
+  - Profile read/update (`GET/PUT /me/profile`)
+  - Profile change request (`POST /me/profile-change-requests`, `GET /me/profile-change-requests/latest`)
   - Favorites toggle
   - Notes read/write
   - Recent history

@@ -51,6 +51,8 @@ Important keys in `.env`:
 - `INVITE_CODE` (for fallback local invite)
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 - `ADMIN_LOGIN_ID`, `ADMIN_LOGIN_PASSWORD`
+- `SMS_TWILIO_ENABLED` (keep `false` for local)
+- `AI_GEMINI_ENABLED`, `AI_GEMINI_API_KEY` (set only when AI recommendation test is needed)
 
 `local-verify.ps1` will fill missing `ADMIN_*` and AWS keys automatically when run.
 
