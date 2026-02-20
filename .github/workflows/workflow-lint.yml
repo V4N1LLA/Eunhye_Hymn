@@ -6,6 +6,7 @@ on:
       - ".github/workflows/**"
       - "infra/aws/deploy.sh"
       - "infra/aws/verify-staging.sh"
+      - "scripts/*.ps1"
   push:
     branches:
       - develop
@@ -13,6 +14,7 @@ on:
       - ".github/workflows/**"
       - "infra/aws/deploy.sh"
       - "infra/aws/verify-staging.sh"
+      - "scripts/*.ps1"
 
 jobs:
   actionlint:
@@ -30,3 +32,44 @@ jobs:
         run: |
           bash -n infra/aws/deploy.sh
           bash -n infra/aws/verify-staging.sh
+
+  powershell-script-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PowerShell script syntax
+        shell: pwsh
+        run: |
+          $scripts = @(
+            "scripts/staging-preflight.ps1",
+            "scripts/staging-latest-status.ps1",
+            "scripts/staging-ops-cycle.ps1",
+            "scripts/staging-rehearsal.ps1",
+            "scripts/staging-sync-secrets.ps1",
+            "scripts/release-preflight.ps1",
+            "scripts/new-worktree-task.ps1",
+            "scripts/apply-branch-protection.ps1"
+          )
+
+          $hasErrors = $false
+          foreach ($script in $scripts) {
+            if (-not (Test-Path $script)) {
+              Write-Error "Missing script: $script"
+              $hasErrors = $true
+              continue
+            }
+
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              foreach ($error in $errors) {
+                Write-Error ("{0}:{1} {2}" -f $script, $error.Extent.StartLineNumber, $error.Message)
+              }
+              $hasErrors = $true
+            }
+          }
+
+          if ($hasErrors) {
+            throw "PowerShell syntax validation failed."
+          }

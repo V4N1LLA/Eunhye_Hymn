@@ -20,18 +20,18 @@
 - `docs/SECRETS_MANAGEMENT.md`
 
 ## 4. 배포 체크리스트
-- [ ] `develop` 최신 반영
+- [ ] `staging` 최신 반영
 - [ ] DB 마이그레이션 변경 유무 확인
-- [ ] 환경 변수 파일 최신화 (`DB_*`, `JWT_*`, `INVITE_CODE`, `S3_*`)
+- [ ] 환경 변수 파일 최신화 (`DB_*`, `JWT_*`, `INVITE_CODE`, `ADMIN_*`, `SMS_*`, `S3_*`, `AI_*`)
 - [ ] 롤백 기준 버전(이전 이미지 태그) 확인
 - [ ] 사전 점검 스크립트 통과
   - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile <profile>] [-AutoLogin]`
   - AWS 세션 만료가 잦은 환경은 `-AutoLogin`을 기본으로 사용 (`aws sso login` 또는 `aws login` 자동 재시도)
 - [ ] 배포 리허설 자동 실행(권장)
-  - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>] [-AutoLogin]`
+  - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref staging [-AwsProfile <profile>] [-AutoLogin]`
   - 로컬 확인만 필요하면 `-DryRun` 사용
 - [ ] 운영 사이클 자동 점검(권장)
-  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자> [-AutoLogin] [-WaitForCompletion]`
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> [-AutoLogin] [-WaitForCompletion]`
   - preflight + 최신 배포 게이트 + `docs/staging-smoke-log.md` 기록을 일괄 수행
 - [ ] GitHub Actions 필수 Secrets 등록 확인
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
@@ -42,9 +42,9 @@
 - [ ] 스모크 테스트 담당자/기기(Android/iOS/웹) 배정
 
 ## 5. 배포 절차
-1. `develop`에 변경 머지
+1. `develop` 변경을 `staging`에 머지
 2. GitHub Actions 배포 워크플로 실행
-   - 운영 반영: `develop` push 트리거
+   - 운영 반영: `staging` push 트리거
    - 리허설/선검증: `Deploy Staging` workflow_dispatch (`enable_awslogs=false` 권장)
    - 자동화 경로: `.\scripts\staging-rehearsal.ps1` 실행 시 preflight + workflow_dispatch + run 완료 대기 + 로그 기록을 일괄 수행
    - 최신 배포 상태 확인: `.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120`

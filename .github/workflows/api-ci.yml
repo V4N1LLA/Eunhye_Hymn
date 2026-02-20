@@ -2,12 +2,18 @@ name: API CI
 
 on:
   pull_request:
+    branches:
+      - develop
+      - staging
+      - production
     paths:
       - "apps/api/**"
       - ".github/workflows/api-ci.yml"
   push:
     branches:
       - develop
+      - staging
+      - production
     paths:
       - "apps/api/**"
       - ".github/workflows/api-ci.yml"

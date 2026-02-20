@@ -1,6 +1,6 @@
 param(
   [string]$Repo = "V4N1LLA/Eunhye_Hymn",
-  [string]$Ref = "develop",
+  [string]$Ref = "staging",
   [string]$Workflow = "deploy-staging.yml",
   [string]$AwsProfile = "",
   [switch]$AutoLogin,
