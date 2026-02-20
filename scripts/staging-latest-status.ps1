@@ -1,7 +1,7 @@
 param(
   [string]$Repo = "V4N1LLA/Eunhye_Hymn",
   [string]$Workflow = "deploy-staging.yml",
-  [string]$Branch = "develop",
+  [string]$Branch = "staging",
   [string]$Event = "",
   [int]$Limit = 1,
   [switch]$Wait,

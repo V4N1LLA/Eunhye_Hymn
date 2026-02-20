@@ -1,0 +1,59 @@
+name: Release Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Target SemVer (without v prefix), e.g. 1.2.3"
+        required: true
+      branch:
+        description: "Branch used for staging/CI evidence lookup"
+        required: false
+        default: staging
+      max_staging_age_minutes:
+        description: "Max allowed age of latest successful staging deploy"
+        required: false
+        default: "1440"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run release preflight
+        id: preflight
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./scripts/release-preflight.ps1 `
+            -Version "${{ inputs.version }}" `
+            -Repo "${{ github.repository }}" `
+            -Branch "${{ inputs.branch }}" `
+            -MaxStagingAgeMinutes "${{ inputs.max_staging_age_minutes }}" `
+            -AsJson | Out-File -FilePath release-preflight.json -Encoding utf8
+          $exitCode = $LASTEXITCODE
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "exit_code=$exitCode"
+          exit 0
+
+      - name: Show preflight result
+        shell: pwsh
+        run: |
+          Get-Content -Raw release-preflight.json
+
+      - name: Upload preflight artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-preflight-${{ inputs.version }}
+          path: release-preflight.json
+
+      - name: Enforce readiness result
+        if: steps.preflight.outputs.exit_code != '0'
+        shell: pwsh
+        run: |
+          Write-Error "Release preflight returned HOLD. See release-preflight.json for details."

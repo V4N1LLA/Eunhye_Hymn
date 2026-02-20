@@ -1,6 +1,6 @@
 param(
   [string]$Repo = "V4N1LLA/Eunhye_Hymn",
-  [string]$Branch = "develop",
+  [string]$Branch = "staging",
   [int]$MaxAgeMinutes = 120,
   [string]$AwsProfile = "",
   [switch]$AutoLogin,

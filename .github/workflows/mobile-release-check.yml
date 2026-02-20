@@ -4,12 +4,16 @@ on:
   pull_request:
     branches:
       - develop
+      - staging
+      - production
     paths:
       - "apps/mobile/**"
       - ".github/workflows/mobile-release-check.yml"
   push:
     branches:
       - develop
+      - staging
+      - production
     paths:
       - "apps/mobile/**"
       - ".github/workflows/mobile-release-check.yml"
@@ -19,6 +23,10 @@ on:
         description: "API base URL passed to flutter build"
         required: false
         default: "https://example.com/api/v1"
+
+concurrency:
+  group: mobile-release-check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   android-release-build:
