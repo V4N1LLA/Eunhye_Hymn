@@ -2,6 +2,30 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-20
+
+### Staging preflight 자동 복구 + 운영 사이클 게이트 보강
+- 스크립트 개선
+  - `scripts/staging-preflight.ps1`
+    - `-AutoLogin` 옵션 추가
+    - `aws sts get-caller-identity` 실패 시(`session expired`/`credentials missing`) `aws sso login` 자동 재시도 지원
+    - 자동 복구 결과를 체크 테이블(`aws session recovery`)에 기록
+  - `scripts/staging-ops-cycle.ps1`
+    - `-AutoLogin` 옵션 추가(내부 preflight로 전달)
+    - `-WaitForCompletion` 사용 시 진행 중 최신 run 완료 대기 경로를 실제 활성화
+  - `scripts/staging-rehearsal.ps1`
+    - `-AutoLogin` 옵션 추가(내부 preflight로 전달)
+  - `scripts/staging-latest-status.ps1`
+    - `-AsJson/-AsMarkdown + -Wait` 조합에서 `gh run watch` 출력이 JSON/Markdown 파싱을 깨지 않도록 출력 분리
+    - `gh run watch` 실패 시 종료코드 기반 예외 처리 추가
+- 운영 실행 증빙
+  - `scripts/staging-ops-cycle.ps1 -AutoLogin -WaitForCompletion` 실행
+  - run `22206920873` 기준 deploy/verify PASS, preflight FAIL(session recovery unavailable)로 `HOLD` 기록
+  - 반영 문서: `docs/staging-smoke-log.md`, `docs/staging-smoke-checklist.md`
+- 문서 동기화
+  - `docs/runbook.md`, `infra/aws/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`
+  - AutoLogin/WaitForCompletion 표준 명령 및 주간 운영 사이클 규칙 반영
+
 ## 2026-02-17
 
 ### Staging 운영 사이클 자동화 + Mobile store readiness

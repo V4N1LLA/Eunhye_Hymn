@@ -138,7 +138,15 @@ if ($null -eq $selectedRun) {
 $runId = "$($selectedRun.databaseId)"
 
 if ($Wait -and $selectedRun.status -ne "completed") {
-  & gh run watch $runId --repo $Repo --interval $WatchIntervalSeconds --exit-status
+  if ($AsJson -or $AsMarkdown) {
+    & gh run watch $runId --repo $Repo --interval $WatchIntervalSeconds --exit-status *> $null
+  } else {
+    & gh run watch $runId --repo $Repo --interval $WatchIntervalSeconds --exit-status
+  }
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "run watch failed (run_id=$runId, exit_code=$LASTEXITCODE)"
+  }
 }
 
 $runView = Invoke-GhJson -Args @(

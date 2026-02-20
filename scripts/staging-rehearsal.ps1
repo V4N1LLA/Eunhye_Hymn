@@ -3,6 +3,7 @@ param(
   [string]$Ref = "develop",
   [string]$Workflow = "deploy-staging.yml",
   [string]$AwsProfile = "",
+  [switch]$AutoLogin,
   [switch]$SkipPreflight,
   [switch]$SkipTerraformPlan,
   [switch]$EnableAwsLogs,
@@ -90,6 +91,9 @@ if (-not $SkipPreflight) {
   )
   if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) {
     $preflightArgs += @("-AwsProfile", $AwsProfile)
+  }
+  if ($AutoLogin) {
+    $preflightArgs += "-AutoLogin"
   }
   if ($SkipTerraformPlan) {
     $preflightArgs += "-SkipTerraformPlan"

@@ -1112,3 +1112,42 @@
 - `rg -n "thread|답글|리뷰 코멘트" docs/WORK_CYCLE.md CLAUDE.md`
 - `rg -n "^(<<<<<<<|>>>>>>>|=======)$" docs/WORK_CYCLE.md CLAUDE.md`
 
+## 39. 이번 사이클 기록 (2026-02-20, staging preflight auto-login + ops cycle gate)
+
+### 목표
+- 스테이징 운영 사이클의 1순위 블로커(preflight 세션 만료)를 자동 복구 가능한 형태로 줄이고, 최신 run 완료 대기 기반 게이트를 고정한다.
+
+### 범위
+- 포함: `scripts/staging-preflight.ps1`, `scripts/staging-ops-cycle.ps1`, `scripts/staging-latest-status.ps1`, `scripts/staging-rehearsal.ps1` 및 운영 문서 동기화
+- 제외: AWS 자격증명 재발급, 실제 모바일 스토어 업로드
+
+### 수행 작업
+1. preflight 자동 복구
+- `scripts/staging-preflight.ps1`에 `-AutoLogin` 옵션 추가
+- `aws sts get-caller-identity` 실패(`session expired`/`credentials missing`) 시 `aws sso login` 자동 재시도 지원
+- 자동 복구 결과를 체크 테이블(`aws session recovery`)로 출력
+
+2. 운영 사이클 게이트 보강
+- `scripts/staging-ops-cycle.ps1`에 `-AutoLogin` 옵션 추가(내부 preflight 전달)
+- `-WaitForCompletion` 시 `-PreferCompleted` 대신 최신 run 완료 대기 경로 사용
+- `scripts/staging-latest-status.ps1`의 `-AsJson/-AsMarkdown + -Wait` 출력 충돌 수정
+
+3. 리허설/문서 동기화
+- `scripts/staging-rehearsal.ps1`에 `-AutoLogin` 옵션 추가
+- 운영 문서 명령 갱신
+  - `docs/runbook.md`
+  - `docs/staging-smoke-checklist.md`
+  - `infra/aws/README.md`
+  - `docs/current-usable-scope.md`
+  - `CLAUDE.md`
+  - `docs/changelog-dev.md`
+- 실행 증빙 반영
+  - `docs/staging-smoke-log.md` (`run 22206920873`, `HOLD`)
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn`
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -AutoLogin`
+- `powershell -NoProfile -File .\\scripts\\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -SkipPreflight -AutoLogin -DryRun`
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -AutoLogin -WaitForCompletion`
+- `rg -n "AutoLogin|WaitForCompletion|aws session recovery|22206920873" scripts docs CLAUDE.md infra/aws/README.md`
+
