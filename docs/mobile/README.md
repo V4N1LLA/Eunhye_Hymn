@@ -8,6 +8,7 @@
 
 - 로그인
   - 소셜 SDK 직접 로그인 (Kakao 모바일)
+  - ID/PW 로그인/회원가입
   - 로그인 화면에서 Kakao 버튼 클릭 시 provider 앱/브라우저로 리디렉션
   - 성도 인증 플로우: `Login -> InviteCode -> PhoneNumber -> SmsCode -> Home`
   - 초대코드 인증(`POST /auth/invite/validate`)
@@ -23,6 +24,7 @@
   - MIDI 에셋 앱 내 재생 UX (재생/일시정지/정지/속도)
 - 개인화
   - 내 정보(교회/이름/구역) 조회/수정
+  - 개인정보 변경 요청 생성/최신 상태 조회
   - 즐겨찾기 토글
   - 메모 조회/저장
   - 최근 열람 히스토리 조회 (검색 + 기간 필터 + 빈 상태 가이드)
@@ -58,6 +60,8 @@
 - Base URL: `/api/v1`
 - 사용 API:
   - `POST /auth/social`
+  - `POST /auth/signup`
+  - `POST /auth/login`
   - `POST /auth/invite/validate`
   - `POST /auth/sms/request`
   - `POST /auth/sms/verify`
@@ -66,6 +70,8 @@
   - `POST /auth/logout`
   - `GET /me/profile`
   - `PUT /me/profile`
+  - `POST /me/profile-change-requests`
+  - `GET /me/profile-change-requests/latest`
   - `GET /me/favorites/{hymnId}`
   - `GET /hymns`
   - `GET /hymns/{id}`

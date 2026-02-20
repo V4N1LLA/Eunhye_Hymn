@@ -147,7 +147,7 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 ```powershell
 .\scripts\staging-rehearsal.ps1 `
   -Repo V4N1LLA/Eunhye_Hymn `
-  -Ref develop `
+  -Ref staging `
   [-AwsProfile eunhye-staging] `
   [-AutoLogin]
 ```
@@ -161,7 +161,7 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 ```powershell
 .\scripts\staging-ops-cycle.ps1 `
   -Repo V4N1LLA/Eunhye_Hymn `
-  -Branch develop `
+  -Branch staging `
   -Owner <operator> `
   [-AutoLogin] `
   [-WaitForCompletion]
@@ -193,7 +193,7 @@ JSON 출력이 필요하면 `-AsJson` 옵션을 사용한다.
   - `Use workflow from`: 검증 브랜치 선택
   - `enable_awslogs`: 기본 `false`로 실행
 - 운영 반영 시:
-  - `develop` 머지 후 push 트리거 자동 실행
+  - `staging` 머지 후 push 트리거 자동 실행
 
 ### DEPLOY_ENV_FILE 내용
 
@@ -213,13 +213,34 @@ ADMIN_KAKAO_SUBJECTS=
 ADMIN_ENFORCE_ADMIN_ONLY=false
 ADMIN_LOGIN_ID=
 ADMIN_LOGIN_PASSWORD=
+SMS_CODE_LENGTH=6
+SMS_EXPIRES_SECONDS=300
+SMS_COOLDOWN_SECONDS=30
+SMS_MAX_ATTEMPTS=5
+SMS_TWILIO_ENABLED=false
+SMS_TWILIO_ACCOUNT_SID=
+SMS_TWILIO_AUTH_TOKEN=
+SMS_TWILIO_FROM_NUMBER=
+SMS_TWILIO_MESSAGE_TEMPLATE=[Eunhye Hymn] Verification code is %s.
 S3_BUCKET=<terraform output s3_bucket_name>
 S3_REGION=ap-northeast-2
 S3_ENDPOINT=
 S3_PUBLIC_BASE_URL=<terraform output s3_bucket_url>
 S3_PRESIGN_EXPIRES_MINUTES=15
+AI_GEMINI_ENABLED=false
+AI_GEMINI_API_KEY=
+AI_GEMINI_MODEL=gemini-2.5-flash-lite
+AI_GEMINI_CONNECT_TIMEOUT_SECONDS=3
+AI_GEMINI_READ_TIMEOUT_SECONDS=8
+AI_GEMINI_TEMPERATURE=0.1
+AI_GEMINI_MAX_OUTPUT_TOKENS=160
+AI_RECOMMEND_MAX_CANDIDATE_HYMNS=25
+AI_RECOMMEND_MAX_RESULTS=3
+AI_RECOMMEND_MAX_SITUATION_CHARS=180
 SPRING_PROFILES_ACTIVE=prod
 ```
+
+운영에서 AI 추천을 사용하지 않으면 `AI_GEMINI_ENABLED=false`를 유지하고 `AI_GEMINI_API_KEY`는 비워둔다.
 
 ## 수동 배포
 

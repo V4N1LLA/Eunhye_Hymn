@@ -13,12 +13,15 @@
 3. Real secrets (must never be committed)
    - Example: `JWT_SECRET`, DB password, cloud credentials, signing keys.
    - SMS provider credentials (`SMS_TWILIO_ACCOUNT_SID`, `SMS_TWILIO_AUTH_TOKEN`).
+   - AI provider credentials (`AI_GEMINI_API_KEY`).
+   - Admin credential values (`ADMIN_LOGIN_PASSWORD`).
 
 ## 3) Environment separation policy
 - local
   - Use local `.env` / `apps/mobile/.env` only.
   - Non-production values only.
   - Keep `SMS_TWILIO_ENABLED=false` unless local end-to-end SMS test is required.
+  - Keep `AI_GEMINI_ENABLED=false` unless low-cost recommendation test is required.
 - staging
   - Use GitHub Actions environment secrets + managed secret store.
   - Separate credentials from production.
@@ -52,8 +55,19 @@
 - No secrets in logs/screenshots/PR body/comments.
 - `.env` files are not tracked by Git.
 - `.env.example` keeps placeholders or local-safe defaults only.
+- AI/SMS flags in committed env templates are disabled by default (`*_ENABLED=false`).
 
-## 7) Mobile release secrets (GitHub Actions)
+## 7) API/infra secret inventory
+
+Runtime secrets that must be managed outside Git:
+- Auth: `JWT_SECRET`
+- DB: `DB_PASS`
+- AWS: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+- SMS: `SMS_TWILIO_ACCOUNT_SID`, `SMS_TWILIO_AUTH_TOKEN`, `SMS_TWILIO_FROM_NUMBER`
+- AI: `AI_GEMINI_API_KEY`
+- Admin: `ADMIN_LOGIN_PASSWORD`
+
+## 8) Mobile release secrets (GitHub Actions)
 Android signing (`.github/workflows/mobile-store-release.yml`):
 - `MOBILE_ANDROID_KEYSTORE_BASE64`
 - `MOBILE_ANDROID_KEY_ALIAS`

@@ -47,6 +47,14 @@ cp .env.example .env
 | `INVITE_CODE` | `dev-invite-code` | 초대코드 (**필수**) |
 | `DB_USER` / `DB_PASS` | `postgres` / `postgres` | DB 인증 |
 | `S3_BUCKET` | `local-bucket` | LocalStack S3 버킷 |
+| `ADMIN_LOGIN_ID` / `ADMIN_LOGIN_PASSWORD` | 빈값 | Admin ID/PW 로그인(선택) |
+| `SMS_TWILIO_ENABLED` | `false` | 로컬 SMS 실발송 여부 |
+| `AI_GEMINI_ENABLED` | `false` | AI 추천 기능 활성화 여부 |
+| `AI_GEMINI_API_KEY` | 빈값 | Gemini API 키 (활성화 시 필수) |
+
+AI 추천 테스트 시에만 아래 값을 추가 설정하세요.
+- `AI_GEMINI_ENABLED=true`
+- `AI_GEMINI_API_KEY=<your_key>`
 
 ---
 
@@ -158,6 +166,9 @@ curl http://localhost:8080/api/v1/ping
 
 초대코드가 필요한 경우: `.env`의 `INVITE_CODE` 값 사용 (기본: `dev-invite-code`)
 
+Admin ID/PW 로그인을 테스트하려면 `.env`에 `ADMIN_LOGIN_ID`, `ADMIN_LOGIN_PASSWORD`를 설정한 뒤
+`POST /api/v1/auth/admin/login` 또는 관리자 로그인 화면의 ID/PW 모드를 사용합니다.
+
 ---
 
 ## 5. 서비스 종료
@@ -186,6 +197,11 @@ export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin"
 ```bash
 # .env 파일 확인
 cat .env | grep -E "(JWT_SECRET|INVITE_CODE)"
+```
+
+AI 추천을 활성화했다면 `AI_GEMINI_API_KEY` 누락 여부도 확인:
+```bash
+cat .env | grep -E "(AI_GEMINI_ENABLED|AI_GEMINI_API_KEY)"
 ```
 
 ### 포트 충돌 (5432, 8080, 5173)
