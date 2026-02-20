@@ -26,7 +26,7 @@
 - [ ] 롤백 기준 버전(이전 이미지 태그) 확인
 - [ ] 사전 점검 스크립트 통과
   - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile <profile>] [-AutoLogin]`
-  - AWS SSO 세션 만료가 잦은 환경은 `-AutoLogin`을 기본으로 사용
+  - AWS 세션 만료가 잦은 환경은 `-AutoLogin`을 기본으로 사용 (`aws sso login` 또는 `aws login` 자동 재시도)
 - [ ] 배포 리허설 자동 실행(권장)
   - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>] [-AutoLogin]`
   - 로컬 확인만 필요하면 `-DryRun` 사용

@@ -1151,3 +1151,36 @@
 - `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -AutoLogin -WaitForCompletion`
 - `rg -n "AutoLogin|WaitForCompletion|aws session recovery|22206920873" scripts docs CLAUDE.md infra/aws/README.md`
 
+## 40. 이번 사이클 기록 (2026-02-20, aws login fallback + preflight pass recovery)
+
+### 목표
+- AutoLogin 경로가 `sso_start_url` 미설정 환경에서도 동작하도록 보강하고, preflight PASS를 실제로 복구한다.
+
+### 범위
+- 포함: `scripts/staging-preflight.ps1` fallback 보강 + 운영 문서/로그 최신화
+- 제외: Admin/Mobile 수동 스모크 실제 수행
+
+### 수행 작업
+1. AutoLogin fallback 보강
+- `scripts/staging-preflight.ps1`
+  - `aws sso login` 실패/비구성 시 `aws login` fallback 재시도 추가
+  - fallback 실패 시 원인(지원 불가/명령 실패)을 체크 결과에 누적 출력
+
+2. 운영 실행 및 증빙 갱신
+- `aws logout --profile default`로 만료 상태를 재현한 뒤 `staging-preflight.ps1 -AutoLogin` 재실행
+- `aws login` fallback 자동 복구로 preflight PASS 확인
+- `staging-ops-cycle.ps1 -AutoLogin -WaitForCompletion` 재실행
+  - `run 22207213127` 기준 preflight/deploy/verify PASS, 판정 `CONDITIONAL_GO`
+- `docs/staging-smoke-log.md`, `docs/staging-smoke-checklist.md`에 실행 결과 반영
+
+3. 기준 문서 동기화
+- `docs/runbook.md`, `infra/aws/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`, `docs/changelog-dev.md` 갱신
+
+### 검증
+- `aws sts get-caller-identity`
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn`
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -AutoLogin`
+- `aws logout --profile default`
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -AutoLogin -WaitForCompletion`
+- `rg -n "aws login|22207213127|CONDITIONAL_GO" docs/staging-smoke-log.md docs/staging-smoke-checklist.md docs/changelog-dev.md CLAUDE.md`
+

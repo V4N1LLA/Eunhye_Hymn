@@ -9,6 +9,7 @@
   - `scripts/staging-preflight.ps1`
     - `-AutoLogin` 옵션 추가
     - `aws sts get-caller-identity` 실패 시(`session expired`/`credentials missing`) `aws sso login` 자동 재시도 지원
+    - 후속 보강: `sso_start_url` 미설정 환경에서도 `aws login` fallback 재시도 지원
     - 자동 복구 결과를 체크 테이블(`aws session recovery`)에 기록
   - `scripts/staging-ops-cycle.ps1`
     - `-AutoLogin` 옵션 추가(내부 preflight로 전달)
@@ -21,6 +22,8 @@
 - 운영 실행 증빙
   - `scripts/staging-ops-cycle.ps1 -AutoLogin -WaitForCompletion` 실행
   - run `22206920873` 기준 deploy/verify PASS, preflight FAIL(session recovery unavailable)로 `HOLD` 기록
+  - `aws logout --profile default` 후 `staging-preflight.ps1 -AutoLogin` 재실행으로 `aws login` fallback 자동 복구 PASS 확인
+  - run `22207213127` 기준 preflight/deploy/verify PASS, `CONDITIONAL_GO` 갱신
   - 반영 문서: `docs/staging-smoke-log.md`, `docs/staging-smoke-checklist.md`
 - 문서 동기화
   - `docs/runbook.md`, `infra/aws/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`

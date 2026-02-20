@@ -778,7 +778,7 @@ develop push → GitHub Actions
 - IAM 정책 샘플:
   - `infra/aws/terraform-deployer-iam-policy.json`
 - 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
-- 최신 점검(2026-02-20): deploy run `22206920873`는 `deploy/verify success`였으나 preflight는 `profile 'default' has no sso_start_url`로 `HOLD`.
+- 최신 점검(2026-02-20): deploy run `22207213127` 기준 preflight/deploy/verify 모두 PASS, 운영 판정 `CONDITIONAL_GO`.
 
 **2. 운영 문서/절차 고도화**
 - `docs/runbook.md` + `docs/staging-smoke-checklist.md` + `docs/staging-feedback-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
