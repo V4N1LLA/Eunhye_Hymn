@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/storage/onboarding_storage.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/storage/onboarding_storage.dart';
 import 'auth_repository.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -184,6 +184,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           ),
                         ),
                       ],
+                      const SizedBox(height: 12),
+                      const Center(
+                        child: Text(
+                          '회원/교회 정보는 첫 사용시에만 입력합니다.',
+                          style: TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

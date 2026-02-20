@@ -7,6 +7,7 @@ import com.eunhyehymn.application.usecases.GetMyProfileUseCase;
 import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
 import com.eunhyehymn.application.usecases.UpsertMyProfileUseCase;
+import com.eunhyehymn.application.usecases.WithdrawMyAccountUseCase;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.common.response.ApiResponse;
 import jakarta.validation.constraints.NotBlank;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,6 +35,7 @@ public class MeController {
     private final GetHistoryUseCase getHistoryUseCase;
     private final GetMyProfileUseCase getMyProfileUseCase;
     private final UpsertMyProfileUseCase upsertMyProfileUseCase;
+    private final WithdrawMyAccountUseCase withdrawMyAccountUseCase;
 
     public MeController(
         ToggleFavoriteUseCase toggleFavoriteUseCase,
@@ -41,7 +44,8 @@ public class MeController {
         SaveHymnNoteUseCase saveHymnNoteUseCase,
         GetHistoryUseCase getHistoryUseCase,
         GetMyProfileUseCase getMyProfileUseCase,
-        UpsertMyProfileUseCase upsertMyProfileUseCase
+        UpsertMyProfileUseCase upsertMyProfileUseCase,
+        WithdrawMyAccountUseCase withdrawMyAccountUseCase
     ) {
         this.toggleFavoriteUseCase = toggleFavoriteUseCase;
         this.getFavoriteUseCase = getFavoriteUseCase;
@@ -50,6 +54,7 @@ public class MeController {
         this.getHistoryUseCase = getHistoryUseCase;
         this.getMyProfileUseCase = getMyProfileUseCase;
         this.upsertMyProfileUseCase = upsertMyProfileUseCase;
+        this.withdrawMyAccountUseCase = withdrawMyAccountUseCase;
     }
 
     @GetMapping("/profile")
@@ -80,6 +85,13 @@ public class MeController {
         UUID userId = parseUserId(authentication);
         boolean favorite = toggleFavoriteUseCase.toggle(userId, hymnId).favorite();
         return ApiResponse.success(new FavoriteResponse(favorite));
+    }
+
+    @DeleteMapping("/account")
+    public ApiResponse<Void> withdraw(Authentication authentication) {
+        UUID userId = parseUserId(authentication);
+        withdrawMyAccountUseCase.withdraw(userId);
+        return ApiResponse.success(null);
     }
 
     @GetMapping("/favorites/{hymnId}")

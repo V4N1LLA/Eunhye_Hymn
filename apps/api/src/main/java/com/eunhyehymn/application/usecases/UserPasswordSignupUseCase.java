@@ -24,6 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserPasswordSignupUseCase {
     static final String PROVIDER_LOCAL_USER = "LOCAL_USER";
     private static final Pattern LOGIN_ID_PATTERN = Pattern.compile("^[a-z0-9._-]{3,100}$");
+    private static final Pattern EMAIL_LOGIN_ID_PATTERN =
+        Pattern.compile("^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$");
+    private static final int MIN_LOGIN_ID_LENGTH = 3;
+    private static final int MAX_LOGIN_ID_LENGTH = 100;
     private static final int MIN_PASSWORD_LENGTH = 8;
 
     private final AuthIdentityRepository authIdentityRepository;
@@ -122,8 +126,14 @@ public class UserPasswordSignupUseCase {
     }
 
     private void validateCredentialFormat(String loginId, String password) {
-        if (!LOGIN_ID_PATTERN.matcher(loginId).matches()) {
-            throw new InvalidCredentialFormatException("로그인 ID는 영문/숫자/._- 조합 3-100자여야 합니다.");
+        if (loginId == null
+            || loginId.length() < MIN_LOGIN_ID_LENGTH
+            || loginId.length() > MAX_LOGIN_ID_LENGTH
+            || (!LOGIN_ID_PATTERN.matcher(loginId).matches()
+            && !EMAIL_LOGIN_ID_PATTERN.matcher(loginId).matches())) {
+            throw new InvalidCredentialFormatException(
+                "로그인 ID는 영문/숫자/._- 조합 또는 이메일 형식 3-100자여야 합니다."
+            );
         }
         if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
             throw new InvalidCredentialFormatException("비밀번호는 최소 8자 이상이어야 합니다.");

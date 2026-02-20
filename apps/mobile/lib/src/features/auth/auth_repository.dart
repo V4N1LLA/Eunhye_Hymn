@@ -161,6 +161,14 @@ class AuthRepository {
     await tokenStorage.clear();
   }
 
+  Future<void> withdraw() async {
+    try {
+      await apiClient.delete('/me/account');
+    } finally {
+      await tokenStorage.clear();
+    }
+  }
+
   Future<void> clearSession() {
     return tokenStorage.clear();
   }

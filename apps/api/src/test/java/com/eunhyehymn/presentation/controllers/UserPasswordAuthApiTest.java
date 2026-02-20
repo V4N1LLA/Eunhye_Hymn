@@ -15,9 +15,11 @@ import com.eunhyehymn.infrastructure.persistence.HymnNoteJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.InviteCodeEntity;
 import com.eunhyehymn.infrastructure.persistence.InviteCodeJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.RefreshTokenJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.UserEntity;
 import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserPasswordCredentialJpaRepository;
+import com.eunhyehymn.domain.model.UserStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -86,6 +88,22 @@ class UserPasswordAuthApiTest {
         assertThat(identity.getProvider()).isEqualTo("LOCAL_USER");
         assertThat(identity.getProviderSubject()).isEqualTo("member.one");
         assertThat(inviteCodeJpaRepository.findById("SIGNUP-CODE").orElseThrow().getUsedCount()).isEqualTo(1);
+    }
+
+    @Test
+    void signupAcceptsEmailLoginId() throws Exception {
+        inviteCodeJpaRepository.save(new InviteCodeEntity(
+            "EMAIL-CODE", null, "email", null, 0, true, null, Instant.now()
+        ));
+
+        String response = signup("qa.user+1@example.com", "password-123!", "email-code");
+        JsonNode data = objectMapper.readTree(response).path("data");
+        String accessToken = data.path("accessToken").asText();
+
+        mockMvc.perform(get("/me/profile")
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.displayName").value("qa.user+1@example.com"));
     }
 
     @Test
@@ -160,6 +178,33 @@ class UserPasswordAuthApiTest {
                 ))))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error.code").value("user_login_failed"));
+    }
+
+    @Test
+    void loginFailsWhenAccountIsDisabled() throws Exception {
+        inviteCodeJpaRepository.save(new InviteCodeEntity(
+            "DISABLED-CODE", null, "disabled", null, 0, true, null, Instant.now()
+        ));
+        signup("member.disabled", "password-123!", "disabled-code");
+
+        UserEntity existing = userJpaRepository.findAll().get(0);
+        userJpaRepository.save(new UserEntity(
+            existing.getId(),
+            existing.getDisplayName(),
+            existing.getRole(),
+            UserStatus.DISABLED,
+            existing.getCreatedAt(),
+            existing.getLastLoginAt()
+        ));
+
+        mockMvc.perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                    "loginId", "member.disabled",
+                    "password", "password-123!"
+                ))))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error.code").value("account_disabled"));
     }
 
     private String signup(String loginId, String password, String inviteCode) throws Exception {

@@ -22,12 +22,14 @@ import com.eunhyehymn.application.usecases.RecordEventsUseCase;
 import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
 import com.eunhyehymn.application.usecases.UpsertMyProfileUseCase;
+import com.eunhyehymn.application.usecases.WithdrawMyAccountUseCase;
 import com.eunhyehymn.domain.repository.AssetRepository;
 import com.eunhyehymn.domain.repository.EventExportJobCleanupRunRepository;
 import com.eunhyehymn.domain.repository.EventExportJobRepository;
 import com.eunhyehymn.domain.repository.EventRepository;
 import com.eunhyehymn.domain.repository.HymnNoteRepository;
 import com.eunhyehymn.domain.repository.HymnRepository;
+import com.eunhyehymn.domain.repository.RefreshTokenRepository;
 import com.eunhyehymn.domain.repository.UserHymnStateRepository;
 import com.eunhyehymn.domain.repository.UserProfileRepository;
 import com.eunhyehymn.domain.repository.UserRepository;
@@ -90,6 +92,14 @@ public class UseCaseConfig {
         UserProfileRepository userProfileRepository
     ) {
         return new UpsertMyProfileUseCase(userRepository, userProfileRepository);
+    }
+
+    @Bean
+    WithdrawMyAccountUseCase withdrawMyAccountUseCase(
+        UserRepository userRepository,
+        RefreshTokenRepository refreshTokenRepository
+    ) {
+        return new WithdrawMyAccountUseCase(userRepository, refreshTokenRepository);
     }
 
     @Bean

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_exception.dart';
 import 'auth_repository.dart';
-import 'sign_up_page.dart';
+import 'email_login_page.dart';
+import 'invite_gate_page.dart';
 import 'social_sdk_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -25,33 +26,13 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _inviteCodeController = TextEditingController();
-  final _accountIdController = TextEditingController();
-  final _accountPasswordController = TextEditingController();
-
   bool _loading = false;
-  bool _showAccountLogin = false;
   String? _error;
 
   bool get _hasKakaoKey => AppConfig.kakaoNativeAppKey.trim().isNotEmpty;
 
-  String get _normalizedInviteCode =>
-      _inviteCodeController.text.trim().toUpperCase();
-
-  String? _validateInviteCode() {
-    final inviteCode = _normalizedInviteCode;
-    if (inviteCode.isEmpty) {
-      return '초대 코드를 입력해 주세요.';
-    }
-    return null;
-  }
-
-  @override
-  void dispose() {
-    _inviteCodeController.dispose();
-    _accountIdController.dispose();
-    _accountPasswordController.dispose();
-    super.dispose();
+  bool _requiresInviteCode(ApiException exception) {
+    return (exception.code ?? '').toLowerCase() == 'invalid_invite_code';
   }
 
   Future<void> _runWithLoading(Future<void> Function() action) async {
@@ -84,15 +65,33 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _handleKakaoLogin() async {
-    final inviteCodeError = _validateInviteCode();
-    if (inviteCodeError != null) {
-      setState(() {
-        _error = inviteCodeError;
-      });
+  Future<void> _handleWithdrawRequested() async {
+    await widget.authRepository.withdraw();
+  }
+
+  Future<void> _openEmailLoginPage() async {
+    if (_loading) {
       return;
     }
 
+    final profile = await Navigator.of(context).push<SessionProfile>(
+      MaterialPageRoute<SessionProfile>(
+        builder: (_) => EmailLoginPage(
+          authRepository: widget.authRepository,
+        ),
+      ),
+    );
+
+    if (!mounted || profile == null) {
+      return;
+    }
+
+    await _runWithLoading(() async {
+      await widget.onLoggedIn(profile);
+    });
+  }
+
+  Future<void> _handleKakaoLogin() async {
     await _runWithLoading(() async {
       if (!_hasKakaoKey) {
         throw ApiException(
@@ -102,53 +101,49 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       final token = await widget.socialSdkService.fetchToken().timeout(
-        const Duration(seconds: 45),
-        onTimeout: () => throw ApiException(
-          '카카오 로그인 응답이 지연되고 있습니다. 다시 시도해 주세요.',
-        ),
-      );
-      final profile = await widget.authRepository.loginWithSocial(
-        token: token,
-        inviteCode: _normalizedInviteCode,
-      );
-      await widget.onLoggedIn(profile);
-    });
-  }
+            const Duration(seconds: 45),
+            onTimeout: () => throw ApiException(
+              '카카오 로그인 응답이 지연되고 있습니다. 다시 시도해 주세요.',
+            ),
+          );
 
-  Future<void> _handleAccountLogin() async {
-    final loginId = _accountIdController.text.trim();
-    final password = _accountPasswordController.text;
-    if (loginId.isEmpty || password.isEmpty) {
-      setState(() {
-        _error = '아이디와 비밀번호를 모두 입력해 주세요.';
-      });
-      return;
-    }
+      try {
+        final profile = await widget.authRepository.loginWithSocial(
+          token: token,
+        );
+        await widget.onLoggedIn(profile);
+      } on ApiException catch (e) {
+        if (!_requiresInviteCode(e)) {
+          rethrow;
+        }
 
-    await _runWithLoading(() async {
-      final profile = await widget.authRepository.loginWithAccount(
-        loginId: loginId,
-        password: password,
-      );
-      await widget.onLoggedIn(profile);
-    });
-  }
+        if (!mounted) {
+          return;
+        }
 
-  Future<void> _openSignUp() async {
-    final profile = await Navigator.of(context).push<SessionProfile>(
-      MaterialPageRoute<SessionProfile>(
-        builder: (_) => SignUpPage(
-          authRepository: widget.authRepository,
-          initialInviteCode: _inviteCodeController.text,
-        ),
-      ),
-    );
-    if (!mounted || profile == null) {
-      return;
-    }
+        final profile = await Navigator.of(context).push<SessionProfile>(
+          MaterialPageRoute<SessionProfile>(
+            builder: (_) => InviteGatePage(
+              title: '초대 코드 입력',
+              description: '로그인을 완료하려면 초대 코드를 입력해 주세요.',
+              submitLabel: '코드 확인 후 입장',
+              onSubmit: (inviteCode) {
+                return widget.authRepository.loginWithSocial(
+                  token: token,
+                  inviteCode: inviteCode,
+                );
+              },
+              onWithdraw: _handleWithdrawRequested,
+            ),
+          ),
+        );
 
-    await _runWithLoading(() async {
-      await widget.onLoggedIn(profile);
+        if (!mounted || profile == null) {
+          return;
+        }
+
+        await widget.onLoggedIn(profile);
+      }
     });
   }
 
@@ -186,27 +181,10 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            '카카오 또는 계정 로그인을 선택해 주세요.',
+                            '카카오 또는 이메일 로그인을 선택해 주세요.',
                             style: TextStyle(color: Color(0xFF5B6572)),
                           ),
                           const SizedBox(height: 14),
-                          TextField(
-                            controller: _inviteCodeController,
-                            enabled: !_loading,
-                            decoration: const InputDecoration(
-                              labelText: '초대 코드',
-                              hintText: '예: ABC123',
-                              filled: true,
-                              fillColor: Color(0xFFF9FAFB),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
                           _ActionButton(
                             onPressed: _loading ? null : _handleKakaoLogin,
                             label: _loading ? '처리 중...' : '카카오로 시작하기',
@@ -216,15 +194,9 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 10),
                           _ActionButton(
-                            onPressed: _loading
-                                ? null
-                                : () => setState(() {
-                                      _showAccountLogin = !_showAccountLogin;
-                                    }),
-                            label: _showAccountLogin
-                                ? '계정 시작 닫기'
-                                : '아이디/비밀번호로 시작하기',
-                            icon: const Icon(Icons.lock_outline),
+                            onPressed: _loading ? null : _openEmailLoginPage,
+                            label: '이메일 로그인',
+                            icon: const Icon(Icons.mail_outline),
                             background: Colors.white,
                             foreground: const Color(0xFF111827),
                             border: const Color(0xFFE5E7EB),
@@ -263,70 +235,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ],
-                  if (_showAccountLogin) ...[
-                    const SizedBox(height: 10),
-                    Card(
-                      margin: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            TextField(
-                              controller: _accountIdController,
-                              enabled: !_loading,
-                              decoration: const InputDecoration(
-                                labelText: '아이디',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            TextField(
-                              controller: _accountPasswordController,
-                              enabled: !_loading,
-                              obscureText: true,
-                              decoration: const InputDecoration(
-                                labelText: '비밀번호',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 48,
-                              child: FilledButton(
-                                onPressed:
-                                    _loading ? null : _handleAccountLogin,
-                                child: Text(
-                                  _loading ? '처리 중...' : '로그인',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 48,
-                              child: OutlinedButton(
-                                onPressed: _loading ? null : _openSignUp,
-                                child: const Text('회원가입'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 30),
-                  const Center(
-                    child: Text(
-                      '회원/교회 정보는 첫 사용 시에만 입력합니다.',
-                      style: TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -356,12 +264,12 @@ class _LoginHero extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          '은혜찬송',
+          '은혜찬양',
           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         const Text(
-          '초대 코드를 입력하고 바로 시작하세요.',
+          '카카오 또는 이메일로 시작하세요.',
           style: TextStyle(color: Color(0xFF5B6572)),
         ),
       ],

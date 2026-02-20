@@ -5,6 +5,7 @@ import com.eunhyehymn.application.ports.TokenService;
 import com.eunhyehymn.domain.model.AuthIdentity;
 import com.eunhyehymn.domain.model.RefreshToken;
 import com.eunhyehymn.domain.model.User;
+import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.domain.model.UserPasswordCredential;
 import com.eunhyehymn.domain.repository.AuthIdentityRepository;
 import com.eunhyehymn.domain.repository.RefreshTokenRepository;
@@ -64,6 +65,11 @@ public class UserPasswordLoginUseCase {
         Instant now = Instant.now();
         User existing = userRepository.findById(identity.userId())
             .orElseThrow(() -> new IllegalStateException("LOCAL_USER identity user not found: " + identity.userId()));
+
+        if (existing.status() == UserStatus.DISABLED) {
+            throw new AccountDisabledException("account is disabled");
+        }
+
         User user = new User(
             existing.id(),
             existing.displayName(),
@@ -94,6 +100,12 @@ public class UserPasswordLoginUseCase {
 
     public static class InvalidCredentialsException extends RuntimeException {
         public InvalidCredentialsException(String message) {
+            super(message);
+        }
+    }
+
+    public static class AccountDisabledException extends RuntimeException {
+        public AccountDisabledException(String message) {
             super(message);
         }
     }

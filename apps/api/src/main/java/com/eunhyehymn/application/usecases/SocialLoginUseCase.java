@@ -85,6 +85,10 @@ public class SocialLoginUseCase {
                 .orElseThrow(() -> new IllegalStateException(
                     "AuthIdentity에 해당하는 사용자 조회 실패: " + existingIdentity.get().userId()));
 
+            if (existing.status() == UserStatus.DISABLED) {
+                throw new AccountDisabledException("account is disabled");
+            }
+
             Role effectiveRole = existing.role();
             if (isAdminCandidate && existing.role() != Role.ADMIN) {
                 effectiveRole = Role.ADMIN;
@@ -181,6 +185,12 @@ public class SocialLoginUseCase {
 
     public static class AdminOnlyException extends RuntimeException {
         public AdminOnlyException(String message) {
+            super(message);
+        }
+    }
+
+    public static class AccountDisabledException extends RuntimeException {
+        public AccountDisabledException(String message) {
             super(message);
         }
     }

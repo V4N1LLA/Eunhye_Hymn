@@ -14,17 +14,9 @@ $mobileEnv = Join-Path $mobileDir ".env"
 $repoEnv = Join-Path $repoRoot ".env"
 $profileFile = Join-Path $mobileDir ("env/{0}.json" -f $Environment)
 
-$preferredFlutter = Join-Path $repoRoot "tools/flutter/bin/flutter.bat"
-$flutter = Get-Command "flutter" -ErrorAction SilentlyContinue
-if ($flutter) {
-    $flutter = $flutter.Source
-}
-if (-not $flutter) {
-    $flutter = $preferredFlutter
-}
-
-if (-not (Test-Path -LiteralPath $flutter)) {
-    throw "Flutter executable not found: $flutter"
+$flutterWrapper = Join-Path $PSScriptRoot "flutterw.ps1"
+if (-not (Test-Path -LiteralPath $flutterWrapper)) {
+    throw "Flutter wrapper not found: $flutterWrapper"
 }
 if (-not (Test-Path -LiteralPath $profileFile)) {
     throw "Environment profile not found: $profileFile"
@@ -120,7 +112,7 @@ if ($resolvedApiBaseUrl.Trim() -ne $profileApiBaseUrl) {
 Push-Location $mobileDir
 try {
     Write-Host ("[run-mobile-emulator] environment={0} api={1}" -f $Environment, $resolvedApiBaseUrl.Trim())
-    & $flutter run -d $DeviceId @dartDefines
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $flutterWrapper run -d $DeviceId @dartDefines
 } finally {
     Pop-Location
 }
