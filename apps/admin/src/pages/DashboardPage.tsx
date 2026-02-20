@@ -21,7 +21,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   { title: "에셋 업로드", description: "이미지/악보/음원 등록", to: "/assets/upload", badge: "AS", tone: "sky" },
   { title: "초대코드 관리", description: "코드 생성 및 비활성화", to: "/invite-codes", badge: "IC", tone: "emerald" },
   { title: "사용자 관리", description: "역할/상태 점검 및 수정", to: "/users", badge: "US", tone: "amber" },
-  { title: "AI Hymn Recommendation", description: "Get suggestions from one situation", to: "/ai/recommendations", badge: "AI", tone: "violet" },
+  { title: "AI 찬송 추천", description: "상황 입력으로 찬송 추천 받기", to: "/ai/recommendations", badge: "AI", tone: "violet" },
   { title: "감사 로그/분석", description: "이벤트 조회/CSV 내보내기", to: "/events", badge: "LG", tone: "violet" },
   { title: "도움말", description: "로그인/권한 문제 해결", to: "/help", badge: "HP", tone: "rose" },
 ];

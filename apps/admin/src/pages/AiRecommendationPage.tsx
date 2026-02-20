@@ -17,7 +17,7 @@ export default function AiRecommendationPage() {
     event.preventDefault();
     const normalized = situation.trim();
     if (!normalized) {
-      setError("Please enter your situation.");
+      setError("상황 설명을 입력해 주세요.");
       return;
     }
 
@@ -39,7 +39,7 @@ export default function AiRecommendationPage() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Failed to get recommendations.",
+          : "추천을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.",
       );
     } finally {
       setLoading(false);
@@ -49,23 +49,31 @@ export default function AiRecommendationPage() {
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-bold text-slate-900">AI Hymn Recommendation</h2>
+        <h2 className="text-xl font-bold text-slate-900">AI 찬송 추천</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Enter one situation and get low-cost recommendations from
-          `gemini-2.5-flash-lite`.
+          예배/모임 상황을 입력하면 AI가 상황에 맞는 찬송을 추천합니다.
         </p>
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+          <p className="font-semibold text-slate-900">사용 방법</p>
+          <p className="mt-1">
+            1) 상황 설명 입력 → 2) 추천 개수 선택 → 3) <span className="font-semibold">추천 받기</span> 실행
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            추천 결과는 참고용이며, 최종 선곡은 예배 목적/대상에 맞게 확인해 주세요.
+          </p>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <form className="space-y-4" onSubmit={runRecommendation}>
           <label className="block text-sm">
-            <div className="mb-1 font-semibold text-slate-700">Situation</div>
+            <div className="mb-1 font-semibold text-slate-700">상황 설명</div>
             <textarea
               value={situation}
               onChange={(event) => setSituation(event.target.value)}
               rows={4}
               maxLength={180}
-              placeholder="Example: Sunday dawn prayer, calm and reflective mood"
+              placeholder="예: 주일 새벽예배, 차분한 묵상 분위기"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <div className="mt-1 text-xs text-slate-500">
@@ -74,7 +82,7 @@ export default function AiRecommendationPage() {
           </label>
 
           <label className="block text-sm">
-            <div className="mb-1 font-semibold text-slate-700">Max Results</div>
+            <div className="mb-1 font-semibold text-slate-700">추천 개수</div>
             <select
               value={maxResults}
               onChange={(event) => setMaxResults(Number(event.target.value))}
@@ -94,11 +102,11 @@ export default function AiRecommendationPage() {
               disabled={loading}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
             >
-              {loading ? "Recommending..." : "Run AI Recommendation"}
+              {loading ? "추천 생성 중..." : "추천 받기"}
             </button>
             {requestedCount != null && candidateCount != null && (
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                Requested {requestedCount}, candidates {candidateCount}
+                요청 {requestedCount}개 · 후보 {candidateCount}곡
               </span>
             )}
           </div>
@@ -113,13 +121,13 @@ export default function AiRecommendationPage() {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-900">Recommendations</h3>
-          <span className="text-sm text-slate-500">{items.length} items</span>
+          <h3 className="text-base font-semibold text-slate-900">추천 결과</h3>
+          <span className="text-sm text-slate-500">{items.length}곡</span>
         </div>
 
         {items.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-            No results yet. Run a recommendation first.
+            아직 결과가 없습니다. 상황을 입력하고 추천 받기를 눌러 주세요.
           </div>
         ) : (
           <div className="space-y-3">
@@ -137,14 +145,14 @@ export default function AiRecommendationPage() {
                       {item.title}
                     </div>
                     <div className="mt-1 text-xs text-slate-500">
-                      {item.tags?.trim() || "No tags"}
+                      {item.tags?.trim() || "태그 없음"}
                     </div>
                   </div>
                   <Link
                     to={`/hymns/${item.id}/edit`}
                     className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                   >
-                    Open Hymn
+                    찬송 열기
                   </Link>
                 </div>
                 <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm text-slate-700">
