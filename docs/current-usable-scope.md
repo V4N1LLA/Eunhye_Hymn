@@ -80,6 +80,7 @@
 ## 5. 빠른 실행 체크리스트
 
 1. 로컬 스택
+   - `.env` 준비: `cp .env.example .env` (PowerShell: `Copy-Item .env.example .env`)
    - `docker compose -f infra/docker/docker-compose.yml up -d`
    - `curl http://localhost:8080/api/v1/ping`
 2. Admin
