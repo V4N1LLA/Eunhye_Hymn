@@ -37,6 +37,7 @@ security:
       enabled: ${AUTH_RATE_LIMIT_ENABLED:true}
       window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
       max-attempts-per-key: ${AUTH_RATE_LIMIT_MAX_ATTEMPTS_PER_KEY:25}
+      trust-forwarded-ip-header: ${AUTH_RATE_LIMIT_TRUST_FORWARDED_IP_HEADER:false}
   invite:
     code: ${INVITE_CODE}
   admin:
