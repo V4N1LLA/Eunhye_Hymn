@@ -15,7 +15,7 @@
 - CI 기능: API/Admin/Mobile 검증 + Mobile release APK 검증 + Mobile store readiness(수동) 워크플로우 구성 완료
 - 스테이징 리허설/롤백/복구 자동 실행 증빙 확보(run `22010284332`, `22010387328`, `22010470389`)
 - 현재 우선 과제: 운영 PC 기준 preflight 무스킵 통과 환경 유지 + Admin/Mobile 수동 스모크 정례화
-- 모바일 배포 상태: Android signed AAB/iOS no-codesign 수동 readiness 워크플로우 추가, 스토어 업로드 파이프라인은 추가 준비 필요
+- 모바일 배포 상태: store release 워크플로우 + 운영 스크립트(`mobile-store-preflight.ps1`, `mobile-store-cycle.ps1`) 구성 완료, Android build_only 실검증 완료(run `22210175274`, `22210322592`)
 
 ## 2. 지금 바로 검증 가능한 범위 (로컬)
 
@@ -199,6 +199,9 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 - 운영 기능 백로그
   - 비동기 export 운영 모니터링 지표(실패율/처리시간/정리량) 정례화 완료
   - 후속 과제: 지표 임계치 기반 알림/대시보드 연동 설계
+- 모바일 스토어 업로드 실검증
+  - Android `play_upload`: `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` 시크릿 준비 후 실행 검증 필요
+  - iOS `testflight`: `MOBILE_IOS_*` 시크릿 프로비저닝 후 실행 검증 필요
 
 ## 6. 빠른 사용 체크리스트
 

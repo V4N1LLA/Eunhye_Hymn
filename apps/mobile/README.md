@@ -88,10 +88,12 @@ lib/
 - Local APK build helper: `scripts/build-mobile-apk.ps1`
   - debug APK (staging): `.\scripts\build-mobile-apk.ps1 -Environment staging -BuildMode debug -Install`
   - release APK: `.\scripts\build-mobile-apk.ps1 -Environment release -BuildMode release -ApiBaseUrl https://<prod-domain>/api/v1`
-- Store release readiness (Android only for now): `.github/workflows/mobile-store-release.yml` (manual)
+- Store release readiness: `.github/workflows/mobile-store-release.yml` (manual)
   - signed AAB build (`flutter build appbundle --release`)
   - `android_distribution_mode=build_only`: build artifact only
   - `android_distribution_mode=play_upload`: Google Play upload after AAB build
+  - `ios_distribution_mode=build_only`: unsigned iOS release artifact build
+  - `ios_distribution_mode=testflight`: signed IPA build + TestFlight upload
   - required inputs for play upload:
     - `android_track`: `internal | alpha | beta | production`
     - `android_release_status`: `draft | completed | inProgress | halted`
@@ -109,6 +111,20 @@ Android signing config:
 Google Play upload secrets:
 - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
 - `GOOGLE_PLAY_PACKAGE_NAME`
+
+iOS TestFlight secrets:
+- `MOBILE_IOS_BUNDLE_ID`
+- `MOBILE_IOS_TEAM_ID`
+- `MOBILE_IOS_P12_BASE64`
+- `MOBILE_IOS_P12_PASSWORD`
+- `MOBILE_IOS_APPSTORE_ISSUER_ID`
+- `MOBILE_IOS_APPSTORE_API_KEY_ID`
+- `MOBILE_IOS_APPSTORE_API_PRIVATE_KEY`
+
+Store release cycle helpers:
+- `scripts/mobile-store-preflight.ps1` (mode-based secret/input checks)
+- `scripts/mobile-store-cycle.ps1` (preflight + workflow_dispatch + run watch + log append)
+- `docs/mobile-store-release-log.md` (execution evidence log)
 
 See also:
 - Minimal-tooling QA guide: `docs/mobile/qa-minimal-tooling.md`

@@ -140,6 +140,9 @@ Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
   - `android_track`: `internal` | `alpha` | `beta` | `production` (play upload 시)
   - `android_release_status`: `draft` | `completed` | `inProgress` | `halted` (play upload 시)
   - `android_changes_not_sent_for_review`: `true` | `false` (play upload 시)
+  - `ios_distribution_mode`: `build_only` | `testflight`
+  - `ios_bundle_id`: iOS bundle id 1회 오버라이드(미입력 시 `MOBILE_IOS_BUNDLE_ID` 사용)
+  - `release_notes`: TestFlight release notes
   - `api_base_url`: 릴리즈 빌드 시 주입할 API URL
 - Android 경로:
   - 서명형 AAB 빌드(`flutter build appbundle --release`)
@@ -151,9 +154,30 @@ Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
     - `MOBILE_ANDROID_STORE_PASSWORD`
     - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (play upload 시)
     - `GOOGLE_PLAY_PACKAGE_NAME` (입력 미지정 시)
+- iOS 경로:
+  - `ios_distribution_mode=build_only`: no-codesign 릴리즈 빌드 후 artifact 업로드
+  - `ios_distribution_mode=testflight`: signed archive/IPA 빌드 후 TestFlight 업로드
+  - 필요한 Secrets (testflight 시):
+    - `MOBILE_IOS_BUNDLE_ID` (입력 미지정 시)
+    - `MOBILE_IOS_TEAM_ID`
+    - `MOBILE_IOS_P12_BASE64`
+    - `MOBILE_IOS_P12_PASSWORD`
+    - `MOBILE_IOS_APPSTORE_ISSUER_ID`
+    - `MOBILE_IOS_APPSTORE_API_KEY_ID`
+    - `MOBILE_IOS_APPSTORE_API_PRIVATE_KEY`
 - Android 서명 설정:
   - `apps/mobile/android/key.properties.example`를 기준으로 `apps/mobile/android/key.properties` 구성
   - `key.properties`가 없으면 로컬 릴리즈 체크는 debug signing fallback을 사용
+
+## 6.3 Store release 사이클 자동화
+
+- preflight(권장):
+  - `.\scripts\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target android -AndroidDistributionMode build_only`
+  - `.\scripts\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target ios -IosDistributionMode testflight`
+- 사이클 실행(권장):
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode build_only -IosDistributionMode build_only`
+- 실행 로그:
+  - `docs/mobile-store-release-log.md`
 
 ## 7. 운영 연계 체크포인트
 

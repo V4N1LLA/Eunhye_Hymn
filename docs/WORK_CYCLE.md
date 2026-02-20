@@ -1184,3 +1184,38 @@
 - `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -AutoLogin -WaitForCompletion`
 - `rg -n "aws login|22207213127|CONDITIONAL_GO" docs/staging-smoke-log.md docs/staging-smoke-checklist.md docs/changelog-dev.md CLAUDE.md`
 
+## 41. 이번 사이클 기록 (2026-02-20, mobile store release ops cycle automation)
+
+### 목표
+- 모바일 스토어 릴리즈 작업을 반복 가능한 사이클로 고정한다. (preflight → dispatch → run watch → 로그 적재)
+
+### 범위
+- 포함: 모바일 스토어 운영 스크립트 추가, Android build_only 실검증, 문서 동기화
+- 제외: Google Play 실제 업로드(`play_upload`), iOS TestFlight 실제 업로드
+
+### 수행 작업
+1. 모바일 스토어 운영 스크립트 추가
+- `scripts/mobile-store-preflight.ps1`
+  - target/mode 기준 필수 시크릿/입력값 점검
+- `scripts/mobile-store-cycle.ps1`
+  - preflight 실행 후 `mobile-store-release.yml` workflow_dispatch
+  - run ID 감지/완료 대기/결과 로그(`docs/mobile-store-release-log.md`) 자동 적재
+
+2. 실검증
+- Android build_only 실행 성공
+  - run `22210175274`
+  - run `22210322592`
+- iOS testflight preflight 실행 결과: `MOBILE_IOS_*` 시크릿 미구성으로 실패(예상)
+
+3. 문서 동기화
+- `apps/mobile/README.md`, `docs/mobile/README.md`
+- `docs/mobile-store-release-log.md`
+- `docs/changelog-dev.md`, `docs/current-usable-scope.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target android -AndroidDistributionMode build_only`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target ios -IosDistributionMode testflight`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode build_only -IosDistributionMode build_only`
+- `gh run view 22210175274 --repo V4N1LLA/Eunhye_Hymn --json conclusion,status,url,headSha`
+- `rg -n "mobile-store|22210175274|22210322592|MOBILE_IOS_" scripts docs apps/mobile CLAUDE.md`
+

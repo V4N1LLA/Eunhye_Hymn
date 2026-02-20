@@ -531,11 +531,19 @@ com.eunhyehymn/
 
 ### Mobile Store Release Readiness (`mobile-store-release.yml`)
 - **트리거**: `workflow_dispatch` (manual)
-- **입력**: `target=android|ios|both`, `api_base_url`
-- **Android 경로**: signed AAB 빌드(`flutter build appbundle --release`)
+- **입력**: `target=android|ios|both`, `android_distribution_mode=build_only|play_upload`, `ios_distribution_mode=build_only|testflight`, `api_base_url`
+- **Android 경로**:
+  - signed AAB 빌드(`flutter build appbundle --release`)
+  - `android_distribution_mode=play_upload` 시 Google Play 업로드
   - required secrets: `MOBILE_ANDROID_KEYSTORE_BASE64`, `MOBILE_ANDROID_KEY_ALIAS`, `MOBILE_ANDROID_KEY_PASSWORD`, `MOBILE_ANDROID_STORE_PASSWORD`
-- **iOS 경로**: release no-codesign 빌드(`flutter build ios --release --no-codesign`)
+- **iOS 경로**:
+  - `ios_distribution_mode=build_only`: release no-codesign 빌드(`flutter build ios --release --no-codesign`)
+  - `ios_distribution_mode=testflight`: signed IPA 빌드 + TestFlight 업로드
 - **목적**: 스토어 업로드 전 빌드/서명 readiness 검증
+- **운영 스크립트**:
+  - `scripts/mobile-store-preflight.ps1`
+  - `scripts/mobile-store-cycle.ps1`
+  - 실행 로그: `docs/mobile-store-release-log.md`
 
 ### Deploy Staging (`deploy-staging.yml`)
 - **트리거**: develop push + `workflow_dispatch`
@@ -792,7 +800,11 @@ develop push → GitHub Actions
 - 현재 저장소 기준 실행은 `flutter run -d chrome` 중심
 - Android release APK 빌드 검증 워크플로우 추가 완료 (`mobile-release-check.yml`, 2026-02-16)
 - Android signed AAB / iOS no-codesign 수동 readiness 워크플로우 추가 완료 (`mobile-store-release.yml`, 2026-02-17)
-- 남은 과제: 스토어 업로드 자동화(서명/인증서/배포 트랙/릴리즈 노트) 파이프라인 확정
+- 운영 루프 자동화 완료: preflight + dispatch + run watch + 로그 적재(`scripts/mobile-store-*.ps1`)
+- Android build-only 실검증 완료: run `22210175274`, `22210322592` 성공
+- 남은 과제:
+  - Google Play 실제 업로드 모드(`play_upload`) 실행 승인/검증
+  - iOS TestFlight 업로드용 시크릿(`MOBILE_IOS_*`) 프로비저닝 후 실검증
 
 ---
 

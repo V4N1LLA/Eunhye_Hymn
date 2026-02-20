@@ -4,6 +4,22 @@
 
 ## 2026-02-20
 
+### Mobile store release cycle automation + Android build-only verification
+- 스크립트 추가
+  - `scripts/mobile-store-preflight.ps1`
+    - target/mode 기준으로 필수 시크릿과 입력값 사전 점검
+  - `scripts/mobile-store-cycle.ps1`
+    - preflight + `mobile-store-release.yml` workflow_dispatch + run watch + 로그 적재 자동화
+- 실행 로그 문서 추가
+  - `docs/mobile-store-release-log.md`
+- 운영 검증
+  - Android build_only 워크플로우 2회 성공
+    - run `22210175274`
+    - run `22210322592`
+  - iOS testflight preflight는 필수 시크릿(`MOBILE_IOS_*`) 미구성으로 실패 확인
+- 문서 동기화
+  - `apps/mobile/README.md`, `docs/mobile/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`
+
 ### Staging preflight 자동 복구 + 운영 사이클 게이트 보강
 - 스크립트 개선
   - `scripts/staging-preflight.ps1`
