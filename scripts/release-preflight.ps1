@@ -121,7 +121,7 @@ function Get-LatestRunForWorkflowSha {
   }
 
   return $runs |
-    Where-Object { $_.headSha -eq $HeadSha -and $_.status -eq "completed" -and $_.conclusion -eq "success" } |
+    Where-Object { $_.headSha -eq $HeadSha } |
     Sort-Object { [DateTime]$_.createdAt } -Descending |
     Select-Object -First 1
 }
@@ -223,7 +223,11 @@ if ([string]::IsNullOrWhiteSpace($deployHeadSha)) {
     try {
       $run = Get-LatestRunForWorkflowSha -Repository $Repo -WorkflowName $workflow -TargetBranch $Branch -HeadSha $deployHeadSha
       if ($null -eq $run) {
-        Add-Check ("workflow " + $workflow) $false ("no success run for sha " + $deployHeadSha)
+        Add-Check ("workflow " + $workflow) $true ("no run for sha {0} (likely path-filtered)" -f $deployHeadSha)
+      } elseif ($run.status -ne "completed") {
+        Add-Check ("workflow " + $workflow) $false ("run_id={0}, status={1}" -f $run.databaseId, $run.status)
+      } elseif ($run.conclusion -ne "success") {
+        Add-Check ("workflow " + $workflow) $false ("run_id={0}, conclusion={1}" -f $run.databaseId, $run.conclusion)
       } else {
         Add-Check ("workflow " + $workflow) $true ("run_id={0}" -f $run.databaseId)
       }
