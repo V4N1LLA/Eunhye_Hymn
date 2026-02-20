@@ -339,6 +339,28 @@ Base URL: `/api/v1`
 
 ### 5.1 프로필
 - `GET /me/profile`
+- `PUT /me/profile`
+- `PUT /me/profile` 요청 `data`:
+```json
+{
+  "churchName": "은혜교회",
+  "name": "홍길동",
+  "group": "청년A"
+}
+```
+- `GET/PUT /me/profile` 응답 `data` 예시:
+```json
+{
+  "userId": "9f2a6c6e-42f8-4a54-8dd3-2dbf2f8a1ab1",
+  "role": "USER",
+  "displayName": "Kakao User",
+  "churchName": "은혜교회",
+  "name": "홍길동",
+  "group": "청년A",
+  "profileCompleted": true,
+  "profileUpdatedAt": "2026-02-19T23:00:00Z"
+}
+```
 
 ### 5.2 즐겨찾기
 - `GET /me/favorites/{hymnId}`

@@ -12,6 +12,7 @@ import 'features/history/history_page.dart';
 import 'features/hymn/hymn_detail_page.dart';
 import 'features/hymn/hymn_list_page.dart';
 import 'features/hymn/hymn_repository.dart';
+import 'features/profile/profile_settings_page.dart';
 
 class EunhyeMobileApp extends StatefulWidget {
   const EunhyeMobileApp({super.key});
@@ -82,13 +83,12 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
         return;
       }
 
-      final needsOnboarding =
-          !(await _onboardingStorage.isCompleted(profile.userId));
+      final resolved = await _resolveProfile(profile);
 
-      _hymnRepository.bindSessionUser(profile.userId);
+      _hymnRepository.bindSessionUser(resolved.profile.userId);
       setState(() {
-        _profile = profile;
-        _needsOnboarding = needsOnboarding;
+        _profile = resolved.profile;
+        _needsOnboarding = resolved.needsOnboarding;
         _loginError = null;
       });
       await _hymnRepository.syncPendingActions();
@@ -110,24 +110,59 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
   }
 
   Future<void> _onLoggedIn(SessionProfile profile) async {
-    final needsOnboarding =
-        !(await _onboardingStorage.isCompleted(profile.userId));
-    _hymnRepository.bindSessionUser(profile.userId);
+    final resolved = await _resolveProfile(profile);
+    _hymnRepository.bindSessionUser(resolved.profile.userId);
     setState(() {
-      _profile = profile;
-      _needsOnboarding = needsOnboarding;
+      _profile = resolved.profile;
+      _needsOnboarding = resolved.needsOnboarding;
       _loginError = null;
     });
     await _hymnRepository.syncPendingActions();
   }
 
-  Future<void> _onOnboardingCompleted() async {
-    if (!mounted || _profile == null) {
+  Future<void> _onOnboardingCompleted(SessionProfile profile) async {
+    if (!mounted) {
       return;
     }
+    _hymnRepository.bindSessionUser(profile.userId);
     await _hymnRepository.syncPendingActions();
     setState(() {
+      _profile = profile;
       _needsOnboarding = false;
+    });
+  }
+
+  Future<_ProfileResolution> _resolveProfile(SessionProfile profile) async {
+    var effective = profile;
+    if (!profile.isProfileCompleted) {
+      final local = await _onboardingStorage.getProfile(profile.userId);
+      if (local != null) {
+        try {
+          final synced = await _authRepository.updateProfile(
+            churchName: local.churchName,
+            name: local.name,
+            group: local.group,
+          );
+          effective = synced;
+        } catch (_) {
+          // Keep onboarding required when server sync is unavailable.
+        }
+      }
+    }
+
+    return _ProfileResolution(
+      profile: effective,
+      needsOnboarding: !effective.isProfileCompleted,
+    );
+  }
+
+  void _onProfileUpdated(SessionProfile profile) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _profile = profile;
+      _needsOnboarding = !profile.isProfileCompleted;
     });
   }
 
@@ -210,27 +245,37 @@ class _EunhyeMobileAppState extends State<EunhyeMobileApp> {
     if (_needsOnboarding) {
       return OnboardingPage(
         userId: _profile!.userId,
+        authRepository: _authRepository,
         onboardingStorage: _onboardingStorage,
         onCompleted: _onOnboardingCompleted,
       );
     }
 
     return _HomeShell(
+      initialProfile: _profile!,
       authRepository: _authRepository,
       hymnRepository: _hymnRepository,
+      onboardingStorage: _onboardingStorage,
+      onProfileUpdated: _onProfileUpdated,
       onLogout: _onLogout,
     );
   }
 }
 
 class _HomeShell extends StatefulWidget {
+  final SessionProfile initialProfile;
   final AuthRepository authRepository;
   final HymnRepository hymnRepository;
+  final OnboardingStorage onboardingStorage;
+  final ValueChanged<SessionProfile> onProfileUpdated;
   final Future<void> Function() onLogout;
 
   const _HomeShell({
+    required this.initialProfile,
     required this.authRepository,
     required this.hymnRepository,
+    required this.onboardingStorage,
+    required this.onProfileUpdated,
     required this.onLogout,
   });
 
@@ -240,7 +285,21 @@ class _HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<_HomeShell> {
   int _index = 0;
-  bool _loggingOut = false;
+  late SessionProfile _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _profile = widget.initialProfile;
+  }
+
+  @override
+  void didUpdateWidget(covariant _HomeShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialProfile != widget.initialProfile) {
+      _profile = widget.initialProfile;
+    }
+  }
 
   Future<void> _openHymnDetail(String hymnId) async {
     await Navigator.of(context).push(
@@ -253,23 +312,14 @@ class _HomeShellState extends State<_HomeShell> {
     );
   }
 
-  Future<void> _handleLogout() async {
-    if (_loggingOut) {
+  void _handleProfileUpdated(SessionProfile profile) {
+    if (!mounted) {
       return;
     }
-
     setState(() {
-      _loggingOut = true;
+      _profile = profile;
     });
-    try {
-      await widget.onLogout();
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loggingOut = false;
-        });
-      }
-    }
+    widget.onProfileUpdated(profile);
   }
 
   @override
@@ -283,32 +333,20 @@ class _HomeShellState extends State<_HomeShell> {
         hymnRepository: widget.hymnRepository,
         onOpenHymnDetail: _openHymnDetail,
       ),
+      ProfileSettingsPage(
+        profile: _profile,
+        authRepository: widget.authRepository,
+        hymnRepository: widget.hymnRepository,
+        onboardingStorage: widget.onboardingStorage,
+        onProfileUpdated: _handleProfileUpdated,
+        onLogout: widget.onLogout,
+      ),
     ];
-    final titles = <String>['찬양', '히스토리'];
+    final titles = <String>['찬양', '히스토리', '내 정보'];
 
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[_index]),
-        actions: [
-          PopupMenuButton<String>(
-            enabled: !_loggingOut,
-            onSelected: (value) {
-              if (value == 'logout') {
-                _handleLogout();
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'logout', child: Text('로그아웃')),
-            ],
-            icon: _loggingOut
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.more_vert),
-          ),
-        ],
       ),
       body: pages[_index],
       bottomNavigationBar: NavigationBar(
@@ -329,8 +367,23 @@ class _HomeShellState extends State<_HomeShell> {
             selectedIcon: Icon(Icons.history),
             label: '히스토리',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: '내 정보',
+          ),
         ],
       ),
     );
   }
+}
+
+class _ProfileResolution {
+  final SessionProfile profile;
+  final bool needsOnboarding;
+
+  const _ProfileResolution({
+    required this.profile,
+    required this.needsOnboarding,
+  });
 }

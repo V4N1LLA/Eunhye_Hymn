@@ -21,6 +21,9 @@ security:
     secret: test-secret
     access-token-ttl-seconds: 3600
     refresh-token-ttl-seconds: 1209600
+  rate-limit:
+    auth:
+      enabled: false
 
 events:
   export:

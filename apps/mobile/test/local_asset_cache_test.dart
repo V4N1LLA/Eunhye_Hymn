@@ -47,6 +47,37 @@ void main() {
     expect(requestCount, 2);
   });
 
+  test('clearForUser removes only target user cache', () async {
+    var requestCount = 0;
+    final cache = _createCache(
+      client: _MockHttpClient((_) async {
+        requestCount += 1;
+        return http.Response.bytes(
+          [1, 2, 3],
+          200,
+          headers: const {'content-type': 'image/png'},
+        );
+      }),
+      tempDirectory: tempDirectory,
+    );
+
+    final asset = _imageAsset(id: 'asset-clear', version: 'v1');
+    final userAPath = await cache.getOrDownload(asset, userId: 'user-A');
+    final userBPath = await cache.getOrDownload(asset, userId: 'user-B');
+    expect(userAPath, isNotNull);
+    expect(userBPath, isNotNull);
+    expect(requestCount, 2);
+
+    await cache.clearForUser(userId: 'user-A');
+
+    final userAAfterClear = await cache.getOrDownload(asset, userId: 'user-A');
+    final userBAfterClear = await cache.getOrDownload(asset, userId: 'user-B');
+
+    expect(userAAfterClear, isNotNull);
+    expect(userBAfterClear, equals(userBPath));
+    expect(requestCount, 3);
+  });
+
   test('reuses cached file for same user and version', () async {
     var requestCount = 0;
     final cache = _createCache(
@@ -133,6 +164,34 @@ void main() {
     expect(path, isNull);
   });
 
+  test('enforces total download timeout even when chunks keep arriving', () async {
+    final cache = _createCache(
+      client: _MockStreamingHttpClient((_) async {
+        Stream<List<int>> stream() async* {
+          for (var i = 0; i < 10; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 15));
+            yield [i];
+          }
+        }
+
+        return http.StreamedResponse(
+          stream(),
+          200,
+          headers: const {'content-type': 'image/png'},
+        );
+      }),
+      tempDirectory: tempDirectory,
+      downloadTimeout: const Duration(milliseconds: 40),
+    );
+
+    final path = await cache.getOrDownload(
+      _imageAsset(id: 'asset-timeout', version: 'v1'),
+      userId: 'member-1',
+    );
+
+    expect(path, isNull);
+  });
+
   test('removes stale file when asset version changes', () async {
     var requestCount = 0;
     final cache = _createCache(
@@ -189,6 +248,7 @@ void main() {
 LocalAssetCache _createCache({
   required http.Client client,
   required Directory tempDirectory,
+  Duration downloadTimeout = const Duration(seconds: 20),
   int maxAssetBytes = 25 * 1024 * 1024,
 }) {
   return LocalAssetCache(
@@ -196,6 +256,7 @@ LocalAssetCache _createCache({
     prefsFactory: SharedPreferences.getInstance,
     documentsDirectoryProvider: () async => tempDirectory,
     now: () => DateTime.utc(2026, 2, 19),
+    downloadTimeout: downloadTimeout,
     maxAssetBytes: maxAssetBytes,
   );
 }

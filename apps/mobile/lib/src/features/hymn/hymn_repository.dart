@@ -184,6 +184,26 @@ class HymnRepository {
     _sessionUserId = userId;
   }
 
+  Future<void> clearPersonalCache() async {
+    final userId = _sessionUserId;
+    if (userId == null || userId.isEmpty) {
+      throw ApiException('로그인 세션이 없습니다.');
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final suffix = '.$userId';
+    final keys = prefs
+        .getKeys()
+        .where(
+          (key) => key.startsWith('mobile.cache.') && key.endsWith(suffix),
+        )
+        .toList();
+
+    for (final key in keys) {
+      await prefs.remove(key);
+    }
+  }
+
   Future<List<HymnSummary>> listHymns() async {
     try {
       final raw = await apiClient.get('/hymns', includeAuth: false);

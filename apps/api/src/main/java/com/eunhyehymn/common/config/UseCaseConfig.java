@@ -16,10 +16,12 @@ import com.eunhyehymn.application.usecases.GetFavoriteUseCase;
 import com.eunhyehymn.application.usecases.GetHistoryUseCase;
 import com.eunhyehymn.application.usecases.GetHymnDetailUseCase;
 import com.eunhyehymn.application.usecases.GetHymnNoteUseCase;
+import com.eunhyehymn.application.usecases.GetMyProfileUseCase;
 import com.eunhyehymn.application.usecases.ListHymnsUseCase;
 import com.eunhyehymn.application.usecases.RecordEventsUseCase;
 import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
+import com.eunhyehymn.application.usecases.UpsertMyProfileUseCase;
 import com.eunhyehymn.domain.repository.AssetRepository;
 import com.eunhyehymn.domain.repository.EventExportJobCleanupRunRepository;
 import com.eunhyehymn.domain.repository.EventExportJobRepository;
@@ -27,6 +29,7 @@ import com.eunhyehymn.domain.repository.EventRepository;
 import com.eunhyehymn.domain.repository.HymnNoteRepository;
 import com.eunhyehymn.domain.repository.HymnRepository;
 import com.eunhyehymn.domain.repository.UserHymnStateRepository;
+import com.eunhyehymn.domain.repository.UserProfileRepository;
 import com.eunhyehymn.domain.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -71,6 +74,22 @@ public class UseCaseConfig {
     @Bean
     GetHistoryUseCase getHistoryUseCase(UserHymnStateRepository userHymnStateRepository, HymnRepository hymnRepository) {
         return new GetHistoryUseCase(userHymnStateRepository, hymnRepository);
+    }
+
+    @Bean
+    GetMyProfileUseCase getMyProfileUseCase(
+        UserRepository userRepository,
+        UserProfileRepository userProfileRepository
+    ) {
+        return new GetMyProfileUseCase(userRepository, userProfileRepository);
+    }
+
+    @Bean
+    UpsertMyProfileUseCase upsertMyProfileUseCase(
+        UserRepository userRepository,
+        UserProfileRepository userProfileRepository
+    ) {
+        return new UpsertMyProfileUseCase(userRepository, userProfileRepository);
     }
 
     @Bean

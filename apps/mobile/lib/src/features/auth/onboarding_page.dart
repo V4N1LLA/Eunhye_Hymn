@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../core/storage/onboarding_storage.dart';
+import '../../core/network/api_exception.dart';
+import 'auth_repository.dart';
 
 class OnboardingPage extends StatefulWidget {
   final String userId;
+  final AuthRepository authRepository;
   final OnboardingStorage onboardingStorage;
-  final Future<void> Function() onCompleted;
+  final Future<void> Function(SessionProfile profile) onCompleted;
 
   const OnboardingPage({
     super.key,
     required this.userId,
+    required this.authRepository,
     required this.onboardingStorage,
     required this.onCompleted,
   });
@@ -71,19 +75,31 @@ class _OnboardingPageState extends State<OnboardingPage> {
     });
 
     try {
+      final updatedProfile = await widget.authRepository.updateProfile(
+        churchName: churchName,
+        name: name,
+        group: group,
+      );
       await widget.onboardingStorage.saveProfile(
         userId: widget.userId,
         churchName: churchName,
         name: name,
         group: group,
       );
-      await widget.onCompleted();
+      await widget.onCompleted(updatedProfile);
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = e.message;
+      });
     } catch (_) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _error = '입력값 저장 중 문제가 발생했습니다. 다시 시도해 주세요.';
+        _error = '프로필 저장 중 문제가 발생했습니다. 다시 시도해 주세요.';
       });
     } finally {
       if (mounted) {
@@ -120,7 +136,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        '초대 코드 검증이 완료되면 앱 이용이 가능합니다.',
+                        '입력값은 계정 프로필로 저장되어 다른 기기에서도 동기화됩니다.',
                         style: TextStyle(color: Color(0xFF5B6572)),
                       ),
                       const SizedBox(height: 16),

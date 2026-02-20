@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -15,7 +16,7 @@ typedef CacheDirectoryProvider = Future<Directory> Function();
 class LocalAssetCache {
   static const _indexKeyBase = 'mobile.cache.assets.files.v2';
   static const _cacheDirName = 'hymn-assets';
-  static const _downloadTimeout = Duration(seconds: 20);
+  static const _defaultDownloadTimeout = Duration(seconds: 20);
   static const _defaultMaxAssetBytes = 25 * 1024 * 1024;
 
   final http.Client _httpClient;
@@ -23,6 +24,7 @@ class LocalAssetCache {
   final CachePrefsFactory _prefsFactory;
   final CacheDirectoryProvider _documentsDirectoryProvider;
   final CacheNowProvider _now;
+  final Duration _downloadTimeout;
   final int _maxAssetBytes;
 
   LocalAssetCache({
@@ -30,6 +32,7 @@ class LocalAssetCache {
     CachePrefsFactory? prefsFactory,
     CacheDirectoryProvider? documentsDirectoryProvider,
     CacheNowProvider? now,
+    Duration downloadTimeout = _defaultDownloadTimeout,
     int maxAssetBytes = _defaultMaxAssetBytes,
   })  : _httpClient = httpClient ?? http.Client(),
         _ownsHttpClient = httpClient == null,
@@ -37,6 +40,7 @@ class LocalAssetCache {
         _documentsDirectoryProvider =
             documentsDirectoryProvider ?? getApplicationDocumentsDirectory,
         _now = now ?? DateTime.now,
+        _downloadTimeout = downloadTimeout,
         _maxAssetBytes = maxAssetBytes;
 
   void dispose() {
@@ -76,15 +80,18 @@ class LocalAssetCache {
       final response =
           await _httpClient.send(request).timeout(_downloadTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        await _cancelStreamedResponse(response);
         return null;
       }
 
       if (!_supportsContentType(asset, response.headers['content-type'])) {
+        await _cancelStreamedResponse(response);
         return null;
       }
 
       final announcedLength = response.contentLength;
       if (announcedLength != null && announcedLength > _maxAssetBytes) {
+        await _cancelStreamedResponse(response);
         return null;
       }
 
@@ -112,21 +119,101 @@ class LocalAssetCache {
     }
   }
 
+  Future<void> clearForUser({required String userId}) async {
+    final normalizedUserId = _normalizeUserId(userId);
+    if (normalizedUserId == null) {
+      return;
+    }
+
+    final index = await _readIndex(normalizedUserId);
+    for (final entry in index.values) {
+      if (entry is! Map<String, dynamic>) {
+        continue;
+      }
+      final filePath = entry['path']?.toString();
+      if (filePath == null || filePath.isEmpty) {
+        continue;
+      }
+      try {
+        final file = File(filePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {
+        // Continue cleanup on a best-effort basis.
+      }
+    }
+
+    final prefs = await _prefsFactory();
+    await prefs.remove(_indexKeyForUser(normalizedUserId));
+
+    try {
+      final directory = await _cacheDirectoryForUser(normalizedUserId);
+      if (await directory.exists()) {
+        await directory.delete(recursive: true);
+      }
+    } catch (_) {
+      // Continue cleanup on a best-effort basis.
+    }
+  }
+
   Future<Uint8List?> _readResponseBytesWithinLimit(
     http.StreamedResponse response,
   ) async {
     final bytes = BytesBuilder(copy: false);
+    final completer = Completer<Uint8List?>();
     var totalBytes = 0;
+    Timer? timer;
 
-    await for (final chunk in response.stream.timeout(_downloadTimeout)) {
-      totalBytes += chunk.length;
-      if (totalBytes > _maxAssetBytes) {
-        return null;
+    late final StreamSubscription<List<int>> subscription;
+    subscription = response.stream.listen(
+      (chunk) {
+        totalBytes += chunk.length;
+        if (totalBytes > _maxAssetBytes) {
+          timer?.cancel();
+          subscription.cancel();
+          if (!completer.isCompleted) {
+            completer.complete(null);
+          }
+          return;
+        }
+        bytes.add(chunk);
+      },
+      onError: (_) {
+        timer?.cancel();
+        if (!completer.isCompleted) {
+          completer.complete(null);
+        }
+      },
+      onDone: () {
+        timer?.cancel();
+        if (!completer.isCompleted) {
+          completer.complete(bytes.takeBytes());
+        }
+      },
+      cancelOnError: true,
+    );
+
+    timer = Timer(_downloadTimeout, () {
+      subscription.cancel();
+      if (!completer.isCompleted) {
+        completer.complete(null);
       }
-      bytes.add(chunk);
-    }
+    });
 
-    return bytes.takeBytes();
+    try {
+      return await completer.future;
+    } finally {
+      timer.cancel();
+    }
+  }
+
+  Future<void> _cancelStreamedResponse(http.StreamedResponse response) async {
+    try {
+      await response.stream.listen((_) {}).cancel();
+    } catch (_) {
+      // Best effort cleanup only.
+    }
   }
 
   Future<String?> _resolveExistingPath(
@@ -267,15 +354,19 @@ class LocalAssetCache {
   }
 
   Future<Directory> _ensureCacheDirectory(String normalizedUserId) async {
-    final baseDir = await _documentsDirectoryProvider();
-    final cacheDir = Directory(
-      '${baseDir.path}${Platform.pathSeparator}$_cacheDirName'
-      '${Platform.pathSeparator}$normalizedUserId',
-    );
+    final cacheDir = await _cacheDirectoryForUser(normalizedUserId);
     if (!await cacheDir.exists()) {
       await cacheDir.create(recursive: true);
     }
     return cacheDir;
+  }
+
+  Future<Directory> _cacheDirectoryForUser(String normalizedUserId) async {
+    final baseDir = await _documentsDirectoryProvider();
+    return Directory(
+      '${baseDir.path}${Platform.pathSeparator}$_cacheDirName'
+      '${Platform.pathSeparator}$normalizedUserId',
+    );
   }
 
   String _indexKeyForUser(String normalizedUserId) {

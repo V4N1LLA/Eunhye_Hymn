@@ -9,8 +9,11 @@ import com.eunhyehymn.application.usecases.UserPasswordSignupUseCase;
 import com.eunhyehymn.application.usecases.ValidateInviteCodeUseCase;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.common.response.ApiResponse;
+import com.eunhyehymn.infrastructure.security.AuthRateLimitService;
 import com.eunhyehymn.infrastructure.security.SocialLoginException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
+import java.util.Locale;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,6 +32,7 @@ public class AuthController {
     private final SocialLoginUseCase socialLoginUseCase;
     private final UserPasswordSignupUseCase userPasswordSignupUseCase;
     private final UserPasswordLoginUseCase userPasswordLoginUseCase;
+    private final AuthRateLimitService authRateLimitService;
 
     public AuthController(
         AdminPasswordLoginUseCase adminPasswordLoginUseCase,
@@ -37,7 +41,8 @@ public class AuthController {
         ValidateInviteCodeUseCase validateInviteCodeUseCase,
         SocialLoginUseCase socialLoginUseCase,
         UserPasswordSignupUseCase userPasswordSignupUseCase,
-        UserPasswordLoginUseCase userPasswordLoginUseCase
+        UserPasswordLoginUseCase userPasswordLoginUseCase,
+        AuthRateLimitService authRateLimitService
     ) {
         this.adminPasswordLoginUseCase = adminPasswordLoginUseCase;
         this.refreshTokenUseCase = refreshTokenUseCase;
@@ -46,80 +51,114 @@ public class AuthController {
         this.socialLoginUseCase = socialLoginUseCase;
         this.userPasswordSignupUseCase = userPasswordSignupUseCase;
         this.userPasswordLoginUseCase = userPasswordLoginUseCase;
+        this.authRateLimitService = authRateLimitService;
     }
 
     @PostMapping("/admin/login")
     public ApiResponse<SocialLoginResponse> adminPasswordLogin(
-        @RequestBody @Validated AdminPasswordLoginRequest request
+        @RequestBody @Validated AdminPasswordLoginRequest request,
+        HttpServletRequest httpRequest
     ) {
+        String key = keyByIpAndLoginId(httpRequest, request.loginId());
+        authRateLimitService.checkOrThrow("admin_login", key);
+
         try {
             AdminPasswordLoginUseCase.LoginResult result = adminPasswordLoginUseCase.login(
                 request.loginId(),
                 request.password()
             );
+            authRateLimitService.recordOutcome("admin_login", true);
             return ApiResponse.success(new SocialLoginResponse(
                 result.accessToken(), result.refreshToken(), result.newUser()
             ));
         } catch (AdminPasswordLoginUseCase.LoginDisabledException e) {
+            authRateLimitService.recordOutcome("admin_login", false);
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "admin_login_disabled", e.getMessage(), null);
         } catch (AdminPasswordLoginUseCase.InvalidCredentialsException e) {
+            authRateLimitService.recordOutcome("admin_login", false);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "admin_login_failed", e.getMessage(), null);
         }
     }
 
     @PostMapping("/social")
-    public ApiResponse<SocialLoginResponse> socialLogin(@RequestBody @Validated SocialLoginRequest request) {
+    public ApiResponse<SocialLoginResponse> socialLogin(
+        @RequestBody @Validated SocialLoginRequest request,
+        HttpServletRequest httpRequest
+    ) {
+        authRateLimitService.checkOrThrow("social_login", keyByIp(httpRequest));
         try {
             SocialLoginUseCase.LoginResult result = socialLoginUseCase.login(
                 request.provider(), request.token(), request.inviteCode()
             );
+            authRateLimitService.recordOutcome("social_login", true);
             return ApiResponse.success(new SocialLoginResponse(
                 result.accessToken(), result.refreshToken(), result.newUser()
             ));
         } catch (SocialLoginException e) {
+            authRateLimitService.recordOutcome("social_login", false);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "social_auth_failed", e.getMessage(), null);
         } catch (SocialLoginUseCase.AdminOnlyException e) {
+            authRateLimitService.recordOutcome("social_login", false);
             throw new ApiException(HttpStatus.FORBIDDEN, "admin_only", e.getMessage(), null);
         } catch (SocialLoginUseCase.InvalidInviteCodeException e) {
+            authRateLimitService.recordOutcome("social_login", false);
             throw new ApiException(HttpStatus.FORBIDDEN, "invalid_invite_code", e.getMessage(), null);
         }
     }
 
     @PostMapping("/signup")
-    public ApiResponse<SocialLoginResponse> signup(@RequestBody @Validated UserPasswordSignupRequest request) {
+    public ApiResponse<SocialLoginResponse> signup(
+        @RequestBody @Validated UserPasswordSignupRequest request,
+        HttpServletRequest httpRequest
+    ) {
+        String key = keyByIpAndLoginId(httpRequest, request.loginId());
+        authRateLimitService.checkOrThrow("user_signup", key);
+
         try {
             UserPasswordSignupUseCase.LoginResult result = userPasswordSignupUseCase.signup(
                 request.loginId(),
                 request.password(),
                 request.inviteCode()
             );
+            authRateLimitService.recordOutcome("user_signup", true);
             return ApiResponse.success(new SocialLoginResponse(
                 result.accessToken(),
                 result.refreshToken(),
                 result.newUser()
             ));
         } catch (UserPasswordSignupUseCase.InvalidInviteCodeException e) {
+            authRateLimitService.recordOutcome("user_signup", false);
             throw new ApiException(HttpStatus.FORBIDDEN, "invalid_invite_code", e.getMessage(), null);
         } catch (UserPasswordSignupUseCase.DuplicateLoginIdException e) {
+            authRateLimitService.recordOutcome("user_signup", false);
             throw new ApiException(HttpStatus.CONFLICT, "login_id_exists", e.getMessage(), null);
         } catch (UserPasswordSignupUseCase.InvalidCredentialFormatException e) {
+            authRateLimitService.recordOutcome("user_signup", false);
             throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_credential_format", e.getMessage(), null);
         }
     }
 
     @PostMapping("/login")
-    public ApiResponse<SocialLoginResponse> login(@RequestBody @Validated UserPasswordLoginRequest request) {
+    public ApiResponse<SocialLoginResponse> login(
+        @RequestBody @Validated UserPasswordLoginRequest request,
+        HttpServletRequest httpRequest
+    ) {
+        String key = keyByIpAndLoginId(httpRequest, request.loginId());
+        authRateLimitService.checkOrThrow("user_login", key);
+
         try {
             UserPasswordLoginUseCase.LoginResult result = userPasswordLoginUseCase.login(
                 request.loginId(),
                 request.password()
             );
+            authRateLimitService.recordOutcome("user_login", true);
             return ApiResponse.success(new SocialLoginResponse(
                 result.accessToken(),
                 result.refreshToken(),
                 result.newUser()
             ));
         } catch (UserPasswordLoginUseCase.InvalidCredentialsException e) {
+            authRateLimitService.recordOutcome("user_login", false);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "user_login_failed", e.getMessage(), null);
         }
     }
@@ -137,9 +176,35 @@ public class AuthController {
     }
 
     @PostMapping("/invite/validate")
-    public ApiResponse<InviteValidateResponse> validateInvite(@RequestBody @Validated InviteValidateRequest request) {
+    public ApiResponse<InviteValidateResponse> validateInvite(
+        @RequestBody @Validated InviteValidateRequest request,
+        HttpServletRequest httpRequest
+    ) {
+        authRateLimitService.checkOrThrow("invite_validate", keyByIp(httpRequest));
         boolean valid = validateInviteCodeUseCase.validate(request.code());
+        authRateLimitService.recordOutcome("invite_validate", valid);
         return ApiResponse.success(new InviteValidateResponse(valid));
+    }
+
+    private String keyByIp(HttpServletRequest request) {
+        return resolveClientIp(request);
+    }
+
+    private String keyByIpAndLoginId(HttpServletRequest request, String loginId) {
+        String normalizedLoginId = loginId == null ? "" : loginId.trim().toLowerCase(Locale.ROOT);
+        return resolveClientIp(request) + "|" + normalizedLoginId;
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 
     public record SocialLoginRequest(
