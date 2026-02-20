@@ -37,6 +37,7 @@
   - `POST /auth/refresh`
   - `POST /auth/logout`
   - `POST /auth/withdraw`
+  - `DELETE /me/account`
 - 멤버:
   - `GET/PUT /me/profile`
   - `POST /me/profile-change-requests`
