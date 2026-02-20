@@ -125,3 +125,16 @@
   - 판정: `HOLD` (AWS 인증 프로필 정비 후 재실행 필요)
 - 로그 문서:
   - `docs/staging-smoke-log.md`
+
+## 10. 운영 사이클 실행 기록 (2026-02-20, 재실행)
+
+- 실행 명령:
+  - `aws logout --profile default`
+  - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -AutoLogin`
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -AutoLogin -WaitForCompletion`
+- 결과:
+  - preflight: PASS (`aws login` fallback 자동 복구 확인)
+  - 배포 게이트: PASS (`run 22207213127`, `deploy/verify success`)
+  - 판정: `CONDITIONAL_GO` (수동 스모크 `PENDING`)
+- 로그 문서:
+  - `docs/staging-smoke-log.md`

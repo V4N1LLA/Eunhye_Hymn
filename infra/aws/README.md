@@ -140,6 +140,8 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 .\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile eunhye-staging] [-AutoLogin]
 ```
 
+`-AutoLogin`은 세션 만료 시 `aws sso login` 또는 `aws login`을 자동 재시도한다.
+
 리허설 자동 실행(권장):
 
 ```powershell

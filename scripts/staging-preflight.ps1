@@ -143,7 +143,7 @@ function Get-AwsIdentityErrorInfo {
     }
   }
 
-  if ($Output -match "Your session has expired|ExpiredToken|Token has expired and refresh failed|The SSO session associated with this profile has expired|The security token included in the request is expired") {
+  if ($Output -match "Your session has expired|ExpiredToken|Token has expired and refresh failed|The SSO session associated with this profile has expired|The security token included in the request is expired|Error loading login session token|Unable to load a existing login session|Please reauthenticate with 'aws login'") {
     return [PSCustomObject]@{
       Code = "session_expired"
       Detail = "session expired (run aws sso login / aws login)"
@@ -213,33 +213,64 @@ function Invoke-AwsSsoLogin {
   }
 }
 
+function Invoke-AwsLogin {
+  $args = @("login")
+  if (-not [string]::IsNullOrWhiteSpace($AwsProfile)) {
+    $args += @("--profile", $AwsProfile)
+  }
+
+  $output = & aws @args 2>&1
+  return [PSCustomObject]@{
+    ExitCode = $LASTEXITCODE
+    Output = (($output -join "`n") -replace "`e\[[\d;]*[A-Za-z]", "")
+  }
+}
+
 function Try-RecoverAwsSession {
   param([string]$ReasonCode)
 
   $profileLabel = if ([string]::IsNullOrWhiteSpace($AwsProfile)) { "default" } else { $AwsProfile }
-  if (-not (Test-AwsSsoConfigured)) {
-    return [PSCustomObject]@{
-      Success = $false
-      Detail = "auto-login unavailable (profile '$profileLabel' has no sso_start_url)"
-    }
+  $errors = @()
+  $attempts = @()
+  if (Test-AwsSsoConfigured) {
+    $attempts += "sso"
+  } else {
+    $errors += "aws sso login skipped (no sso_start_url)"
   }
+  $attempts += "login"
 
-  $loginResult = Invoke-AwsSsoLogin
-  if ($loginResult.ExitCode -eq 0) {
-    return [PSCustomObject]@{
-      Success = $true
-      Detail = "aws sso login success (profile '$profileLabel')"
+  foreach ($attempt in $attempts) {
+    if ($attempt -eq "sso") {
+      $attemptName = "aws sso login"
+      $loginResult = Invoke-AwsSsoLogin
+    } else {
+      $attemptName = "aws login"
+      $loginResult = Invoke-AwsLogin
     }
-  }
 
-  $detailLine = Get-FirstUsefulLine -Output $loginResult.Output
-  if ([string]::IsNullOrWhiteSpace($detailLine)) {
-    $detailLine = "aws sso login failed"
+    if ($loginResult.ExitCode -eq 0) {
+      return [PSCustomObject]@{
+        Success = $true
+        Detail = "$attemptName success (profile '$profileLabel')"
+      }
+    }
+
+    $detailLine = Get-FirstUsefulLine -Output $loginResult.Output
+    if ([string]::IsNullOrWhiteSpace($detailLine)) {
+      $detailLine = "$attemptName failed"
+    }
+
+    if ($attempt -eq "login" -and $loginResult.Output -match "Invalid choice|Unknown options|argument command: invalid choice") {
+      $errors += "aws login unsupported by current aws cli"
+      continue
+    }
+
+    $errors += "$attemptName failed: $detailLine"
   }
 
   return [PSCustomObject]@{
     Success = $false
-    Detail = "aws sso login failed: $detailLine"
+    Detail = ($errors -join "; ")
   }
 }
 
