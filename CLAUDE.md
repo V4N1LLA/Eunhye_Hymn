@@ -2,6 +2,7 @@
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
 > 마지막 업데이트: 2026-02-20
+> 정합성 기준 문서: `docs/api-contract.md`, `docs/data-model.md`, `.env.example`, `apps/api/.env.example`
 
 ---
 
@@ -20,9 +21,9 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (29 UseCase)
+│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle)
 │   │   └── Dockerfile    # Multi-stage (JDK build → JRE run + curl for healthcheck)
-│   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 8페이지 완료
+│   ├── admin/            # React + Vite + TypeScript 관리자 웹
 │   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
 │   │   └── nginx.conf    # 정적 파일 serve + /api/v1 프록시 + SPA fallback
 │   └── mobile/           # Flutter 모바일 앱 (MVP: 로그인/목록/상세/메모/히스토리)
@@ -161,9 +162,9 @@ com.eunhyehymn/
 │   └── repository/     # Repository 인터페이스
 ├── application/
 │   ├── ports/          # 외부 서비스 인터페이스 (SocialTokenVerifier)
-│   └── usecases/       # 비즈니스 로직 Use Cases (29개)
+│   └── usecases/       # 비즈니스 로직 Use Cases
 ├── presentation/
-│   ├── controllers/    # REST 컨트롤러 (11개)
+│   ├── controllers/    # REST 컨트롤러
 │   └── dto/            # Request/Response DTOs
 ├── infrastructure/
 │   ├── persistence/    # JPA Repository Adapters (10개)
@@ -204,6 +205,8 @@ com.eunhyehymn/
 ---
 
 ## 7. API 엔드포인트 (Base: `/api/v1`)
+
+> 이 섹션은 개요용이다. 최신 상세 계약은 `docs/api-contract.md`를 우선 기준으로 사용한다.
 
 ### 7.1 인증 (`AuthController`, `DevAuthController`)
 
@@ -295,7 +298,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (29개)
+## 8. Use Cases (개요)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -685,7 +688,7 @@ develop push → GitHub Actions
 
 ### 완료
 
-**백엔드 API (29 UseCase, 11 Controller)**
+**백엔드 API (주요 영역 구현 완료)**
 - 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
 - S3 에셋 관리 (presign/confirm/삭제)
 - JWT 인증 + 소셜 로그인 (Kakao) + 토큰 회전
@@ -694,10 +697,10 @@ develop push → GitHub Actions
 - 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
 - 비동기 export 결과 정리 배치 (완료/실패 작업 기본 7일 보관 후 정리)
 - 비동기 export 운영 지표 API (`/admin/events/export-jobs/metrics`) + cleanup 실행 이력 기록
-- DB 스키마 Flyway 마이그레이션 (V1~V9)
-- 테스트 15개 파일 전체 통과 (SocialLoginApiTest 포함)
+- DB 스키마 Flyway 마이그레이션 (V1~V16)
+- 핵심 테스트 스위트 통과 (API/Admin/Mobile)
 
-**Admin 프론트엔드 (8페이지)**
+**Admin 프론트엔드**
 - 찬양 목록/생성/수정/삭제 + 검색/필터 + 활성화 토글
 - 에셋 업로드 3단계 (presign/upload/confirm) + 삭제
 - 사용자 관리 (역할/상태 변경, 검색/필터)
@@ -723,7 +726,7 @@ develop push → GitHub Actions
 - API Dockerfile (multi-stage)
 - Admin Dockerfile (multi-stage: Node build + Nginx serve)
 - Nginx 설정 (Admin 정적 파일 serve + API 리버스 프록시 + SPA fallback)
-- CI/CD (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test + Staging 자동 배포)
+- CI/CD (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test + Mobile release readiness + Staging 자동 배포)
 
 **AWS 인프라 (Terraform)**
 - VPC + 퍼블릭 서브넷 2개 + IGW + 라우트 테이블
@@ -749,8 +752,8 @@ develop push → GitHub Actions
   - `docs/current-usable-scope.md`
   - `docs/mobile/README.md`
   - `README.md`
-- 최신 기준점 문서 동기화 (2026-02-17)
-  - `docs/current-usable-scope.md` (`ee49a0e` 기준 커밋/근거 PR/실행 run 반영)
+- 최신 기준점 문서 동기화 (2026-02-20)
+  - `docs/current-usable-scope.md` (최신 기준 커밋/근거 반영)
   - `docs/deployment-readiness-audit.md` (최신 Actions 실행 근거/잔여 리스크 갱신)
 - 개발 변경 이력 동기화
   - `docs/changelog-dev.md`
