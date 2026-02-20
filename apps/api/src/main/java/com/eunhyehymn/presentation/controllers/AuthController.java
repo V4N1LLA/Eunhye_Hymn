@@ -14,6 +14,7 @@ import com.eunhyehymn.infrastructure.security.SocialLoginException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +34,7 @@ public class AuthController {
     private final UserPasswordSignupUseCase userPasswordSignupUseCase;
     private final UserPasswordLoginUseCase userPasswordLoginUseCase;
     private final AuthRateLimitService authRateLimitService;
+    private final boolean trustForwardedIpHeader;
 
     public AuthController(
         AdminPasswordLoginUseCase adminPasswordLoginUseCase,
@@ -42,7 +44,8 @@ public class AuthController {
         SocialLoginUseCase socialLoginUseCase,
         UserPasswordSignupUseCase userPasswordSignupUseCase,
         UserPasswordLoginUseCase userPasswordLoginUseCase,
-        AuthRateLimitService authRateLimitService
+        AuthRateLimitService authRateLimitService,
+        @Value("${security.rate-limit.auth.trust-forwarded-ip-header:false}") boolean trustForwardedIpHeader
     ) {
         this.adminPasswordLoginUseCase = adminPasswordLoginUseCase;
         this.refreshTokenUseCase = refreshTokenUseCase;
@@ -52,6 +55,7 @@ public class AuthController {
         this.userPasswordSignupUseCase = userPasswordSignupUseCase;
         this.userPasswordLoginUseCase = userPasswordLoginUseCase;
         this.authRateLimitService = authRateLimitService;
+        this.trustForwardedIpHeader = trustForwardedIpHeader;
     }
 
     @PostMapping("/admin/login")
@@ -196,15 +200,32 @@ public class AuthController {
     }
 
     private String resolveClientIp(HttpServletRequest request) {
+        if (!trustForwardedIpHeader) {
+            return normalizeIp(request.getRemoteAddr());
+        }
+
         String forwardedFor = request.getHeader("X-Forwarded-For");
         if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
+            String candidate = normalizeIp(forwardedFor.split(",")[0]);
+            if (!candidate.isBlank()) {
+                return candidate;
+            }
         }
         String realIp = request.getHeader("X-Real-IP");
         if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
+            String candidate = normalizeIp(realIp);
+            if (!candidate.isBlank()) {
+                return candidate;
+            }
         }
-        return request.getRemoteAddr();
+        return normalizeIp(request.getRemoteAddr());
+    }
+
+    private String normalizeIp(String source) {
+        if (source == null) {
+            return "";
+        }
+        return source.trim();
     }
 
     public record SocialLoginRequest(

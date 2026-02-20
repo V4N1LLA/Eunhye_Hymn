@@ -52,4 +52,33 @@ class AuthRateLimitApiTest {
             .andExpect(status().isTooManyRequests())
             .andExpect(jsonPath("$.error.code").value("too_many_requests"));
     }
+
+    @Test
+    void spoofedForwardedIpHeaderDoesNotBypassRateLimitByDefault() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of(
+            "loginId", "member.spoof",
+            "password", "wrong-password"
+        ));
+
+        mockMvc.perform(post("/auth/login")
+                .header("X-Forwarded-For", "203.0.113.10")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value("user_login_failed"));
+
+        mockMvc.perform(post("/auth/login")
+                .header("X-Forwarded-For", "203.0.113.11")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value("user_login_failed"));
+
+        mockMvc.perform(post("/auth/login")
+                .header("X-Forwarded-For", "203.0.113.12")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.error.code").value("too_many_requests"));
+    }
 }
