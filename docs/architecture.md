@@ -35,10 +35,12 @@
 - 로그/메트릭 등 횡단 관심사는 인터페이스로 제공한다.
 
 ## 4. Bounded Context
-- **Identity & Access**: 초대 코드, 소셜 로그인, JWT 발급.
+- **Identity & Access**: 초대 코드, SMS 인증, 소셜/계정 로그인, JWT 발급.
 - **Hymn Catalog**: 찬송가 메타데이터, 태그, 검색.
 - **Media Access**: S3 서명 URL 발급.
+- **Member Profile**: 내 프로필, 개인정보 변경 요청/승인.
 - **Audit & Analytics**: 조회 및 변경 이벤트.
+- **AI Recommendation**: 상황 텍스트 기반 찬송 추천(외부 LLM 연동).
 
 ## 5. API 계약 우선
 - 요청/응답 형태는 `docs/api-contract.md`에 먼저 정의.

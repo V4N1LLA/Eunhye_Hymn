@@ -4,15 +4,23 @@ on:
   pull_request:
     branches:
       - develop
+      - staging
+      - production
     paths:
       - "apps/mobile/**"
       - ".github/workflows/mobile-ci.yml"
   push:
     branches:
       - develop
+      - staging
+      - production
     paths:
       - "apps/mobile/**"
       - ".github/workflows/mobile-ci.yml"
+
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   mobile-ci:

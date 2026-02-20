@@ -226,6 +226,7 @@ for ($i = 0; $i -lt $RunDetectRetries; $i++) {
         ($_.CreatedAtUtc -ge $triggeredAfter) -and
         ([string]::IsNullOrWhiteSpace($_.Run.headBranch) -or $_.Run.headBranch -eq $Ref)
       }
+    # Select the earliest matching run after dispatch to avoid attaching to later concurrent runs.
     $selected = $strictCandidates | Sort-Object CreatedAtUtc | Select-Object -First 1
 
     if ($null -eq $selected) {

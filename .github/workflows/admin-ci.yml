@@ -2,13 +2,25 @@ name: Admin CI
 
 on:
   pull_request:
+    branches:
+      - develop
+      - staging
+      - production
     paths:
       - "apps/admin/**"
+      - ".github/workflows/admin-ci.yml"
   push:
     branches:
       - develop
+      - staging
+      - production
     paths:
       - "apps/admin/**"
+      - ".github/workflows/admin-ci.yml"
+
+concurrency:
+  group: admin-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

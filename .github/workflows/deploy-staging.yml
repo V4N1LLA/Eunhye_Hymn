@@ -3,7 +3,12 @@ name: Deploy Staging
 on:
   push:
     branches:
-      - develop
+      - staging
+    paths:
+      - "apps/api/**"
+      - "apps/admin/**"
+      - "infra/aws/**"
+      - ".github/workflows/deploy-staging.yml"
   workflow_dispatch:
     inputs:
       enable_awslogs:
@@ -126,6 +131,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    environment: staging
     timeout-minutes: 30
     concurrency:
       group: staging-ec2-deploy
