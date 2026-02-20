@@ -1,7 +1,8 @@
-# Eunhye Hymn API 계약 (MVP)
+# Eunhye Hymn API 계약
 
 Base URL: `/api/v1`
-모든 응답은 기본적으로 아래 envelope를 사용한다.
+
+기본 응답 envelope:
 
 ```json
 {
@@ -11,431 +12,338 @@ Base URL: `/api/v1`
 }
 ```
 
-## Auth verification flow update (2026-02)
+## 1) 인증/계정
 
-Social login and member verification are now separated:
-
-1. `POST /auth/social` (Kakao login, token issue)
-2. `POST /auth/invite/validate` (invite code validation + bind to authenticated user)
-3. `POST /auth/sms/request` (send SMS code, auth required)
-4. `POST /auth/sms/verify` (verify code, auth required)
-5. `POST /auth/withdraw` (self-withdraw, auth required)
-
-`GET /me/profile` now includes:
-
-```json
-{
-  "userId": "uuid",
-  "role": "USER",
-  "inviteVerified": true,
-  "phoneVerified": true,
-  "verified": true
-}
-```
-
-## 1. 인증
-
-### 1.1 초대 코드 검증
+### 1.1 초대코드 검증
 - `POST /auth/invite/validate`
-- 요청 `data` 예시:
-```json
-{
-  "code": "ABC123"
-}
-```
-- 응답 `data` 예시:
-```json
-{
-  "valid": true
-}
-```
+- 인증 없음(로그인 후 호출 시 현재 사용자에 초대코드 확정)
+- 요청:
+  ```json
+  { "code": "ABC123" }
+  ```
+- 응답:
+  ```json
+  { "valid": true }
+  ```
 
 ### 1.2 소셜 로그인 (Kakao)
 - `POST /auth/social`
-- 요청 `data` 예시:
-```json
-{
-  "provider": "kakao",
-  "token": "social-token",
-  "inviteCode": "ABC123"
-}
-```
-- 응답 `data` 예시:
-```json
-{
-  "accessToken": "jwt-access",
-  "refreshToken": "jwt-refresh",
-  "newUser": false
-}
-```
+- 요청:
+  ```json
+  {
+    "provider": "kakao",
+    "token": "social-token",
+    "inviteCode": "ABC123"
+  }
+  ```
+- 응답:
+  ```json
+  {
+    "accessToken": "jwt-access",
+    "refreshToken": "jwt-refresh",
+    "newUser": false
+  }
+  ```
 
-### 1.3 토큰 갱신
+### 1.3 사용자 계정 회원가입/로그인
+- `POST /auth/signup`
+  ```json
+  {
+    "loginId": "member.one",
+    "password": "password-123!",
+    "inviteCode": "ABC123"
+  }
+  ```
+- `POST /auth/login`
+  ```json
+  {
+    "loginId": "member.one",
+    "password": "password-123!"
+  }
+  ```
+- 공통 응답:
+  ```json
+  {
+    "accessToken": "jwt-access",
+    "refreshToken": "jwt-refresh",
+    "newUser": false
+  }
+  ```
+
+### 1.4 관리자 로그인/비밀번호 변경
+- `POST /auth/admin/login`
+  ```json
+  {
+    "loginId": "owner",
+    "password": "your-admin-password"
+  }
+  ```
+- `POST /admin/auth/password` (관리자 토큰 필요)
+  ```json
+  {
+    "currentPassword": "current-password",
+    "newLoginId": "owner2",
+    "newPassword": "new-password-456!"
+  }
+  ```
+
+### 1.5 토큰 갱신/로그아웃
 - `POST /auth/refresh`
-- 요청 `data`: `{ "refreshToken": "jwt-refresh" }`
-- 응답 `data`: `{ "accessToken": "...", "refreshToken": "..." }`
-
-### 1.4 로그아웃
+  ```json
+  { "refreshToken": "jwt-refresh" }
+  ```
+  응답:
+  ```json
+  { "accessToken": "jwt-access", "refreshToken": "jwt-refresh-2" }
+  ```
 - `POST /auth/logout`
-- 요청 `data`: `{ "refreshToken": "jwt-refresh" }`
+  ```json
+  { "refreshToken": "jwt-refresh" }
+  ```
+  응답 `data`: `null`
+
+### 1.6 SMS 인증
+- `POST /auth/sms/request` (인증 필요)
+  ```json
+  { "phoneNumber": "01012345678" }
+  ```
+  응답:
+  ```json
+  {
+    "verificationId": "uuid",
+    "expiresInSeconds": 300,
+    "cooldownSeconds": 30
+  }
+  ```
+- `POST /auth/sms/verify` (인증 필요)
+  ```json
+  {
+    "verificationId": "uuid",
+    "code": "123456"
+  }
+  ```
+  응답:
+  ```json
+  {
+    "verified": true,
+    "completed": true
+  }
+  ```
+
+### 1.7 회원 탈퇴
+- `POST /auth/withdraw` (인증 필요)
+- 요청 본문 없음
 - 응답 `data`: `null`
 
-### 1.5 Admin ID/PW 로그인
-- `POST /auth/admin/login`
-- 요청 `data` 예시:
-```json
-{
-  "loginId": "owner",
-  "password": "your-admin-password"
-}
-```
-- 응답 `data` 예시:
-```json
-{
-  "accessToken": "jwt-access",
-  "refreshToken": "jwt-refresh",
-  "newUser": false
-}
-```
-
-### 1.6 Admin ID/PW 변경 (관리자 토큰 필요)
-- `POST /admin/auth/password`
-- 요청 `data` 예시:
-```json
-{
-  "currentPassword": "current-password",
-  "newLoginId": "owner2",
-  "newPassword": "new-password-456!"
-}
-```
-- 응답 `data` 예시:
-```json
-{
-  "loginId": "owner2",
-  "updatedAt": "2026-02-15T14:00:00Z"
-}
-```
-
-### 1.7 사용자 회원가입
-- `POST /auth/signup`
-- 요청 `data` 예시:
-```json
-{
-  "loginId": "member.one",
-  "password": "password-123!",
-  "inviteCode": "ABC123"
-}
-```
-- 응답 `data` 예시:
-```json
-{
-  "accessToken": "jwt-access",
-  "refreshToken": "jwt-refresh",
-  "newUser": true
-}
-```
-
-### 1.8 사용자 로그인
-- `POST /auth/login`
-- 요청 `data` 예시:
-```json
-{
-  "loginId": "member.one",
-  "password": "password-123!"
-}
-```
-- 응답 `data` 예시:
-```json
-{
-  "accessToken": "jwt-access",
-  "refreshToken": "jwt-refresh",
-  "newUser": false
-}
-```
-
-### 1.9 DEV 로그인 (개발/테스트 전용, 운영 앱 미사용)
+### 1.8 DEV 로그인 (개발 전용)
 - `POST /auth/dev/login`
 
-## 2. 찬양
+## 2) 찬양/AI
 
 ### 2.1 찬양 목록 (공개)
 - `GET /hymns`
-- 응답 `data`: `[{ id, title, number, tags }]`
+- 응답:
+  ```json
+  [
+    { "id": "uuid", "title": "Amazing Grace", "number": "123", "tags": "grace,comfort" }
+  ]
+  ```
 
 ### 2.2 찬양 상세 (인증 필요)
 - `GET /hymns/{id}`
-- 응답 `data` 예시:
-```json
-{
-  "id": "hymn-uuid",
-  "title": "Amazing Grace",
-  "number": "123",
-  "tags": "advent",
-  "enabled": true,
-  "lastOpenedAt": "2025-01-01T00:00:00Z",
-  "assets": [
-    {
-      "id": "asset-uuid",
-      "type": "PNG",
-      "part": "ALL",
-      "url": "https://cdn.example/hymns/.../PNG/ALL/score.png",
-      "checksum": null,
-      "version": "v1"
-    },
-    {
-      "id": "asset-uuid-2",
-      "type": "MIDI",
-      "part": "S",
-      "url": "https://cdn.example/hymns/.../MIDI/S/soprano.mid",
-      "checksum": null,
-      "version": "v1"
-    }
-  ]
-}
-```
-
-### 2.3 찬양 관리 (관리자)
-- `POST /admin/hymns` (생성)
-- `PATCH /admin/hymns/{id}` (수정)
-- `DELETE /admin/hymns/{id}` (삭제)
-- `GET /admin/hymns` (전체 목록)
-
-### 2.4 AI 찬송 추천 (인증 필요)
-- `POST /ai/hymn-recommendations`
-- 요청 `data` 예시:
-```json
-{
-  "situation": "주일 새벽 예배, 차분한 묵상 분위기",
-  "maxResults": 3
-}
-```
-- 응답 `data` 예시:
-```json
-{
-  "items": [
-    {
-      "id": "hymn-uuid",
-      "number": "101",
-      "title": "찬송 제목",
-      "tags": "grace,comfort",
-      "reason": "상황에 맞는 분위기와 가사 주제"
-    }
-  ],
-  "requestedMaxResults": 3,
-  "candidateCount": 25
-}
-```
-
-## 3. 에셋 관리 (관리자)
-
-### 3.1 프리사인 발급
-- `POST /admin/assets/presign`
-- 요청 `data` 예시:
-```json
-{
-  "hymnId": "hymn-uuid",
-  "type": "PNG",
-  "part": "ALL",
-  "filename": "score.png",
-  "contentType": "image/png"
-}
-```
-- 응답 `data` 예시:
-```json
-{
-  "uploadUrl": "https://s3-presigned-url",
-  "publicUrl": "https://cdn.example/hymns/hymn-uuid/PNG/ALL/uuid-score.png",
-  "objectKey": "hymns/hymn-uuid/PNG/ALL/uuid-score.png"
-}
-```
-
-### 3.2 업로드 확인
-- `POST /admin/assets/confirm`
-- 요청 `data` 예시:
-```json
-{
-  "hymnId": "hymn-uuid",
-  "type": "MIDI",
-  "part": "S",
-  "publicUrl": "https://cdn.example/hymns/hymn-uuid/MIDI/S/uuid.mid",
-  "objectKey": "hymns/hymn-uuid/MIDI/S/uuid.mid",
-  "checksum": "abc123",
-  "version": "v1"
-}
-```
-
-### 3.3 에셋 삭제
-- `DELETE /admin/assets/{id}`
-
-## 4. 사용자/초대코드 관리 (관리자)
-
-### 4.1 사용자 관리
-- `GET /admin/users`
-- `POST /admin/users`
-- `PATCH /admin/users/{id}`
-- `DELETE /admin/users/{id}` (soft-delete: `status=DISABLED`)
-
-### 4.2 초대코드 관리
-- `POST /admin/invite-codes`
-- `GET /admin/invite-codes`
-- `DELETE /admin/invite-codes/{code}`
-
-### 4.3 감사 로그/분석
-- `GET /admin/events`
-- `GET /admin/events/export` (CSV 다운로드)
-- `POST /admin/events/export-jobs` (비동기 대용량 CSV 작업 생성, 202 Accepted)
-- `GET /admin/events/export-jobs/{jobId}` (작업 상태 조회)
-- `GET /admin/events/export-jobs/{jobId}/download` (완료 작업 다운로드)
-- `GET /admin/events/export-jobs/metrics` (비동기 export 운영 지표)
-- 지원 쿼리:
-  - `eventType`: `HYMN_OPENED` | `PART_PLAYED` | `NOTE_SAVED` | `FAVORITE_TOGGLED`
-  - `userId`, `hymnId`: UUID
-  - `from`, `to`: ISO-8601 UTC
-  - `page`: 페이지 번호 (기본 1)
-  - `size`: 페이지 크기 (기본 50, 최대 200)
-  - `limit`: 하위 호환 조회 개수 파라미터(미지정 시 `page/size` 사용)
-  - `summaryDays`: 최근 집계 일수 (기본 7, 최대 90)
-  - `days`: 운영 지표 집계 일수 (기본 7, 최대 90, `GET /admin/events/export-jobs/metrics` 전용)
-- 비동기 export 스냅샷 규칙:
-  - `POST /admin/events/export-jobs`에서 `to`를 생략하면 서버가 작업 생성 시각을 `toExclusive`로 고정한다.
-  - 실행 대기 중 신규 유입 이벤트는 해당 작업 결과에서 제외된다.
-- 응답 `data` 예시:
-```json
-{
-  "items": [
-    {
-      "id": "event-uuid",
-      "userId": "user-uuid",
-      "eventType": "HYMN_OPENED",
-      "hymnId": "hymn-uuid",
-      "part": "ALL",
-      "metadataJson": "{\"source\":\"mobile\"}",
-      "createdAt": "2026-02-13T11:40:00Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "size": 50,
-    "total": 2100,
-    "totalPages": 42,
-    "hasPrevious": false,
-    "hasNext": true
-  },
-  "summary": {
-    "fromInclusive": "2026-02-06T00:00:00Z",
-    "toExclusive": "2026-02-13T00:00:00Z",
-    "total": 210,
-    "byType": [
-      { "eventType": "HYMN_OPENED", "count": 120 },
-      { "eventType": "PART_PLAYED", "count": 50 },
-      { "eventType": "NOTE_SAVED", "count": 30 },
-      { "eventType": "FAVORITE_TOGGLED", "count": 10 }
+- 응답 예시:
+  ```json
+  {
+    "id": "hymn-uuid",
+    "title": "Amazing Grace",
+    "number": "123",
+    "tags": "grace,comfort",
+    "enabled": true,
+    "lastOpenedAt": "2026-02-20T00:00:00Z",
+    "assets": [
+      {
+        "id": "asset-uuid",
+        "type": "PNG",
+        "part": "ALL",
+        "url": "https://cdn.example/hymns/.../PNG/ALL/score.png",
+        "checksum": null,
+        "version": "v1"
+      }
     ]
   }
-}
-```
+  ```
 
-- `GET /admin/events/export` 응답:
-  - `Content-Type: text/csv`
-  - `Content-Disposition: attachment; filename="admin-events-*.csv"`
-  - 보안: CSV 셀 값이 수식(`=`, `+`, `-`, `@`)으로 시작하면 이스케이프 처리
-
-- `POST /admin/events/export-jobs` 응답 `data` 예시:
-```json
-{
-  "id": "job-uuid",
-  "status": "QUEUED",
-  "exportLimit": 50000,
-  "rowCount": null,
-  "fileName": null,
-  "errorMessage": null,
-  "createdAt": "2026-02-14T05:00:00Z",
-  "startedAt": null,
-  "completedAt": null,
-  "statusUrl": "/admin/events/export-jobs/job-uuid",
-  "downloadUrl": "/admin/events/export-jobs/job-uuid/download",
-  "downloadable": false
-}
-```
-
-- `GET /admin/events/export-jobs/metrics` 응답 `data` 예시:
-```json
-{
-  "windowDays": 7,
-  "fromInclusive": "2026-02-07T05:00:00Z",
-  "toExclusive": "2026-02-14T05:00:00Z",
-  "jobs": {
-    "total": 24,
-    "queued": 1,
-    "running": 0,
-    "completed": 21,
-    "failed": 2,
-    "failureRatePercent": 8.7
-  },
-  "processing": {
-    "measuredJobs": 23,
-    "averageSeconds": 14.8,
-    "p95Seconds": 39.0
-  },
-  "cleanup": {
-    "runCount": 7,
-    "deletedJobs": 43
+### 2.3 AI 찬송 추천 (인증 필요)
+- `POST /ai/hymn-recommendations`
+- 요청:
+  ```json
+  {
+    "situation": "주일 새벽 예배, 차분한 묵상 분위기",
+    "maxResults": 3
   }
-}
-```
+  ```
+- 응답:
+  ```json
+  {
+    "items": [
+      {
+        "id": "hymn-uuid",
+        "number": "101",
+        "title": "찬송 제목",
+        "tags": "grace,comfort",
+        "reason": "상황에 맞는 분위기와 가사 주제"
+      }
+    ],
+    "requestedMaxResults": 3,
+    "candidateCount": 25
+  }
+  ```
 
-## 5. 사용자 개인 영역
+## 3) 관리자 API
 
-### 5.1 프로필
+### 3.1 찬양 관리
+- `GET /admin/hymns`
+- `POST /admin/hymns`
+- `PATCH /admin/hymns/{id}`
+- `DELETE /admin/hymns/{id}`
+
+### 3.2 에셋 관리
+- `POST /admin/assets/presign`
+  ```json
+  {
+    "hymnId": "hymn-uuid",
+    "type": "PNG",
+    "part": "ALL",
+    "filename": "score.png",
+    "contentType": "image/png"
+  }
+  ```
+- `POST /admin/assets/confirm`
+  ```json
+  {
+    "hymnId": "hymn-uuid",
+    "type": "MIDI",
+    "part": "S",
+    "publicUrl": "https://cdn.example/hymns/hymn-uuid/MIDI/S/uuid.mid",
+    "objectKey": "hymns/hymn-uuid/MIDI/S/uuid.mid",
+    "checksum": "abc123",
+    "version": "v1"
+  }
+  ```
+- `DELETE /admin/assets/{id}`
+
+### 3.3 사용자/초대코드
+- 사용자:
+  - `GET /admin/users`
+  - `POST /admin/users`
+  - `PATCH /admin/users/{id}`
+  - `DELETE /admin/users/{id}` (soft delete)
+- 초대코드:
+  - `GET /admin/invite-codes`
+  - `POST /admin/invite-codes`
+  - `DELETE /admin/invite-codes/{code}`
+
+### 3.4 개인정보 변경 요청 심사
+- `GET /admin/profile-change-requests`
+  - 쿼리 `status=PENDING|APPROVED|REJECTED` (생략 시 `PENDING`)
+- `PATCH /admin/profile-change-requests/{id}`
+  ```json
+  { "action": "APPROVE" }
+  ```
+  ```json
+  { "action": "REJECT", "rejectReason": "정보 확인 필요" }
+  ```
+
+### 3.5 감사 로그/분석
+- `GET /admin/events`
+- `GET /admin/events/export` (동기 CSV)
+- `POST /admin/events/export-jobs` (비동기 작업 생성, `202 Accepted`)
+- `GET /admin/events/export-jobs/{jobId}`
+- `GET /admin/events/export-jobs/{jobId}/download`
+- `GET /admin/events/export-jobs/metrics`
+
+지원 쿼리(일부):
+- `eventType`, `userId`, `hymnId`, `from`, `to`
+- `page`, `size`, `limit`
+- `summaryDays` (`GET /admin/events`)
+- `days` (`GET /admin/events/export-jobs/metrics`)
+
+## 4) 내 정보 API (`/me`)
+
+### 4.1 프로필
 - `GET /me/profile`
 - `PUT /me/profile`
-- `PUT /me/profile` 요청 `data`:
-```json
-{
-  "churchName": "은혜교회",
-  "name": "홍길동",
-  "group": "청년A"
-}
-```
-- `GET/PUT /me/profile` 응답 `data` 예시:
-```json
-{
-  "userId": "9f2a6c6e-42f8-4a54-8dd3-2dbf2f8a1ab1",
-  "role": "USER",
-  "displayName": "Kakao User",
-  "churchName": "은혜교회",
-  "name": "홍길동",
-  "group": "청년A",
-  "profileCompleted": true,
-  "profileUpdatedAt": "2026-02-19T23:00:00Z"
-}
-```
+  ```json
+  {
+    "churchName": "은혜교회",
+    "name": "홍길동",
+    "group": "청년A",
+    "gender": "UNKNOWN"
+  }
+  ```
+- 응답 예시:
+  ```json
+  {
+    "userId": "uuid",
+    "role": "USER",
+    "displayName": "Kakao User",
+    "churchName": "은혜교회",
+    "name": "홍길동",
+    "group": "청년A",
+    "gender": "UNKNOWN",
+    "profileCompleted": true,
+    "profileUpdatedAt": "2026-02-20T12:00:00Z",
+    "inviteVerified": true,
+    "phoneVerified": true,
+    "verified": true
+  }
+  ```
 
-### 5.2 즐겨찾기
+### 4.2 개인정보 변경 요청
+- `POST /me/profile-change-requests`
+  ```json
+  {
+    "churchName": "은혜교회",
+    "name": "홍길동",
+    "group": "청년B",
+    "gender": "UNKNOWN"
+  }
+  ```
+- `GET /me/profile-change-requests/latest`
+- 응답 예시:
+  ```json
+  {
+    "id": "uuid",
+    "status": "PENDING",
+    "churchName": "은혜교회",
+    "name": "홍길동",
+    "group": "청년B",
+    "gender": "UNKNOWN",
+    "requestedAt": "2026-02-20T12:30:00Z",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "rejectReason": null
+  }
+  ```
+
+### 4.3 즐겨찾기/메모/히스토리
 - `GET /me/favorites/{hymnId}`
-- `POST /me/favorites/{hymnId}` (toggle)
-
-### 5.3 메모
+- `POST /me/favorites/{hymnId}`
 - `GET /me/hymns/{hymnId}/note`
 - `PUT /me/hymns/{hymnId}/note`
-- 요청 `data`: `{ "content": "메모 내용" }`
-
-### 5.4 히스토리
+  ```json
+  { "content": "메모 내용" }
+  ```
 - `GET /me/history`
 
-## 6. 이벤트
+## 5) 이벤트/시스템
 
-### 6.1 사용자 이벤트 기록
-- `POST /events`
-- 단건 또는 배열 요청 허용
-- 이벤트 필드: `eventType`, `hymnId`, `part`, `metadataJson`
+### 5.1 이벤트 기록
+- `POST /events` (인증 필요)
+- 단건 또는 배열 payload 허용
 
-## 7. 시스템
-
-### 7.1 헬스 체크
+### 5.2 헬스 체크
 - `GET /ping`
-- 응답 `data` 예시:
-```json
-{
-  "ok": true
-}
-```
+  ```json
+  { "ok": true }
+  ```
