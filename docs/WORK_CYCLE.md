@@ -44,6 +44,9 @@
 
 8. 리뷰 반영
 - 리뷰 코멘트를 반영하고 재검증 후 푸시한다.
+- 각 리뷰 코멘트 thread에 처리 결과를 반드시 답글로 남긴다. (무엇을 변경했는지, 어떤 검증을 했는지)
+- 코드 변경이 없는 코멘트도 답글로 사유를 남긴다. (질문 응답, 이미 반영됨, 보류/비적용 근거)
+- 답글 작성 후 PR 코멘트 목록에서 누락 thread가 없는지 확인한다.
 
 9. 머지 및 후속 정리
 - PR 머지 후 `develop` 동기화.
@@ -1087,4 +1090,25 @@
 - `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex`
 - `rg -n "staging-ops-cycle|session expired|22119056042|mobile-store-release|key.properties.example" scripts docs README.md CLAUDE.md apps/mobile`
 - `rg -n "^(<<<<<<<|>>>>>>>|=======)$" .github/workflows/mobile-store-release.yml apps/mobile/android/app/build.gradle.kts scripts/staging-preflight.ps1 scripts/staging-latest-status.ps1 scripts/staging-ops-cycle.ps1 docs/staging-smoke-checklist.md docs/staging-feedback-checklist.md docs/runbook.md docs/staging-smoke-log.md docs/mobile/README.md apps/mobile/README.md docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md CLAUDE.md docs/WORK_CYCLE.md README.md infra/aws/README.md`
+
+## 38. 이번 사이클 기록 (2026-02-20, review comment thread response policy sync)
+
+### 목표
+- 리뷰 코멘트 반영 내역을 thread 단위로 기록하는 규칙을 작업 사이클 기준에 고정한다.
+
+### 범위
+- 포함: `docs/WORK_CYCLE.md`, `CLAUDE.md` 작업 사이클 규칙 갱신
+- 제외: 애플리케이션 코드/인프라 동작 변경
+
+### 수행 작업
+1. 리뷰 답글 기록 규칙 명문화
+- `docs/WORK_CYCLE.md`의 "8. 리뷰 반영"에 thread별 답글 의무 추가
+- `CLAUDE.md`의 작업 주의사항/사이클 단계에 동일 규칙 반영
+
+2. 원격 동기화 준비
+- 문서 변경 커밋 및 원격 브랜치 푸시
+
+### 검증
+- `rg -n "thread|답글|리뷰 코멘트" docs/WORK_CYCLE.md CLAUDE.md`
+- `rg -n "^(<<<<<<<|>>>>>>>|=======)$" docs/WORK_CYCLE.md CLAUDE.md`
 
