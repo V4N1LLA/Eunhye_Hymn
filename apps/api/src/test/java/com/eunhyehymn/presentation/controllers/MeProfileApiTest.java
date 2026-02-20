@@ -1,5 +1,7 @@
 package com.eunhyehymn.presentation.controllers;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -12,6 +14,7 @@ import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnNoteJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.InviteCodeJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.RefreshTokenEntity;
 import com.eunhyehymn.infrastructure.persistence.RefreshTokenJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserEntity;
 import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
@@ -112,5 +115,34 @@ class MeProfileApiTest {
             .andExpect(jsonPath("$.data.churchName").value("은혜교회"))
             .andExpect(jsonPath("$.data.name").value("홍길동"))
             .andExpect(jsonPath("$.data.group").value("청년A"));
+    }
+
+    @Test
+    void withdrawDisablesAccountAndRevokesRefreshTokens() throws Exception {
+        UUID refreshTokenId = UUID.randomUUID();
+        refreshTokenJpaRepository.save(new RefreshTokenEntity(
+            refreshTokenId,
+            userId,
+            "hash-1",
+            Instant.now().plusSeconds(3600),
+            null,
+            Instant.now()
+        ));
+
+        mockMvc.perform(delete("/me/account")
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        UserEntity withdrawn = userJpaRepository.findById(userId).orElseThrow();
+        assertThat(withdrawn.getStatus()).isEqualTo(UserStatus.DISABLED);
+
+        RefreshTokenEntity token = refreshTokenJpaRepository.findById(refreshTokenId).orElseThrow();
+        assertThat(token.getRevokedAt()).isNotNull();
+
+        mockMvc.perform(get("/me/profile")
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value("unauthorized"));
     }
 }
