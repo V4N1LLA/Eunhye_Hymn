@@ -19,6 +19,7 @@
   - 로컬 악보 파일 디코딩 실패 시 원본 URL로 자동 fallback
   - MIDI 에셋 앱 내 재생 UX (재생/일시정지/정지/속도)
 - 개인화
+  - 내 정보(교회/이름/구역) 조회/수정
   - 즐겨찾기 토글
   - 메모 조회/저장
   - 최근 열람 히스토리 조회 (검색 + 기간 필터 + 빈 상태 가이드)
@@ -54,6 +55,7 @@
   - `POST /auth/refresh`
   - `POST /auth/logout`
   - `GET /me/profile`
+  - `PUT /me/profile`
   - `GET /me/favorites/{hymnId}`
   - `GET /hymns`
   - `GET /hymns/{id}`

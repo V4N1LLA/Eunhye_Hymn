@@ -32,6 +32,11 @@ security:
     secret: ${JWT_SECRET}
     access-token-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS}
     refresh-token-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS}
+  rate-limit:
+    auth:
+      enabled: ${AUTH_RATE_LIMIT_ENABLED:true}
+      window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+      max-attempts-per-key: ${AUTH_RATE_LIMIT_MAX_ATTEMPTS_PER_KEY:25}
   invite:
     code: ${INVITE_CODE}
   admin:

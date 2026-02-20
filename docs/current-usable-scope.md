@@ -82,7 +82,7 @@ AWS 스테이징 인프라 및 CI/CD 자동 배포는 코드 기준으로 구성
 
 - `develop` push 트리거
 - API 테스트 + Admin 타입체크/빌드 + Mobile analyze/test
-- Mobile release APK 빌드 검증(`mobile-release-check.yml`)
+- Mobile release APK 빌드 검증(`mobile-release-check.yml`, `apps/mobile/**` 변경 시 조건부 실행)
 - Mobile store release readiness 수동 검증(`mobile-store-release.yml`)
 - API/Admin Docker 이미지 ECR push
 - EC2 SSH 배포 및 헬스체크

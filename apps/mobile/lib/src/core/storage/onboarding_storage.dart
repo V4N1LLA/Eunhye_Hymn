@@ -60,4 +60,11 @@ class OnboardingStorage {
     final profile = await getProfile(userId);
     return profile != null;
   }
+
+  Future<void> clearProfile(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_churchKey(userId));
+    await prefs.remove(_nameKey(userId));
+    await prefs.remove(_groupKey(userId));
+  }
 }

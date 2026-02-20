@@ -7,11 +7,30 @@ enum UserRole { user, admin }
 class SessionProfile {
   final String userId;
   final UserRole role;
+  final String? displayName;
+  final String? churchName;
+  final String? name;
+  final String? group;
+  final bool profileCompleted;
 
   const SessionProfile({
     required this.userId,
     required this.role,
+    required this.displayName,
+    required this.churchName,
+    required this.name,
+    required this.group,
+    required this.profileCompleted,
   });
+
+  bool get isProfileCompleted {
+    if (profileCompleted) {
+      return true;
+    }
+    return (churchName?.trim().isNotEmpty ?? false) &&
+        (name?.trim().isNotEmpty ?? false) &&
+        (group?.trim().isNotEmpty ?? false);
+  }
 }
 
 class AuthRepository {
@@ -146,6 +165,27 @@ class AuthRepository {
     return tokenStorage.clear();
   }
 
+  Future<SessionProfile> updateProfile({
+    required String churchName,
+    required String name,
+    required String group,
+  }) async {
+    final raw = await apiClient.put(
+      '/me/profile',
+      body: {
+        'churchName': churchName.trim(),
+        'name': name.trim(),
+        'group': group.trim(),
+      },
+    );
+
+    if (raw is! Map<String, dynamic>) {
+      throw ApiException('Profile response is invalid.');
+    }
+
+    return _toSessionProfile(raw);
+  }
+
   Future<SessionProfile> _loginWithPasswordEndpoint(
     String path, {
     required Map<String, Object?> body,
@@ -181,7 +221,15 @@ class AuthRepository {
     }
 
     final role = roleText == 'ADMIN' ? UserRole.admin : UserRole.user;
-    return SessionProfile(userId: userId, role: role);
+    return SessionProfile(
+      userId: userId,
+      role: role,
+      displayName: _toNullableText(raw['displayName']),
+      churchName: _toNullableText(raw['churchName']),
+      name: _toNullableText(raw['name']),
+      group: _toNullableText(raw['group']),
+      profileCompleted: raw['profileCompleted'] == true,
+    );
   }
 
   bool _isUnauthorized(ApiException exception) {
@@ -203,5 +251,13 @@ class AuthRepository {
     }
 
     return (accessToken, refreshToken);
+  }
+
+  String? _toNullableText(Object? value) {
+    final text = value?.toString();
+    if (text == null || text.trim().isEmpty) {
+      return null;
+    }
+    return text.trim();
   }
 }

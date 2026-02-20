@@ -47,7 +47,8 @@ jobs:
         run: flutter pub get
 
       - name: Build Android release APK
-        run: flutter build apk --release --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+        run: |
+          flutter build apk --release --dart-define=API_BASE_URL="${API_BASE_URL}"
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
