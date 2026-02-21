@@ -65,10 +65,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _handleWithdrawRequested() async {
-    await widget.authRepository.withdraw();
-  }
-
   Future<void> _openEmailLoginPage() async {
     if (_loading) {
       return;
@@ -133,7 +129,6 @@ class _LoginPageState extends State<LoginPage> {
                   inviteCode: inviteCode,
                 );
               },
-              onWithdraw: _handleWithdrawRequested,
             ),
           ),
         );

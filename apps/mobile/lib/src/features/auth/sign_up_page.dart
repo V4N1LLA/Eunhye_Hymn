@@ -77,7 +77,6 @@ class _SignUpPageState extends State<SignUpPage> {
                 inviteCode: inviteCode,
               );
             },
-            onWithdraw: () => widget.authRepository.withdraw(),
           ),
         ),
       );
