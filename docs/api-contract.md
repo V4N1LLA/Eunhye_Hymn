@@ -49,7 +49,7 @@ Base URL: `/api/v1`
 - `POST /auth/signup`
   ```json
   {
-    "loginId": "member.one",
+    "loginId": "qa.user@example.com",
     "password": "password-123!",
     "inviteCode": "ABC123"
   }
@@ -57,10 +57,11 @@ Base URL: `/api/v1`
 - `POST /auth/login`
   ```json
   {
-    "loginId": "member.one",
+    "loginId": "qa.user@example.com",
     "password": "password-123!"
   }
   ```
+- `loginId`는 영문/숫자/`._-` 조합 또는 이메일 형식(3~100자)을 지원
 - 공통 응답:
   ```json
   {
@@ -132,6 +133,7 @@ Base URL: `/api/v1`
 
 ### 1.7 회원 탈퇴
 - `POST /auth/withdraw` (인증 필요)
+- `DELETE /me/account` (인증 필요, `POST /auth/withdraw`와 동일 처리)
 - 요청 본문 없음
 - 응답 `data`: `null`
 

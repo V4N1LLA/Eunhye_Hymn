@@ -157,6 +157,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
               '입력한 정보는 관리자 승인 및 안내 표시에 사용됩니다.',
               style: TextStyle(color: Color(0xFF6B7280)),
             ),
+            const SizedBox(height: 4),
+            const Text(
+              '회원/교회 정보는 첫 사용 시 1회만 입력합니다.',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+            ),
             const SizedBox(height: 18),
             TextField(
               controller: _churchController,

@@ -119,12 +119,12 @@ public class AuthController {
         } catch (SocialLoginException e) {
             authRateLimitService.recordOutcome("social_login", false);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "social_auth_failed", e.getMessage(), null);
-        } catch (SocialLoginUseCase.AdminOnlyException e) {
-            authRateLimitService.recordOutcome("social_login", false);
-            throw new ApiException(HttpStatus.FORBIDDEN, "admin_only", e.getMessage(), null);
         } catch (SocialLoginUseCase.AccountDisabledException e) {
             authRateLimitService.recordOutcome("social_login", false);
             throw new ApiException(HttpStatus.FORBIDDEN, "account_disabled", e.getMessage(), null);
+        } catch (SocialLoginUseCase.AdminOnlyException e) {
+            authRateLimitService.recordOutcome("social_login", false);
+            throw new ApiException(HttpStatus.FORBIDDEN, "admin_only", e.getMessage(), null);
         }
     }
 

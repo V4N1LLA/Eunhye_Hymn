@@ -9,6 +9,7 @@ import com.eunhyehymn.application.usecases.RequestMyProfileChangeUseCase;
 import com.eunhyehymn.application.usecases.SaveHymnNoteUseCase;
 import com.eunhyehymn.application.usecases.ToggleFavoriteUseCase;
 import com.eunhyehymn.application.usecases.UpsertMyProfileUseCase;
+import com.eunhyehymn.application.usecases.WithdrawAccountUseCase;
 import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.common.response.ApiResponse;
 import com.eunhyehymn.domain.model.ProfileChangeRequest;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,6 +42,7 @@ public class MeController {
     private final UpsertMyProfileUseCase upsertMyProfileUseCase;
     private final RequestMyProfileChangeUseCase requestMyProfileChangeUseCase;
     private final GetLatestMyProfileChangeRequestUseCase getLatestMyProfileChangeRequestUseCase;
+    private final WithdrawAccountUseCase withdrawAccountUseCase;
     private final UserVerificationRepository userVerificationRepository;
 
     public MeController(
@@ -52,6 +55,7 @@ public class MeController {
         UpsertMyProfileUseCase upsertMyProfileUseCase,
         RequestMyProfileChangeUseCase requestMyProfileChangeUseCase,
         GetLatestMyProfileChangeRequestUseCase getLatestMyProfileChangeRequestUseCase,
+        WithdrawAccountUseCase withdrawAccountUseCase,
         UserVerificationRepository userVerificationRepository
     ) {
         this.toggleFavoriteUseCase = toggleFavoriteUseCase;
@@ -63,6 +67,7 @@ public class MeController {
         this.upsertMyProfileUseCase = upsertMyProfileUseCase;
         this.requestMyProfileChangeUseCase = requestMyProfileChangeUseCase;
         this.getLatestMyProfileChangeRequestUseCase = getLatestMyProfileChangeRequestUseCase;
+        this.withdrawAccountUseCase = withdrawAccountUseCase;
         this.userVerificationRepository = userVerificationRepository;
     }
 
@@ -120,6 +125,13 @@ public class MeController {
         UUID userId = parseUserId(authentication);
         boolean favorite = toggleFavoriteUseCase.toggle(userId, hymnId).favorite();
         return ApiResponse.success(new FavoriteResponse(favorite));
+    }
+
+    @DeleteMapping("/account")
+    public ApiResponse<Void> withdraw(Authentication authentication) {
+        UUID userId = parseUserId(authentication);
+        withdrawAccountUseCase.withdraw(userId);
+        return ApiResponse.success(null);
     }
 
     @GetMapping("/favorites/{hymnId}")

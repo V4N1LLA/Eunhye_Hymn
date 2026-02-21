@@ -4,6 +4,23 @@
 
 ## 2026-02-20
 
+### Auth invite-gated login sync + `/me/account` withdraw endpoint
+- API/Auth
+  - `UserPasswordSignupUseCase` 로그인 ID 검증에 이메일 형식(3~100자) 허용
+  - `MeController`에 `DELETE /me/account` 추가 (기존 `POST /auth/withdraw`와 동일 탈퇴 처리)
+  - `AuthController` social login 예외 매핑 정리 (`account_disabled` 유지)
+- Mobile auth UX
+  - 로그인 화면에서 이메일/카카오 진입 분리 (`login_page.dart` + `email_login_page.dart`)
+  - 이메일 회원가입 시 초대코드 확인을 별도 단계(`invite_gate_page.dart`)로 분리
+  - 온보딩 화면에 "회원/교회 정보 1회 입력" 안내 문구 추가
+  - `AuthRepository.withdraw()`가 `/me/account` 호출 후 로컬 토큰 정리
+- 스크립트
+  - `scripts/run-mobile-emulator.ps1`가 `scripts/flutterw.ps1` 래퍼 경유로 실행되도록 변경
+- 검증
+  - `./gradlew.bat test --no-daemon --tests "com.eunhyehymn.presentation.controllers.UserPasswordAuthApiTest" --tests "com.eunhyehymn.presentation.controllers.MeProfileApiTest"`
+  - `..\..\scripts\flutterw.ps1 analyze`
+  - `..\..\scripts\flutterw.ps1 test`
+
 ### Documentation full sync (env/API/data-model)
 - 문서 기준선 재정렬
   - `README.md`, `docs/current-usable-scope.md`, `current_update.md`
