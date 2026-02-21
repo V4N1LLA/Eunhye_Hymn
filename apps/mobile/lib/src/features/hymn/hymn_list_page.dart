@@ -24,6 +24,7 @@ class _HymnListPageState extends State<HymnListPage> {
   bool _loading = true;
   String? _error;
   List<HymnSummary> _items = const [];
+  List<HistoryItem> _recentItems = const [];
   String _query = '';
   String? _selectedTag;
 
@@ -61,12 +62,18 @@ class _HymnListPageState extends State<HymnListPage> {
     }
 
     try {
-      final items = await widget.hymnRepository.listHymns();
+      final itemsFuture = widget.hymnRepository.listHymns();
+      final recentItemsFuture =
+          widget.hymnRepository.getHistory().catchError((_) => <HistoryItem>[]);
+
+      final items = await itemsFuture;
+      final recentItems = await recentItemsFuture;
       if (!mounted) {
         return;
       }
       setState(() {
         _items = items;
+        _recentItems = _buildRecentItems(recentItems);
       });
     } catch (e) {
       if (!mounted) {
@@ -137,6 +144,13 @@ class _HymnListPageState extends State<HymnListPage> {
                       ),
                     ),
                   ),
+                  if (_recentItems.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    _RecentQuickAccess(
+                      items: _recentItems,
+                      onOpenHymnDetail: widget.onOpenHymnDetail,
+                    ),
+                  ],
                   if (tags.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     SingleChildScrollView(
@@ -271,6 +285,94 @@ class _HymnListPageState extends State<HymnListPage> {
       });
 
     return entries.take(8).map((entry) => entry.key).toList();
+  }
+
+  List<HistoryItem> _buildRecentItems(List<HistoryItem> items) {
+    final sorted = [...items]..sort((a, b) {
+        final left = _tryParseDate(a.lastOpenedAt);
+        final right = _tryParseDate(b.lastOpenedAt);
+        if (left == null && right == null) {
+          return 0;
+        }
+        if (left == null) {
+          return 1;
+        }
+        if (right == null) {
+          return -1;
+        }
+        return right.compareTo(left);
+      });
+
+    final unique = <String, HistoryItem>{};
+    for (final item in sorted) {
+      unique.putIfAbsent(item.id, () => item);
+      if (unique.length >= 5) {
+        break;
+      }
+    }
+    return unique.values.toList();
+  }
+}
+
+class _RecentQuickAccess extends StatelessWidget {
+  final List<HistoryItem> items;
+  final void Function(String hymnId) onOpenHymnDetail;
+
+  const _RecentQuickAccess({
+    required this.items,
+    required this.onOpenHymnDetail,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '최근 본 찬양 빠른 이동',
+          style: TextStyle(
+            color: Color(0xFF4B5563),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final item in items)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    avatar: const Icon(
+                      Icons.history_rounded,
+                      size: 16,
+                      color: Color(0xFF6B7280),
+                    ),
+                    onPressed: () => onOpenHymnDetail(item.id),
+                    label: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 180),
+                      child: Text(
+                        _quickAccessLabel(item),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _quickAccessLabel(HistoryItem item) {
+    final number = item.number?.trim();
+    if (number == null || number.isEmpty) {
+      return item.title;
+    }
+    return '$number - ${item.title}';
   }
 }
 
@@ -558,4 +660,11 @@ List<String> _splitTags(String? raw) {
       .map((tag) => tag.trim())
       .where((tag) => tag.isNotEmpty)
       .toList();
+}
+
+DateTime? _tryParseDate(String? raw) {
+  if (raw == null || raw.trim().isEmpty) {
+    return null;
+  }
+  return DateTime.tryParse(raw.trim());
 }

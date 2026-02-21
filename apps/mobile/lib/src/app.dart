@@ -462,6 +462,27 @@ class _HomeShellState extends State<_HomeShell> {
       return;
     }
 
+    if (_index != 0) {
+      setState(() {
+        _index = 0;
+        _lastBackPressedAt = DateTime.now();
+      });
+      if (!mounted) {
+        return;
+      }
+
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('찬양 화면으로 이동했습니다. 뒤로 버튼을 한 번 더 누르면 앱이 종료됩니다.'),
+          duration: _exitSnackBarDuration,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final now = DateTime.now();
     if (_lastBackPressedAt != null &&
         now.difference(_lastBackPressedAt!) <= _exitSnackBarDuration) {
@@ -478,7 +499,7 @@ class _HomeShellState extends State<_HomeShell> {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       const SnackBar(
-        content: Text('뒤로 버튼을 한번 더 누르시면 종료됩니다.'),
+        content: Text('뒤로 버튼을 한 번 더 누르면 앱이 종료됩니다.'),
         duration: _exitSnackBarDuration,
         behavior: SnackBarBehavior.floating,
       ),
