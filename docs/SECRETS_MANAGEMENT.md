@@ -44,6 +44,10 @@
   - DB credentials
   - cloud access keys
   - mobile signing credentials
+- Run monthly audit (recommended):
+  - `.\scripts\staging-secret-rotation-audit.ps1 -Repo V4N1LLA/Eunhye_Hymn -MaxAgeDays 90 -IncludeMobileReleaseSecrets`
+  - `STALE` means the secret age exceeded threshold and should be rotated.
+  - `MISSING` means workflow-required secret setup is incomplete.
 - Leak response steps:
   1. Revoke/rotate leaked secret.
   2. Audit access logs and token usage.
