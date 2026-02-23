@@ -32,6 +32,22 @@
   - `infra/aws/README.md`
   - `docs/current-usable-scope.md`
 
+### Ops health cycle + exception-aware monitoring hardening
+- 스크립트 추가
+  - `scripts/ops-health-cycle.ps1`
+  - staging 게이트(`staging-ops-cycle`) + 시크릿 점검(`secrets-rotation-cycle`)을 통합 실행
+  - 실패 원인 분류(`FailureCategory`) 및 통합 판정(`PASS/HOLD/ERROR`) 로그 자동 누적
+- 운영 로그 문서 추가
+  - `docs/ops-health-log.md`
+- 예외/디버깅 하드닝
+  - `scripts/staging-ops-cycle.ps1`: `-AsJson` 추가, status 조회 실패/JSON 파싱 실패 시 구조화 에러 출력 지원
+  - `scripts/secrets-rotation-cycle.ps1`: `-AsJson` 추가, 집계 결과/세부 목록 JSON 출력 지원
+- 운영 문서 동기화
+  - `docs/runbook.md`
+  - `docs/SECRETS_MANAGEMENT.md`
+  - `infra/aws/README.md`
+  - `docs/current-usable-scope.md`
+
 ## 2026-02-22
 
 ### Staging secret rotation audit automation

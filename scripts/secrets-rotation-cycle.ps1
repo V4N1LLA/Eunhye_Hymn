@@ -3,7 +3,8 @@ param(
   [int]$MaxAgeDays = 90,
   [switch]$IncludeMobileReleaseSecrets,
   [string]$Owner = "codex",
-  [string]$LogFile = "docs/secrets-rotation-log.md"
+  [string]$LogFile = "docs/secrets-rotation-log.md",
+  [switch]$AsJson
 )
 
 $ErrorActionPreference = "Stop"
@@ -143,13 +144,37 @@ Append-LogRow -Path $LogFile -Row @{
   Notes = ($notes -join "; ")
 }
 
-Write-Host "== Secrets Rotation Cycle =="
-Write-Host ("Repo: {0}" -f $Repo)
-Write-Host ("Scope: {0}" -f $scope)
-Write-Host ("MaxAgeDays: {0}" -f $MaxAgeDays)
-Write-Host ("Summary: OK={0}, STALE={1}, MISSING={2}, UNKNOWN={3}" -f $okRows.Count, $staleRows.Count, $missingRows.Count, $unknownRows.Count)
-Write-Host ("Decision: {0}" -f $decision)
-Write-Host ("Log: {0}" -f $LogFile)
+$resultPayload = [PSCustomObject]@{
+  UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+  Repo = $Repo
+  Scope = $scope
+  MaxAgeDays = $MaxAgeDays
+  OkCount = $okRows.Count
+  StaleCount = $staleRows.Count
+  MissingCount = $missingRows.Count
+  UnknownCount = $unknownRows.Count
+  Decision = $decision
+  Owner = $Owner
+  Notes = ($notes -join "; ")
+  LogFile = $LogFile
+  Details = [PSCustomObject]@{
+    Stale = @($staleRows | Select-Object Scope, Secret, UpdatedAt, AgeDays, Status, Detail)
+    Missing = @($missingRows | Select-Object Scope, Secret, UpdatedAt, AgeDays, Status, Detail)
+    Unknown = @($unknownRows | Select-Object Scope, Secret, UpdatedAt, AgeDays, Status, Detail)
+  }
+}
+
+if ($AsJson) {
+  $resultPayload | ConvertTo-Json -Depth 8
+} else {
+  Write-Host "== Secrets Rotation Cycle =="
+  Write-Host ("Repo: {0}" -f $Repo)
+  Write-Host ("Scope: {0}" -f $scope)
+  Write-Host ("MaxAgeDays: {0}" -f $MaxAgeDays)
+  Write-Host ("Summary: OK={0}, STALE={1}, MISSING={2}, UNKNOWN={3}" -f $okRows.Count, $staleRows.Count, $missingRows.Count, $unknownRows.Count)
+  Write-Host ("Decision: {0}" -f $decision)
+  Write-Host ("Log: {0}" -f $LogFile)
+}
 
 if ($decision -eq "PASS") {
   exit 0

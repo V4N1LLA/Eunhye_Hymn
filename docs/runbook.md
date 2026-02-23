@@ -14,6 +14,7 @@
 - `docs/staging-smoke-checklist.md`
 - `docs/staging-rehearsal-log.md`
 - `docs/staging-smoke-log.md`
+- `docs/ops-health-log.md`
 - `docs/deployment-readiness-audit.md`
 - `docs/staging-admin-login.md`
 - `infra/aws/README.md`
@@ -36,6 +37,9 @@
   - preflight + 최신 배포 게이트 + 수동 스모크 최신성(기본 7일) 게이트 + `docs/staging-smoke-log.md` 기록을 일괄 수행
   - 수동 스모크 완료 후 결과 기록:
     - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> -SkipPreflight -ManualSmokeResult PASS -ManualSmokeEvidence <증빙URL> [-ManualSmokeNotes "<요약>"]`
+- [ ] 통합 운영 헬스 사이클 실행(권장)
+  - `.\scripts\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> [-AutoLogin] [-WaitForCompletion]`
+  - staging 게이트 + 시크릿 로테이션 점검을 함께 실행하고 `docs/ops-health-log.md`에 결과를 누적
 - [ ] GitHub Actions 필수 Secrets 등록 확인
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
 - [ ] GitHub Actions 배포 워크플로 최신 성공 이력 확인
@@ -98,6 +102,9 @@
 ## 9. 정기 점검 (권장)
 - 주 1회 스테이징 배포 리허설 + 스모크 체크리스트 1회 수행
 - 주 1회 `staging-ops-cycle.ps1 -WaitForCompletion -AutoLogin` 실행 결과를 기준으로 Go/Hold 근거를 `docs/staging-smoke-log.md`에 누적
+- 주 1회 통합 운영 헬스 점검
+  - `.\scripts\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> -AutoLogin -WaitForCompletion`
+  - 결과는 `docs/ops-health-log.md`에 자동 누적되고, 실패 원인은 `FailureCategory`로 분류됨
 - 월 1회 시크릿 교체 상태 점검
   - `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <담당자> -MaxAgeDays 90`
   - 모바일 릴리즈 시크릿 포함 점검: `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <담당자> -MaxAgeDays 90 -IncludeMobileReleaseSecrets`

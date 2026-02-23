@@ -1354,3 +1354,41 @@
 - `powershell -NoProfile -File .\\scripts\\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner codex -MaxAgeDays 90 -IncludeMobileReleaseSecrets -LogFile .tmp\\secrets-rotation-cycle\\with-mobile.md` (현재 기준 expected fail)
 - `rg -n "secrets-rotation-cycle|secrets-rotation-log|Decision=HOLD|IncludeMobileReleaseSecrets" scripts/secrets-rotation-cycle.ps1 docs/SECRETS_MANAGEMENT.md docs/runbook.md infra/aws/README.md docs/changelog-dev.md docs/WORK_CYCLE.md docs/current-usable-scope.md`
 
+## 46. 이번 사이클 기록 (2026-02-23, ops health cycle + exception-aware monitoring)
+
+### 목표
+- 운영자가 배포 게이트/시크릿 점검/예외 원인을 한 번에 확인하고, 디버깅 가능한 구조화 출력까지 확보한다.
+
+### 범위
+- 포함: 통합 운영 헬스 사이클 스크립트 추가, JSON 출력 모드 확장, 운영 로그/문서 동기화
+- 제외: AWS 리소스 변경, 실제 시크릿 값 교체
+
+### 수행 작업
+1. 통합 운영 헬스 스크립트 추가
+- `scripts/ops-health-cycle.ps1`
+- `staging-ops-cycle.ps1` + `secrets-rotation-cycle.ps1`를 순차 실행
+- 단계별 결과를 `PASS/HOLD/ERROR`로 정규화하고 `FailureCategory` 분류
+- `docs/ops-health-log.md`에 통합 상태/증빙/노트 누적 기록
+
+2. 예외/디버깅 하드닝
+- `scripts/staging-ops-cycle.ps1`
+  - `-AsJson` 지원
+  - status 조회 실패/JSON 파싱 실패 시 구조화된 에러 payload 출력
+- `scripts/secrets-rotation-cycle.ps1`
+  - `-AsJson` 지원
+  - 집계 결과 + 상세(stale/missing/unknown) 목록 구조화 출력
+
+3. 운영 문서 동기화
+- `docs/ops-health-log.md` 신규 생성
+- `docs/runbook.md`: 통합 운영 헬스 사이클 명령/로그 반영
+- `docs/SECRETS_MANAGEMENT.md`: 통합 모니터링 경로 반영
+- `infra/aws/README.md`: 운영 명령/실패 원인 분류 로그 반영
+- `docs/current-usable-scope.md`, `docs/changelog-dev.md` 갱신
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -SkipManualSmokeRecencyGate -MaxAgeMinutes 10000 -LogFile .tmp\\ops-health-cycle\\staging-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner codex -MaxAgeDays 90 -LogFile .tmp\\ops-health-cycle\\secrets-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -SkipManualSmokeRecencyGate -StagingMaxAgeMinutes 10000 -SecretsMaxAgeDays 90 -OpsHealthLogFile .tmp\\ops-health-cycle\\ops-health-log.md -StagingLogFile .tmp\\ops-health-cycle\\staging-log.md -SecretsLogFile .tmp\\ops-health-cycle\\secrets-log.md`
+- `powershell -NoProfile -File .\\scripts\\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -SkipManualSmokeRecencyGate -StagingMaxAgeMinutes 10000 -SecretsMaxAgeDays 90 -IncludeMobileReleaseSecrets -OpsHealthLogFile .tmp\\ops-health-cycle\\ops-health-log.md -StagingLogFile .tmp\\ops-health-cycle\\staging-log.md -SecretsLogFile .tmp\\ops-health-cycle\\secrets-log.md` (현재 기준 expected fail; secret missing)
+- `rg -n "ops-health-cycle|AsJson|FailureCategory|ops-health-log" scripts docs infra/aws/README.md`
+
