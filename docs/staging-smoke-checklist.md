@@ -11,8 +11,9 @@
   - `.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120`
   - 기록용 표가 필요하면 `-AsMarkdown` 옵션 사용
 - [ ] 운영 사이클 자동 점검 실행 (권장)
-  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자> [-AutoLogin] [-WaitForCompletion]`
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자> [-AutoLogin] [-WaitForCompletion] [-ManualSmokeMaxAgeDays 7]`
   - 결과는 `docs/staging-smoke-log.md`에 자동 기록
+  - `Manual Smoke=OVERDUE`이면 수동 스모크 최신성 게이트 실패 상태이므로 스모크 실행 후 결과를 기록해야 한다
 - [ ] 점검 대상 커밋 SHA/배포 시각/담당자 확정
 - [ ] 자동 리허설 로그(`docs/staging-rehearsal-log.md`) 최신 행 확인
 - [ ] 관리자 계정 및 모바일 테스트 계정 준비
@@ -85,6 +86,19 @@
 | Mobile 로그인/핵심 기능 |  |  |  |  |
 | 오프라인 동기화 |  |  |  |  |
 | 최종 판정(Go/No-Go) |  |  |  |  |
+
+수동 스모크를 완료하면 아래 명령으로 로그를 자동 누적한다.
+
+```powershell
+.\scripts\staging-ops-cycle.ps1 `
+  -Repo V4N1LLA/Eunhye_Hymn `
+  -Branch develop `
+  -Owner <담당자> `
+  -SkipPreflight `
+  -ManualSmokeResult PASS `
+  -ManualSmokeEvidence <증빙URL> `
+  [-ManualSmokeNotes "<요약>"]
+```
 
 ## 6. 실행 기록 (2026-02-14)
 

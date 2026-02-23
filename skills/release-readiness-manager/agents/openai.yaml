@@ -1,0 +1,7 @@
+interface:
+  display_name: "Release Readiness Manager"
+  short_description: "Validate SemVer release gates before tagging."
+  default_prompt: "Use $release-readiness-manager to run release preflight for this version."
+
+policy:
+  allow_implicit_invocation: true

@@ -2,6 +2,23 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-23
+
+### Staging manual smoke recency gate + log automation
+- 스크립트 개선
+  - `scripts/staging-ops-cycle.ps1`
+  - 수동 스모크 최신성 게이트 추가 (`-ManualSmokeMaxAgeDays`, 기본 7일)
+  - 최신 수동 스모크(PASS/FAIL) 기록이 없거나 오래된 경우 `Manual Smoke=OVERDUE` + `HOLD` 판정
+  - 수동 스모크 결과 자동 기록 파라미터 추가:
+    - `-ManualSmokeResult PASS|FAIL`
+    - `-ManualSmokeEvidence <URL>`
+    - `-ManualSmokeNotes "<요약>"`
+- 운영 문서 동기화
+  - `docs/runbook.md`
+  - `docs/staging-smoke-checklist.md`
+  - `infra/aws/README.md`
+  - `docs/current-usable-scope.md`
+
 ## 2026-02-22
 
 ### Staging secret rotation audit automation

@@ -1292,3 +1292,37 @@
 - `powershell -NoProfile -File .\\scripts\\staging-secret-rotation-audit.ps1 -Repo V4N1LLA/Eunhye_Hymn -MaxAgeDays 90 -IncludeMobileReleaseSecrets`
 - `rg -n "staging-secret-rotation-audit|STALE|MISSING" docs/runbook.md docs/SECRETS_MANAGEMENT.md infra/aws/README.md docs/changelog-dev.md docs/WORK_CYCLE.md`
 
+## 44. 이번 사이클 기록 (2026-02-23, manual smoke recency gate + auto recording)
+
+### 목표
+- 스테이징 운영 사이클에서 수동 스모크 기록 누락/지연을 자동 감지하고, 결과 기록을 스크립트로 표준화한다.
+
+### 범위
+- 포함: `staging-ops-cycle.ps1` 게이트/기록 파라미터 확장, 운영 문서 동기화
+- 제외: AWS 인프라 변경, 실제 스테이징 배포/수동 스모크 실행
+
+### 수행 작업
+1. 운영 사이클 스크립트 확장
+- `scripts/staging-ops-cycle.ps1`
+- 추가 옵션:
+  - `-ManualSmokeMaxAgeDays` (기본 7)
+  - `-ManualSmokeResult PASS|FAIL`
+  - `-ManualSmokeEvidence`
+  - `-ManualSmokeNotes`
+  - `-SkipManualSmokeRecencyGate`
+- 최신 수동 스모크 기록(`docs/staging-smoke-log.md`의 PASS/FAIL) 파싱 후 최신성 게이트 적용
+- 기록 누락/지연 시 `Manual Smoke=OVERDUE`, `Decision=HOLD`
+
+2. 운영 문서 동기화
+- `docs/runbook.md`: 운영 체크리스트/수동 결과 기록 명령 반영
+- `docs/staging-smoke-checklist.md`: `OVERDUE` 해석 및 자동 기록 명령 반영
+- `infra/aws/README.md`: 운영 명령/옵션/자동 기록 절차 반영
+- `docs/current-usable-scope.md`: 우선 과제 문구 갱신
+- `docs/changelog-dev.md`: 변경 이력 반영
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -SkipManualSmokeRecencyGate`
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight` (기존 로그 기준 수동 스모크 recency 게이트 동작 확인)
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -ManualSmokeResult PASS -ManualSmokeEvidence https://example.com/smoke`
+- `rg -n "ManualSmokeMaxAgeDays|ManualSmokeResult|OVERDUE|SkipManualSmokeRecencyGate" scripts/staging-ops-cycle.ps1 docs/runbook.md docs/staging-smoke-checklist.md infra/aws/README.md`
+

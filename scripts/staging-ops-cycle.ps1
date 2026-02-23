@@ -8,7 +8,13 @@ param(
   [string]$LogFile = "docs/staging-smoke-log.md",
   [switch]$SkipPreflight,
   [switch]$SkipTerraformPlan,
-  [switch]$WaitForCompletion
+  [switch]$WaitForCompletion,
+  [ValidateSet("", "PASS", "FAIL")]
+  [string]$ManualSmokeResult = "",
+  [string]$ManualSmokeEvidence = "",
+  [string]$ManualSmokeNotes = "",
+  [int]$ManualSmokeMaxAgeDays = 7,
+  [switch]$SkipManualSmokeRecencyGate
 )
 
 $ErrorActionPreference = "Stop"
@@ -82,8 +88,81 @@ function Invoke-PowerShellFile {
   }
 }
 
+function Get-LatestManualSmokeRecord {
+  param(
+    [string]$Path,
+    [string]$Repo,
+    [string]$Branch
+  )
+
+  if (-not (Test-Path $Path)) {
+    return $null
+  }
+
+  $lines = Get-Content -Path $Path -Encoding utf8
+  $latest = $null
+
+  foreach ($line in $lines) {
+    $trimmed = $line.Trim()
+    if (-not $trimmed.StartsWith("|")) {
+      continue
+    }
+    if ($trimmed -match "^\|\s*-+\s*\|") {
+      continue
+    }
+
+    $parts = $line.Split("|")
+    if ($parts.Count -lt 16) {
+      continue
+    }
+
+    $rowUtc = $parts[1].Trim()
+    $rowRepo = $parts[2].Trim()
+    $rowBranch = $parts[3].Trim()
+    $rowManualSmoke = $parts[12].Trim().ToUpperInvariant()
+    if (-not ($rowManualSmoke -eq "PASS" -or $rowManualSmoke -eq "FAIL")) {
+      continue
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Repo) -and $rowRepo -ne $Repo) {
+      continue
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Branch) -and $rowBranch -ne $Branch) {
+      continue
+    }
+
+    [datetime]$rowUtcParsed = [datetime]::MinValue
+    if (-not [datetime]::TryParse($rowUtc, [ref]$rowUtcParsed)) {
+      continue
+    }
+    $rowUtcParsed = $rowUtcParsed.ToUniversalTime()
+
+    if ($null -eq $latest -or $rowUtcParsed -gt $latest.UtcTime) {
+      $latest = [PSCustomObject]@{
+        UtcTime = $rowUtcParsed
+        Repo = $rowRepo
+        Branch = $rowBranch
+        ManualSmoke = $rowManualSmoke
+        Evidence = $parts[13].Trim()
+        Owner = $parts[14].Trim()
+        Notes = $parts[15].Trim()
+      }
+    }
+  }
+
+  return $latest
+}
+
 if ($MaxAgeMinutes -lt 0) {
   throw "MaxAgeMinutes must be >= 0"
+}
+if ($ManualSmokeMaxAgeDays -lt 1) {
+  throw "ManualSmokeMaxAgeDays must be >= 1"
+}
+if ([string]::IsNullOrWhiteSpace($ManualSmokeResult) -and (
+    -not [string]::IsNullOrWhiteSpace($ManualSmokeEvidence) -or
+    -not [string]::IsNullOrWhiteSpace($ManualSmokeNotes)
+  )) {
+  throw "ManualSmokeEvidence/ManualSmokeNotes requires ManualSmokeResult."
 }
 
 $preflightState = "SKIPPED"
@@ -192,14 +271,62 @@ $deployGate = ($summary.DeployJobConclusion -eq "success")
 $verifyGate = ($summary.VerifyStepConclusion -eq "success")
 $ageGate = ($MaxAgeMinutes -eq 0 -or [double]$summary.RunAgeMinutes -le $MaxAgeMinutes)
 $preflightGate = ($preflightState -ne "FAIL")
+$manualSmokeRecencyGate = $true
+$manualSmokeOutcomeGate = $true
+$manualSmokeAgeDaysDisplay = "-"
+$latestManualSmoke = $null
 
-$decision = if ($runGate -and $deployGate -and $verifyGate -and $ageGate -and $preflightGate) {
+if (-not [string]::IsNullOrWhiteSpace($ManualSmokeResult)) {
+  $manualSmokeAgeDaysDisplay = "0"
+  if ($ManualSmokeResult -eq "FAIL") {
+    $manualSmokeOutcomeGate = $false
+    $notes += "manual smoke result=FAIL"
+  }
+} elseif (-not $SkipManualSmokeRecencyGate) {
+  $latestManualSmoke = Get-LatestManualSmokeRecord -Path $LogFile -Repo $Repo -Branch $Branch
+  if ($null -eq $latestManualSmoke) {
+    $manualSmokeRecencyGate = $false
+    $notes += "manual smoke record missing"
+  } else {
+    $manualSmokeAgeDays = ([DateTime]::UtcNow - $latestManualSmoke.UtcTime).TotalDays
+    if ($manualSmokeAgeDays -lt 0) {
+      $manualSmokeAgeDays = 0
+    }
+    $manualSmokeAgeDaysDisplay = [Math]::Round($manualSmokeAgeDays, 2)
+    if ($manualSmokeAgeDays -gt [double]$ManualSmokeMaxAgeDays) {
+      $manualSmokeRecencyGate = $false
+      $notes += "manual smoke stale(ageDays=$manualSmokeAgeDaysDisplay, maxDays=$ManualSmokeMaxAgeDays)"
+    }
+  }
+} else {
+  $notes += "manual smoke recency gate skipped"
+}
+
+$decision = if ($runGate -and $deployGate -and $verifyGate -and $ageGate -and $preflightGate -and $manualSmokeRecencyGate -and $manualSmokeOutcomeGate) {
   "CONDITIONAL_GO"
 } else {
   "HOLD"
 }
 
-$manualSmoke = if ($decision -eq "CONDITIONAL_GO") { "PENDING" } else { "BLOCKED" }
+$manualSmoke = if (-not [string]::IsNullOrWhiteSpace($ManualSmokeResult)) {
+  $ManualSmokeResult
+} elseif (-not $manualSmokeRecencyGate) {
+  "OVERDUE"
+} elseif ($decision -eq "CONDITIONAL_GO") {
+  "PENDING"
+} else {
+  "BLOCKED"
+}
+$evidence = "$($summary.Url)"
+if (-not [string]::IsNullOrWhiteSpace($ManualSmokeEvidence)) {
+  $evidence = "$($summary.Url) ; $ManualSmokeEvidence"
+}
+if (-not [string]::IsNullOrWhiteSpace($ManualSmokeNotes)) {
+  $notes += "manual smoke note: $ManualSmokeNotes"
+}
+if ($manualSmokeRecencyGate -and $null -ne $latestManualSmoke) {
+  $notes += ("latest manual smoke={0} at {1} ageDays={2}" -f $latestManualSmoke.ManualSmoke, $latestManualSmoke.UtcTime.ToString("yyyy-MM-ddTHH:mm:ssZ"), $manualSmokeAgeDaysDisplay)
+}
 
 if (-not $ageGate) {
   $notes += "run too old(age=$($summary.RunAgeMinutes), max=$MaxAgeMinutes)"
@@ -216,6 +343,12 @@ if (-not $verifyGate) {
 if (-not $preflightGate) {
   $notes += "preflight failed"
 }
+if (-not $manualSmokeRecencyGate) {
+  $notes += "manual smoke recency gate failed"
+}
+if (-not $manualSmokeOutcomeGate) {
+  $notes += "manual smoke outcome gate failed"
+}
 
 Append-LogRow -Path $LogFile -Row @{
   UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -230,7 +363,7 @@ Append-LogRow -Path $LogFile -Row @{
   AgeMin = "$($summary.RunAgeMinutes)"
   Decision = $decision
   ManualSmoke = $manualSmoke
-  Evidence = "$($summary.Url)"
+  Evidence = $evidence
   Owner = $Owner
   Notes = ($notes -join "; ")
 }
@@ -241,13 +374,16 @@ Write-Host ("Branch: {0}" -f $Branch)
 Write-Host ("RunId: {0}" -f $summary.RunId)
 Write-Host ("HeadSha: {0}" -f $summary.HeadSha)
 Write-Host ("Preflight: {0}" -f $preflightState)
-Write-Host ("Gate(run/deploy/verify/age): {0}/{1}/{2}/{3}" -f $runGate, $deployGate, $verifyGate, $ageGate)
+Write-Host ("Gate(run/deploy/verify/age/manualRecency/manualOutcome): {0}/{1}/{2}/{3}/{4}/{5}" -f $runGate, $deployGate, $verifyGate, $ageGate, $manualSmokeRecencyGate, $manualSmokeOutcomeGate)
 Write-Host ("Decision: {0}" -f $decision)
+Write-Host ("ManualSmoke: {0}" -f $manualSmoke)
+Write-Host ("ManualSmokeAgeDays: {0}" -f $manualSmokeAgeDaysDisplay)
 Write-Host ("Log: {0}" -f $LogFile)
 Write-Host ""
 Write-Host "Update manual smoke results in:"
 Write-Host "- docs/staging-smoke-checklist.md"
 Write-Host "- docs/staging-feedback-checklist.md"
+Write-Host "- or run staging-ops-cycle with -ManualSmokeResult PASS/FAIL"
 
 if ($decision -eq "CONDITIONAL_GO") {
   exit 0

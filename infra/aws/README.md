@@ -175,10 +175,25 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
   -Branch staging `
   -Owner <operator> `
   [-AutoLogin] `
-  [-WaitForCompletion]
+  [-WaitForCompletion] `
+  [-ManualSmokeMaxAgeDays 7]
 ```
 
 이 스크립트는 preflight와 최신 배포 게이트를 함께 확인하고 `docs/staging-smoke-log.md`에 판정(`CONDITIONAL_GO`/`HOLD`)을 기록한다.
+또한 기본적으로 수동 스모크 최신성(7일)을 확인하며, 최신 기록이 없거나 오래되면 `Manual Smoke=OVERDUE`로 `HOLD` 처리한다.
+
+수동 스모크 완료 결과를 로그에 자동 기록하려면:
+
+```powershell
+.\scripts\staging-ops-cycle.ps1 `
+  -Repo V4N1LLA/Eunhye_Hymn `
+  -Branch staging `
+  -Owner <operator> `
+  -SkipPreflight `
+  -ManualSmokeResult PASS `
+  -ManualSmokeEvidence <evidence-url-or-ticket> `
+  [-ManualSmokeNotes "<summary>"]
+```
 
 최신 배포 run 상태(특히 deploy/verify 성공 여부) 확인:
 

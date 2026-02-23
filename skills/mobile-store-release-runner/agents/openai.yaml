@@ -1,0 +1,7 @@
+interface:
+  display_name: "Mobile Store Release Runner"
+  short_description: "Run mobile release preflight, dispatch, and logging."
+  default_prompt: "Use $mobile-store-release-runner to run mobile store release readiness."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Staging Ops Runner"
+  short_description: "Run preflight, gate checks, and staging decisions."
+  default_prompt: "Use $staging-ops-runner to execute staging preflight and Go/Hold checks."
+
+policy:
+  allow_implicit_invocation: true
