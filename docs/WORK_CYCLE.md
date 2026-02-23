@@ -1265,3 +1265,30 @@
 - `cd apps/admin && npm run build`
 - `powershell -NoProfile -File .\\scripts\\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -AsJson`
 
+## 43. 이번 사이클 기록 (2026-02-22, staging secret rotation audit automation)
+
+### 목표
+- 운영 시크릿 로테이션 점검을 수동 확인에서 자동 기준(`OK/STALE/MISSING`)으로 전환한다.
+
+### 범위
+- 포함: 시크릿 최신성 점검 스크립트 추가, 운영 문서 반영
+- 제외: 실제 시크릿 재발급/교체 작업
+
+### 수행 작업
+1. 시크릿 점검 스크립트 추가
+- `scripts/staging-secret-rotation-audit.ps1`
+- GitHub repo secrets의 `updatedAt`을 조회해 상태 판정
+- 기본 스테이징 필수 시크릿 점검 + `-IncludeMobileReleaseSecrets` 확장 지원
+- `-MaxAgeDays` 초과 시 `STALE` 판정 및 종료코드 1 반환
+
+2. 운영 문서 동기화
+- `docs/runbook.md`: 월간 정기 점검에 자동 점검 명령/조치 기준 추가
+- `docs/SECRETS_MANAGEMENT.md`: 로테이션 자동 점검 명령/상태 해석 추가
+- `infra/aws/README.md`: 운영 점검 루틴에 시크릿 점검 명령 추가
+- `docs/changelog-dev.md`: 변경 이력 기록
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-secret-rotation-audit.ps1 -Repo V4N1LLA/Eunhye_Hymn -MaxAgeDays 90`
+- `powershell -NoProfile -File .\\scripts\\staging-secret-rotation-audit.ps1 -Repo V4N1LLA/Eunhye_Hymn -MaxAgeDays 90 -IncludeMobileReleaseSecrets`
+- `rg -n "staging-secret-rotation-audit|STALE|MISSING" docs/runbook.md docs/SECRETS_MANAGEMENT.md infra/aws/README.md docs/changelog-dev.md docs/WORK_CYCLE.md`
+

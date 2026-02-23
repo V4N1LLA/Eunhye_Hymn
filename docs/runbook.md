@@ -96,4 +96,6 @@
 - 주 1회 스테이징 배포 리허설 + 스모크 체크리스트 1회 수행
 - 주 1회 `staging-ops-cycle.ps1 -WaitForCompletion -AutoLogin` 실행 결과를 기준으로 Go/Hold 근거를 `docs/staging-smoke-log.md`에 누적
 - 월 1회 시크릿 교체 상태 점검
+  - `.\scripts\staging-secret-rotation-audit.ps1 -Repo V4N1LLA/Eunhye_Hymn -MaxAgeDays 90 -IncludeMobileReleaseSecrets`
+  - 결과가 `STALE` 또는 `MISSING`이면 즉시 교체/보완 후 `docs/changelog-dev.md`에 기록
 - 월 1회 롤백 시나리오 점검

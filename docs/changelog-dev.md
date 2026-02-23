@@ -2,6 +2,19 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-22
+
+### Staging secret rotation audit automation
+- 스크립트 추가
+  - `scripts/staging-secret-rotation-audit.ps1`
+  - GitHub Actions repo secrets의 `updatedAt` 기준으로 `OK/STALE/MISSING/UNKNOWN` 판정
+  - 기본 스테이징 필수 시크릿 점검 + `-IncludeMobileReleaseSecrets` 옵션으로 모바일 배포 시크릿 확장
+  - `-MaxAgeDays` 임계값 기반으로 초과 시 실패(exit 1) 처리
+- 운영 문서 동기화
+  - `docs/runbook.md`
+  - `docs/SECRETS_MANAGEMENT.md`
+  - `infra/aws/README.md`
+
 ## 2026-02-20
 
 ### Auth invite-gated login sync + `/me/account` withdraw endpoint
