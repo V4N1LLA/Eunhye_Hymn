@@ -1,0 +1,7 @@
+interface:
+  display_name: "Secrets Rotation Auditor"
+  short_description: "Audit stale or missing secrets and track rotation."
+  default_prompt: "Use $secrets-rotation-auditor to run the monthly secret rotation audit."
+
+policy:
+  allow_implicit_invocation: true

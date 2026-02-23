@@ -108,3 +108,27 @@ cd apps/mobile
 - Admin: 타입체크 + 빌드
 - Mobile: analyze + test
 - Staging deploy 및 mobile release readiness workflow는 별도 문서(`docs/runbook.md`, `docs/mobile/README.md`) 기준으로 운영한다.
+
+## 9. Codex 스킬 동기화 (다른 PC 포함)
+
+저장소의 `skills/`를 로컬 Codex 스킬 디렉터리(`$CODEX_HOME/skills` 또는 `~/.codex/skills`)로 동기화한다.
+
+전체 동기화:
+
+```powershell
+.\scripts\sync-skills.ps1
+```
+
+특정 스킬만 동기화:
+
+```powershell
+.\scripts\sync-skills.ps1 -Skill staging-ops-runner,docs-sync-enforcer
+```
+
+적용 전 확인(드라이런):
+
+```powershell
+.\scripts\sync-skills.ps1 -DryRun
+```
+
+동기화 후 Codex를 재시작한다.
