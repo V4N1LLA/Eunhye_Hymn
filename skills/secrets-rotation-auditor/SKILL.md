@@ -12,8 +12,9 @@ Use this skill to perform periodic secret audit cycles and track follow-up actio
 1. Run secret rotation audit script for core staging secrets.
 2. Include mobile release secrets when requested.
 3. Classify findings into `PASS`, `STALE`, `MISSING`.
-4. Propose or execute secret sync steps when policy allows.
-5. Record remediation outcomes in docs.
+4. Run `secrets-rotation-cycle.ps1` for repeatable logging and decision tracking.
+5. Propose or execute secret sync steps when policy allows.
+6. Record remediation outcomes in docs.
 
 Read `references/commands.md` for command templates.
 
@@ -29,6 +30,7 @@ Read `references/commands.md` for command templates.
 - `docs/SECRETS_MANAGEMENT.md`
 - `docs/runbook.md`
 - `infra/aws/README.md`
+- `docs/secrets-rotation-log.md`
 - `docs/changelog-dev.md`
 
 ## Return output

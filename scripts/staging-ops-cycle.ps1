@@ -14,7 +14,8 @@ param(
   [string]$ManualSmokeEvidence = "",
   [string]$ManualSmokeNotes = "",
   [int]$ManualSmokeMaxAgeDays = 7,
-  [switch]$SkipManualSmokeRecencyGate
+  [switch]$SkipManualSmokeRecencyGate,
+  [switch]$AsJson
 )
 
 $ErrorActionPreference = "Stop"
@@ -222,8 +223,9 @@ if ($WaitForCompletion) {
 $statusResult = Invoke-PowerShellFile -ScriptPath $statusScript -Arguments $statusArgs
 if ($statusResult.ExitCode -ne 0) {
   $tail = if ([string]::IsNullOrWhiteSpace($statusResult.Output)) { "status command failed" } else { $statusResult.Output.Split("`n")[-1].Trim() }
+  $errorUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
   Append-LogRow -Path $LogFile -Row @{
-    UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    UtcTime = $errorUtc
     Repo = $Repo
     Branch = $Branch
     RunId = "-"
@@ -239,14 +241,37 @@ if ($statusResult.ExitCode -ne 0) {
     Owner = $Owner
     Notes = "status error: $tail"
   }
+  if ($AsJson) {
+    [PSCustomObject]@{
+      UtcTime = $errorUtc
+      Repo = $Repo
+      Branch = $Branch
+      RunId = "-"
+      HeadSha = "-"
+      Preflight = $preflightState
+      RunGate = "FAIL"
+      DeployGate = "FAIL"
+      VerifyGate = "FAIL"
+      AgeMin = "-"
+      Decision = "HOLD"
+      ManualSmoke = "NOT_STARTED"
+      ManualSmokeAgeDays = "-"
+      Evidence = "-"
+      Owner = $Owner
+      Notes = "status error: $tail"
+      ErrorType = "status_command_failed"
+    } | ConvertTo-Json -Depth 6
+    exit 1
+  }
   throw "staging status check failed: $tail"
 }
 
 try {
   $statusPayload = $statusResult.Output | ConvertFrom-Json
 } catch {
+  $errorUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
   Append-LogRow -Path $LogFile -Row @{
-    UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    UtcTime = $errorUtc
     Repo = $Repo
     Branch = $Branch
     RunId = "-"
@@ -261,6 +286,28 @@ try {
     Evidence = "-"
     Owner = $Owner
     Notes = "status output is not valid json"
+  }
+  if ($AsJson) {
+    [PSCustomObject]@{
+      UtcTime = $errorUtc
+      Repo = $Repo
+      Branch = $Branch
+      RunId = "-"
+      HeadSha = "-"
+      Preflight = $preflightState
+      RunGate = "FAIL"
+      DeployGate = "FAIL"
+      VerifyGate = "FAIL"
+      AgeMin = "-"
+      Decision = "HOLD"
+      ManualSmoke = "NOT_STARTED"
+      ManualSmokeAgeDays = "-"
+      Evidence = "-"
+      Owner = $Owner
+      Notes = "status output is not valid json"
+      ErrorType = "status_json_parse_failed"
+    } | ConvertTo-Json -Depth 6
+    exit 1
   }
   throw "failed to parse status json output"
 }
@@ -368,22 +415,64 @@ Append-LogRow -Path $LogFile -Row @{
   Notes = ($notes -join "; ")
 }
 
-Write-Host "== Staging Ops Cycle =="
-Write-Host ("Repo: {0}" -f $Repo)
-Write-Host ("Branch: {0}" -f $Branch)
-Write-Host ("RunId: {0}" -f $summary.RunId)
-Write-Host ("HeadSha: {0}" -f $summary.HeadSha)
-Write-Host ("Preflight: {0}" -f $preflightState)
-Write-Host ("Gate(run/deploy/verify/age/manualRecency/manualOutcome): {0}/{1}/{2}/{3}/{4}/{5}" -f $runGate, $deployGate, $verifyGate, $ageGate, $manualSmokeRecencyGate, $manualSmokeOutcomeGate)
-Write-Host ("Decision: {0}" -f $decision)
-Write-Host ("ManualSmoke: {0}" -f $manualSmoke)
-Write-Host ("ManualSmokeAgeDays: {0}" -f $manualSmokeAgeDaysDisplay)
-Write-Host ("Log: {0}" -f $LogFile)
-Write-Host ""
-Write-Host "Update manual smoke results in:"
-Write-Host "- docs/staging-smoke-checklist.md"
-Write-Host "- docs/staging-feedback-checklist.md"
-Write-Host "- or run staging-ops-cycle with -ManualSmokeResult PASS/FAIL"
+$resultPayload = [PSCustomObject]@{
+  UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+  Repo = $Repo
+  Branch = $Branch
+  RunId = "$($summary.RunId)"
+  HeadSha = "$($summary.HeadSha)"
+  Preflight = $preflightState
+  RunGate = $(if ($runGate) { "PASS" } else { "FAIL" })
+  DeployGate = $(if ($deployGate) { "PASS" } else { "FAIL" })
+  VerifyGate = $(if ($verifyGate) { "PASS" } else { "FAIL" })
+  AgeMin = "$($summary.RunAgeMinutes)"
+  Decision = $decision
+  ManualSmoke = $manualSmoke
+  ManualSmokeAgeDays = "$manualSmokeAgeDaysDisplay"
+  Evidence = $evidence
+  Owner = $Owner
+  Notes = ($notes -join "; ")
+  Gates = [PSCustomObject]@{
+    Run = $runGate
+    Deploy = $deployGate
+    Verify = $verifyGate
+    Age = $ageGate
+    ManualRecency = $manualSmokeRecencyGate
+    ManualOutcome = $manualSmokeOutcomeGate
+  }
+  LatestManualSmoke = if ($null -eq $latestManualSmoke) {
+    $null
+  } else {
+    [PSCustomObject]@{
+      UtcTime = $latestManualSmoke.UtcTime.ToString("yyyy-MM-ddTHH:mm:ssZ")
+      ManualSmoke = $latestManualSmoke.ManualSmoke
+      Evidence = $latestManualSmoke.Evidence
+      Owner = $latestManualSmoke.Owner
+      Notes = $latestManualSmoke.Notes
+    }
+  }
+}
+
+if ($AsJson) {
+  $resultPayload | ConvertTo-Json -Depth 8
+} else {
+  Write-Host "== Staging Ops Cycle =="
+  Write-Host ("Repo: {0}" -f $Repo)
+  Write-Host ("Branch: {0}" -f $Branch)
+  Write-Host ("RunId: {0}" -f $summary.RunId)
+  Write-Host ("HeadSha: {0}" -f $summary.HeadSha)
+  Write-Host ("Preflight: {0}" -f $preflightState)
+  Write-Host ("Gate(run/deploy/verify/age/manualRecency/manualOutcome): {0}/{1}/{2}/{3}/{4}/{5}" -f $runGate, $deployGate, $verifyGate, $ageGate, $manualSmokeRecencyGate, $manualSmokeOutcomeGate)
+  Write-Host ("Decision: {0}" -f $decision)
+  Write-Host ("ManualSmoke: {0}" -f $manualSmoke)
+  Write-Host ("ManualSmokeAgeDays: {0}" -f $manualSmokeAgeDaysDisplay)
+  Write-Host ("Log: {0}" -f $LogFile)
+  Write-Host ""
+  Write-Host "Update manual smoke results in:"
+  Write-Host "- docs/staging-smoke-checklist.md"
+  Write-Host "- docs/staging-feedback-checklist.md"
+  Write-Host "- or run staging-ops-cycle with -ManualSmokeResult PASS/FAIL"
+}
 
 if ($decision -eq "CONDITIONAL_GO") {
   exit 0

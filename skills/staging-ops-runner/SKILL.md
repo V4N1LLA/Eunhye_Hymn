@@ -14,7 +14,8 @@ Use this skill to run staging checks in a consistent order and leave auditable e
 3. Run deploy gate check with `staging-latest-status.ps1`.
 4. Run full cycle with `staging-ops-cycle.ps1` when Go/Hold evidence is needed.
 5. Run rehearsal with `staging-rehearsal.ps1` when dispatch verification is needed.
-6. Record run IDs, conclusions, and decision in staging logs.
+6. Run `ops-health-cycle.ps1` when consolidated ops health evidence is needed.
+7. Record run IDs, conclusions, and decision in staging logs.
 
 Read `references/commands.md` for exact command templates.
 
@@ -28,6 +29,7 @@ Read `references/commands.md` for exact command templates.
 
 - `docs/staging-smoke-log.md`
 - `docs/staging-rehearsal-log.md`
+- `docs/ops-health-log.md`
 - `docs/staging-smoke-checklist.md`
 - `docs/runbook.md`
 - `docs/changelog-dev.md`

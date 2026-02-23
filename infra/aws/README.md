@@ -197,6 +197,19 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
   [-ManualSmokeNotes "<summary>"]
 ```
 
+통합 운영 헬스 사이클(게이트 + 시크릿 점검)을 함께 실행하려면:
+
+```powershell
+.\scripts\ops-health-cycle.ps1 `
+  -Repo V4N1LLA/Eunhye_Hymn `
+  -Branch staging `
+  -Owner <operator> `
+  [-AutoLogin] `
+  [-WaitForCompletion]
+```
+
+결과는 `docs/ops-health-log.md`에 자동 누적되며, 실패 원인은 `FailureCategory`로 분류된다.
+
 최신 배포 run 상태(특히 deploy/verify 성공 여부) 확인:
 
 ```powershell

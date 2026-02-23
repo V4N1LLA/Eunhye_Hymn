@@ -22,6 +22,18 @@ Use `-AsMarkdown` for log-ready table output.
 .\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <owner> -AutoLogin -WaitForCompletion
 ```
 
+Record manual smoke result:
+
+```powershell
+.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <owner> -SkipPreflight -ManualSmokeResult PASS -ManualSmokeEvidence <evidence-url>
+```
+
+JSON output for automation/debugging:
+
+```powershell
+.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <owner> -SkipPreflight -AsJson
+```
+
 ## Rehearsal dispatch
 
 ```powershell
@@ -38,3 +50,12 @@ Dry-run:
 
 - `docs/staging-smoke-log.md`
 - `docs/staging-rehearsal-log.md`
+- `docs/ops-health-log.md`
+
+## Consolidated health cycle
+
+```powershell
+.\scripts\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <owner> -AutoLogin -WaitForCompletion
+```
+
+This combines staging gates + secrets rotation checks and classifies failures.
