@@ -19,6 +19,19 @@
   - `infra/aws/README.md`
   - `docs/current-usable-scope.md`
 
+### Secrets rotation cycle log automation
+- 스크립트 추가
+  - `scripts/secrets-rotation-cycle.ps1`
+  - `staging-secret-rotation-audit.ps1` 결과(JSON)를 수집해 `PASS/HOLD` 판정
+  - 결과 요약(`OK/STALE/MISSING/UNKNOWN`)을 Markdown 로그에 자동 누적
+- 로그 문서 추가
+  - `docs/secrets-rotation-log.md`
+- 운영 문서 동기화
+  - `docs/SECRETS_MANAGEMENT.md`
+  - `docs/runbook.md`
+  - `infra/aws/README.md`
+  - `docs/current-usable-scope.md`
+
 ## 2026-02-22
 
 ### Staging secret rotation audit automation
