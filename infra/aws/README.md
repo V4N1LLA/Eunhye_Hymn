@@ -154,6 +154,7 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 - `STALE`: 기준 일수 초과(교체 권장)
 - `MISSING`: 필수 시크릿 누락
 - 실행 이력은 `docs/secrets-rotation-log.md`에 자동 누적된다.
+- 스케줄 자동 실행: `.github/workflows/secrets-rotation-scheduled.yml` (매월 1일 03:00 UTC)
 
 리허설 자동 실행(권장):
 
@@ -209,6 +210,8 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 ```
 
 결과는 `docs/ops-health-log.md`에 자동 누적되며, 실패 원인은 `FailureCategory`로 분류된다.
+HOLD/ERROR는 `scripts/ops-health-issue-alert.ps1`를 통해 이슈로 자동 승격할 수 있다.
+스케줄 자동 실행은 `.github/workflows/ops-health-scheduled.yml`에서 관리한다(매주 월요일 02:00 UTC).
 
 최신 배포 run 상태(특히 deploy/verify 성공 여부) 확인:
 

@@ -23,8 +23,19 @@ function Escape-MarkdownCell {
   return $Value.Replace("|", "\|").Trim()
 }
 
+function Ensure-ParentDirectory {
+  param([string]$Path)
+
+  $directory = Split-Path -Path $Path -Parent
+  if (-not [string]::IsNullOrWhiteSpace($directory) -and -not (Test-Path $directory)) {
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+  }
+}
+
 function Ensure-LogFile {
   param([string]$Path)
+
+  Ensure-ParentDirectory -Path $Path
 
   if (Test-Path $Path) {
     return

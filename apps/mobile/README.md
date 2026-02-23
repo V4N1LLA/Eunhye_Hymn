@@ -132,6 +132,10 @@ Store release cycle helpers:
 - `scripts/mobile-store-preflight.ps1` (mode-based secret/input checks)
 - `scripts/mobile-store-cycle.ps1` (preflight + workflow_dispatch + run watch + log append)
 - `docs/mobile-store-release-log.md` (execution evidence log)
+- latest publish-path verification (2026-02-23):
+  - Android `play_upload`: run `22329008651` failed at Google Play upload step
+  - iOS `testflight`: run `22329248773` failed at Apple certificate import step
+  - next action: replace bootstrap placeholders with real store credentials and rerun both paths
 
 See also:
 - Minimal-tooling QA guide: `docs/mobile/qa-minimal-tooling.md`

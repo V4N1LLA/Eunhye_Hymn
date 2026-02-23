@@ -105,8 +105,14 @@
 - 주 1회 통합 운영 헬스 점검
   - `.\scripts\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> -AutoLogin -WaitForCompletion`
   - 결과는 `docs/ops-health-log.md`에 자동 누적되고, 실패 원인은 `FailureCategory`로 분류됨
+  - GitHub Actions 스케줄 실행: `.github/workflows/ops-health-scheduled.yml` (매주 월요일 02:00 UTC)
+  - HOLD/ERROR 시 `scripts/ops-health-issue-alert.ps1`가 이슈를 자동 생성/업데이트
 - 월 1회 시크릿 교체 상태 점검
   - `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <담당자> -MaxAgeDays 90`
   - 모바일 릴리즈 시크릿 포함 점검: `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <담당자> -MaxAgeDays 90 -IncludeMobileReleaseSecrets`
   - 결과는 `docs/secrets-rotation-log.md`에 자동 누적되며 `Decision=HOLD`이면 즉시 교체/보완 후 `docs/changelog-dev.md`에 기록
+  - GitHub Actions 스케줄 실행: `.github/workflows/secrets-rotation-scheduled.yml` (매월 1일 03:00 UTC)
+- 주 1회 AI 추천 운영 지표 점검
+  - `ai_recommend_requests_total`, `ai_recommend_latency_seconds`, `ai_recommend_fallback_total`
+  - 기준: success rate >= 99%, p95 latency <= 2.0s, fallback ratio <= 5%
 - 월 1회 롤백 시나리오 점검
