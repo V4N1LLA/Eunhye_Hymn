@@ -145,13 +145,15 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 시크릿 로테이션 상태 점검(월 1회 권장):
 
 ```powershell
-.\scripts\staging-secret-rotation-audit.ps1 -Repo V4N1LLA/Eunhye_Hymn -MaxAgeDays 90 -IncludeMobileReleaseSecrets
+.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <operator> -MaxAgeDays 90
+.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <operator> -MaxAgeDays 90 -IncludeMobileReleaseSecrets
 ```
 
 출력 상태:
 - `OK`: 기준 일수 이내
 - `STALE`: 기준 일수 초과(교체 권장)
 - `MISSING`: 필수 시크릿 누락
+- 실행 이력은 `docs/secrets-rotation-log.md`에 자동 누적된다.
 
 리허설 자동 실행(권장):
 

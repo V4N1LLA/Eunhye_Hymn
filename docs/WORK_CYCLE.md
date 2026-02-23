@@ -1326,3 +1326,31 @@
 - `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -ManualSmokeResult PASS -ManualSmokeEvidence https://example.com/smoke`
 - `rg -n "ManualSmokeMaxAgeDays|ManualSmokeResult|OVERDUE|SkipManualSmokeRecencyGate" scripts/staging-ops-cycle.ps1 docs/runbook.md docs/staging-smoke-checklist.md infra/aws/README.md`
 
+## 45. 이번 사이클 기록 (2026-02-23, secrets rotation cycle log automation)
+
+### 목표
+- 시크릿 로테이션 점검 결과를 수동 출력 확인에서 운영 로그 누적 방식으로 전환한다.
+
+### 범위
+- 포함: 시크릿 점검 사이클 스크립트 추가, 로그 문서/운영 문서 동기화
+- 제외: 실제 시크릿 값 교체/등록
+
+### 수행 작업
+1. 시크릿 점검 사이클 스크립트 추가
+- `scripts/secrets-rotation-cycle.ps1`
+- `staging-secret-rotation-audit.ps1 -AsJson` 실행 결과를 수집
+- 상태 집계(`OK/STALE/MISSING/UNKNOWN`) 후 `Decision=PASS/HOLD` 산출
+- `docs/secrets-rotation-log.md`에 감사 결과를 표 형태로 누적 기록
+
+2. 운영 문서 동기화
+- `docs/secrets-rotation-log.md` 신규 생성
+- `docs/SECRETS_MANAGEMENT.md`: 월간 점검 명령을 cycle 스크립트 기준으로 갱신
+- `docs/runbook.md`: 월간 정기 점검 항목을 cycle 스크립트 기준으로 갱신
+- `infra/aws/README.md`: 운영 가이드 명령/로그 경로 갱신
+- `docs/current-usable-scope.md`, `docs/changelog-dev.md` 반영
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner codex -MaxAgeDays 90 -LogFile .tmp\\secrets-rotation-cycle\\staging-only.md`
+- `powershell -NoProfile -File .\\scripts\\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner codex -MaxAgeDays 90 -IncludeMobileReleaseSecrets -LogFile .tmp\\secrets-rotation-cycle\\with-mobile.md` (현재 기준 expected fail)
+- `rg -n "secrets-rotation-cycle|secrets-rotation-log|Decision=HOLD|IncludeMobileReleaseSecrets" scripts/secrets-rotation-cycle.ps1 docs/SECRETS_MANAGEMENT.md docs/runbook.md infra/aws/README.md docs/changelog-dev.md docs/WORK_CYCLE.md docs/current-usable-scope.md`
+
