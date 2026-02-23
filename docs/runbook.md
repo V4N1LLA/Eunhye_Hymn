@@ -31,8 +31,10 @@
   - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref staging [-AwsProfile <profile>] [-AutoLogin]`
   - 로컬 확인만 필요하면 `-DryRun` 사용
 - [ ] 운영 사이클 자동 점검(권장)
-  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> [-AutoLogin] [-WaitForCompletion]`
-  - preflight + 최신 배포 게이트 + `docs/staging-smoke-log.md` 기록을 일괄 수행
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> [-AutoLogin] [-WaitForCompletion] [-ManualSmokeMaxAgeDays 7]`
+  - preflight + 최신 배포 게이트 + 수동 스모크 최신성(기본 7일) 게이트 + `docs/staging-smoke-log.md` 기록을 일괄 수행
+  - 수동 스모크 완료 후 결과 기록:
+    - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> -SkipPreflight -ManualSmokeResult PASS -ManualSmokeEvidence <증빙URL> [-ManualSmokeNotes "<요약>"]`
 - [ ] GitHub Actions 필수 Secrets 등록 확인
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
 - [ ] GitHub Actions 배포 워크플로 최신 성공 이력 확인
