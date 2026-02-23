@@ -126,12 +126,13 @@ foreach ($target in $targets) {
   }
 
   $updatedAtUtc = $updatedAtUtc.ToUniversalTime()
-  $ageDays = [int][Math]::Floor(($nowUtc - $updatedAtUtc).TotalDays)
-  if ($ageDays -lt 0) {
-    $ageDays = 0
+  $ageTotalDays = ($nowUtc - $updatedAtUtc).TotalDays
+  if ($ageTotalDays -lt 0) {
+    $ageTotalDays = 0
   }
 
-  $isStale = $ageDays -gt $MaxAgeDays
+  $ageDays = [Math]::Round($ageTotalDays, 2)
+  $isStale = $ageTotalDays -gt [double]$MaxAgeDays
   $rows += [PSCustomObject]@{
     Scope = $scope
     Secret = $name
@@ -139,7 +140,7 @@ foreach ($target in $targets) {
     AgeDays = $ageDays
     MaxAgeDays = $MaxAgeDays
     Status = $(if ($isStale) { "STALE" } else { "OK" })
-    Detail = $(if ($isStale) { "age exceeds threshold; rotate secret" } else { "within threshold" })
+    Detail = $(if ($isStale) { "age exceeds threshold precisely; rotate secret" } else { "within threshold" })
   }
 }
 
