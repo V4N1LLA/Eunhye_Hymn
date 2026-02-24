@@ -785,6 +785,10 @@ develop push → GitHub Actions
   - `.github/workflows/deploy-staging.yml`, `.github/workflows/ops-health-scheduled.yml`: workflow_dispatch boolean 입력 false 보존식으로 정규화
   - `scripts/staging-rehearsal.ps1`, `scripts/mobile-store-cycle.ps1`: preflight 실패 시 first-useful-line 추출로 로그/예외 원인 가시성 강화
   - `scripts/staging-ops-cycle.ps1`, `scripts/ops-health-cycle.ps1`: `-LogDedupWindowMinutes`(기본 30) 기반 중복 로그 쓰기 억제
+- HOLD/ERROR 알림 노이즈 제어 반영 (2026-02-24)
+  - `scripts/ops-health-issue-alert.ps1`: dedup/re-alert cooldown(`30m`/`480m`/`120m`) + `-ForceAlert` 지원
+  - `scripts/ops-health-cycle.ps1`: `-AlertDedupWindowMinutes`, `-AlertHoldReAlertWindowMinutes`, `-AlertErrorReAlertWindowMinutes`, `-AlertForce` 전달
+  - `docs/runbook.md`: 알림 볼륨 조정 파라미터 운영 가이드 추가
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`
@@ -826,6 +830,7 @@ develop push → GitHub Actions
   - `.github/workflows/ops-health-scheduled.yml` (주간)
   - `.github/workflows/secrets-rotation-scheduled.yml` (월간)
   - HOLD/ERROR 자동 이슈 알림: `scripts/ops-health-issue-alert.ps1`
+  - 기본 알림 정책: dedup `30m`, HOLD 재알림 `480m`, ERROR 재알림 `120m` (필요 시 `ops-health-cycle.ps1` alert 파라미터로 조정)
 
 **3. 기능 백로그**
 - 비동기 export 운영 지표(실패율/처리시간/정리량) 정례화 완료 (2026-02-14)
