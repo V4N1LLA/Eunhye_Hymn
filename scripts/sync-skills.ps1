@@ -22,6 +22,39 @@ function Resolve-RepoPath {
   return [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $PathValue))
 }
 
+function Normalize-DirectoryPath {
+  param([string]$PathValue)
+
+  if ([string]::IsNullOrWhiteSpace($PathValue)) {
+    return ""
+  }
+
+  $fullPath = [System.IO.Path]::GetFullPath($PathValue)
+  return $fullPath.TrimEnd('\', '/')
+}
+
+function Test-PathOverlap {
+  param(
+    [string]$PathA,
+    [string]$PathB
+  )
+
+  $normalizedA = Normalize-DirectoryPath -PathValue $PathA
+  $normalizedB = Normalize-DirectoryPath -PathValue $PathB
+  if ([string]::IsNullOrWhiteSpace($normalizedA) -or [string]::IsNullOrWhiteSpace($normalizedB)) {
+    return $false
+  }
+
+  if ($normalizedA -ieq $normalizedB) {
+    return $true
+  }
+
+  $prefixA = $normalizedA + [System.IO.Path]::DirectorySeparatorChar
+  $prefixB = $normalizedB + [System.IO.Path]::DirectorySeparatorChar
+  return $normalizedA.StartsWith($prefixB, [System.StringComparison]::OrdinalIgnoreCase) -or
+    $normalizedB.StartsWith($prefixA, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
 function Get-CodexHome {
   if (-not [string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
     return $env:CODEX_HOME
@@ -65,6 +98,10 @@ $destRoot = if ([string]::IsNullOrWhiteSpace($DestDir)) {
   Join-Path (Get-CodexHome) "skills"
 } else {
   Resolve-RepoPath -RepoRoot $repoRoot -PathValue $DestDir
+}
+
+if (Test-PathOverlap -PathA $sourceRoot -PathB $destRoot) {
+  throw ("SourceDir and DestDir must not be identical or nested. source={0}, dest={1}" -f $sourceRoot, $destRoot)
 }
 
 $allSkillDirs = Get-ChildItem -LiteralPath $sourceRoot -Directory |

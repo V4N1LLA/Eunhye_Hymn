@@ -15,7 +15,13 @@
 ## Optional secret sync helper
 
 ```powershell
-.\scripts\staging-sync-secrets.ps1 -Repo V4N1LLA/Eunhye_Hymn
+.\scripts\staging-sync-secrets.ps1 `
+  -Repo V4N1LLA/Eunhye_Hymn `
+  -Ec2Host <ec2-host> `
+  -Ec2SshKeyPath <path-to-pem> `
+  -DbPassword <db-password> `
+  -JwtSecret <jwt-secret> `
+  -InviteCode <invite-code>
 ```
 
 Use only when explicit sync/update is requested.

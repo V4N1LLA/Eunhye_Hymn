@@ -29,6 +29,21 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Test-CommandExists {
+  param([string]$Name)
+  return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Get-PowerShellCommand {
+  if (Test-CommandExists "powershell.exe") {
+    return "powershell.exe"
+  }
+  if (Test-CommandExists "pwsh") {
+    return "pwsh"
+  }
+  return ""
+}
+
 function Escape-MarkdownCell {
   param([string]$Value)
 
@@ -120,7 +135,11 @@ function Invoke-PowerShellFile {
     [string[]]$Arguments = @()
   )
 
-  $output = & powershell.exe -NoProfile -File $ScriptPath @Arguments 2>&1
+  if ([string]::IsNullOrWhiteSpace($script:PowerShellCommand)) {
+    throw "missing powershell command (powershell.exe/pwsh)"
+  }
+
+  $output = & $script:PowerShellCommand -NoProfile -File $ScriptPath @Arguments 2>&1
   $merged = ($output -join "`n")
   $json = $null
   if (-not [string]::IsNullOrWhiteSpace($merged)) {
@@ -145,15 +164,18 @@ function Get-FailureCategory {
     [string]$Output
   )
 
+  $manualSmokeRecencyPattern = "ManualSmoke=OVERDUE|manual smoke recency gate failed|manual smoke record missing|manual smoke stale"
+
   if ($Step -eq "staging") {
     if ($null -ne $Json) {
-      if ($Json.ManualSmoke -eq "OVERDUE" -or "$($Json.Notes)" -match "manual smoke") {
+      $notesText = "$($Json.Notes)"
+      if ($Json.ManualSmoke -eq "OVERDUE" -or $notesText -match $manualSmokeRecencyPattern) {
         return "manual_smoke_recency"
       }
-      if ("$($Json.Notes)" -match "run too old") {
+      if ($notesText -match "run too old") {
         return "deploy_freshness"
       }
-      if ("$($Json.Notes)" -match "session expired|credentials missing|profile not found|preflight") {
+      if ($notesText -match "session expired|credentials missing|profile not found|preflight") {
         return "aws_preflight"
       }
       if ("$($Json.ErrorType)" -match "status_") {
@@ -164,7 +186,7 @@ function Get-FailureCategory {
       }
     }
 
-    if ($Output -match "manual smoke") { return "manual_smoke_recency" }
+    if ($Output -match $manualSmokeRecencyPattern) { return "manual_smoke_recency" }
     if ($Output -match "run too old") { return "deploy_freshness" }
     if ($Output -match "session expired|credentials missing|profile not found|preflight") { return "aws_preflight" }
     if ($Output -match "status error|status output is not valid json") { return "status_query_error" }
@@ -186,6 +208,11 @@ function Get-FailureCategory {
   }
 
   return "unknown_error"
+}
+
+$script:PowerShellCommand = Get-PowerShellCommand
+if ([string]::IsNullOrWhiteSpace($script:PowerShellCommand)) {
+  throw "missing powershell command (powershell.exe/pwsh)"
 }
 
 if ($StagingMaxAgeMinutes -lt 0) {
