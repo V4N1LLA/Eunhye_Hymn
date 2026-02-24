@@ -32,6 +32,10 @@
 - Rehearsal run-detection reliability
   - `scripts/staging-rehearsal.ps1`
   - Added baseline run-id tracking and earliest-post-dispatch selection to reduce concurrent workflow run misattribution
+- Workflow dispatch boolean hardening
+  - `.github/workflows/deploy-staging.yml`
+  - `.github/workflows/ops-health-scheduled.yml`
+  - Preserved explicit `false` values for workflow_dispatch boolean inputs (`enable_awslogs`, `include_mobile_release_secrets`, `wait_for_completion`)
 
 ## 2026-02-23
 

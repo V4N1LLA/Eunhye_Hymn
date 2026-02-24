@@ -54,8 +54,8 @@ jobs:
       STAGING_MAX_AGE_MINUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.staging_max_age_minutes || '240' }}
       MANUAL_SMOKE_MAX_AGE_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_smoke_max_age_days || '7' }}
       SECRETS_MAX_AGE_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.secrets_max_age_days || '90' }}
-      INCLUDE_MOBILE_RELEASE_SECRETS: ${{ github.event_name == 'workflow_dispatch' && inputs.include_mobile_release_secrets || 'false' }}
-      WAIT_FOR_COMPLETION: ${{ github.event_name == 'workflow_dispatch' && inputs.wait_for_completion || 'false' }}
+      INCLUDE_MOBILE_RELEASE_SECRETS: ${{ github.event_name == 'workflow_dispatch' && (inputs.include_mobile_release_secrets && 'true' || 'false') || 'false' }}
+      WAIT_FOR_COMPLETION: ${{ github.event_name == 'workflow_dispatch' && (inputs.wait_for_completion && 'true' || 'false') || 'false' }}
     steps:
       - uses: actions/checkout@v4
 
