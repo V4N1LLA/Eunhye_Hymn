@@ -94,6 +94,29 @@ function Append-LogRow {
   Add-Content -Path $Path -Value "| $utc | $RepoName | $BranchRef | $PreflightStatus | $RunUrl | $Result | $Notes |" -Encoding utf8
 }
 
+function Get-FirstUsefulLine {
+  param([string]$Output)
+
+  if ([string]::IsNullOrWhiteSpace($Output)) {
+    return ""
+  }
+
+  $lines = $Output -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+  if ($lines.Count -eq 0) {
+    return ""
+  }
+
+  foreach ($line in $lines) {
+    if ($line -eq "System.Management.Automation.RemoteException") { continue }
+    if ($line -like "At line:*") { continue }
+    if ($line -like "+ CategoryInfo:*") { continue }
+    if ($line -like "+ FullyQualifiedErrorId:*") { continue }
+    return $line
+  }
+
+  return $lines[0]
+}
+
 if (-not (Test-CommandExists "gh")) {
   throw "gh CLI is required."
 }
@@ -127,11 +150,16 @@ if (-not $SkipPreflight) {
     $preflightArgs += "-SkipTerraformPlan"
   }
 
-  & $script:PowerShellCommand @preflightArgs
+  $preflightOutput = & $script:PowerShellCommand @preflightArgs 2>&1
   if ($LASTEXITCODE -ne 0) {
+    $preflightDetail = Get-FirstUsefulLine -Output ($preflightOutput -join "`n")
+    if ([string]::IsNullOrWhiteSpace($preflightDetail)) {
+      $preflightDetail = "preflight failed"
+    }
+
     $preflightStatus = "FAILED"
-    Append-LogRow -Path $LogFile -RepoName $Repo -BranchRef $Ref -PreflightStatus $preflightStatus -RunUrl "-" -Result "ABORTED" -Notes "preflight failed"
-    throw "staging preflight failed; rehearsal aborted."
+    Append-LogRow -Path $LogFile -RepoName $Repo -BranchRef $Ref -PreflightStatus $preflightStatus -RunUrl "-" -Result "ABORTED" -Notes "preflight failed: $preflightDetail"
+    throw "staging preflight failed; rehearsal aborted. detail: $preflightDetail"
   }
   $preflightStatus = "PASS"
 }
