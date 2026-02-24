@@ -12,12 +12,12 @@
   - `staging` <- `develop` 머지 반영 완료 (`e83ecbf`, logs `6459e95`)
   - `production` <- `staging` 머지 반영 완료 (`cde06d6`)
 - 스테이징 최신 증빙
-  - Deploy Staging run `22347916528` (preflight/deploy/verify PASS)
+  - Deploy Staging run `22352745524` (preflight/deploy/verify PASS)
   - `staging-ops-cycle`: strict gate `HOLD` (manual smoke recency missing), skip gate `CONDITIONAL_GO`
   - `ops-health-cycle`: `PASS` with staging `CONDITIONAL_GO`, secrets `PASS`
 - 릴리즈 프리플라이트/레디니스
   - `scripts/release-preflight.ps1 -Version 1.0.1 -Branch staging` 결과 `READY`
-  - Release Readiness run `22351497696` 성공
+  - Release Readiness run `22353077026` 성공
   - `scripts/release-preflight.ps1`의 `staging head alignment` 체크 유지
 - 모바일 스토어 사이클 최신 증빙 (production ref)
   - Android `play_upload`: run `22351537681` 실패 (`android_play_upload`)
@@ -856,7 +856,7 @@ develop push → GitHub Actions
 - IAM 정책 샘플:
   - `infra/aws/terraform-deployer-iam-policy.json`
 - 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
-- 최신 점검(2026-02-24): deploy run `22347916528` 기준 자동 게이트 `PASS`, 수동 스모크 미기록으로 strict 판정 `HOLD`/skip 판정 `CONDITIONAL_GO`.
+- 최신 점검(2026-02-24): deploy run `22352745524` 기준 자동 게이트 `PASS`, 수동 스모크 미기록으로 strict 판정 `HOLD`/skip 판정 `CONDITIONAL_GO`.
 
 **2. 운영 문서/절차 고도화**
 - `docs/runbook.md` + `docs/staging-smoke-checklist.md` + `docs/staging-feedback-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영

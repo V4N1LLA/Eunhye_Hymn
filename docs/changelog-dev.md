@@ -217,6 +217,9 @@
   - `scripts/release-preflight.ps1 -Version 1.0.1 -Branch staging -MaxStagingAgeMinutes 1440 -AsJson`
     - release decision `READY`
   - Release Readiness workflow run `22351497696` success
+  - staging head realignment rerun
+    - Deploy Staging workflow run `22352745524` success (head sha `456cf8dc9ac213f8855eb86becfffa5e7407573e`)
+    - Release Readiness workflow rerun `22353077026` success
 - Mobile store cycle rerun on `production`
   - Android `play_upload`: run `22351537681` failed at `Upload Android AAB to Google Play` (`android_play_upload`)
   - iOS `testflight`: run `22351821815` failed at `Import Apple code-sign certificate` (`ios_codesign_certificate_import`)
