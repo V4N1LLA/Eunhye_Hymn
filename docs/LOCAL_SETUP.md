@@ -130,6 +130,7 @@ cd apps/api
 # 프론트엔드 타입체크 + 빌드
 cd apps/admin
 npm install
+npm run test
 npx tsc --noEmit
 npm run build
 ```

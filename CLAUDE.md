@@ -49,7 +49,7 @@ Eunhye_Hymn/
 ├── docs/                 # 프로젝트 문서 (요구사항, 아키텍처, API 계약 등)
 ├── .github/workflows/
 │   ├── api-ci.yml        # API 테스트 (PR + develop push)
-│   ├── admin-ci.yml      # Admin 타입체크 + 빌드 (PR + develop push)
+│   ├── admin-ci.yml      # Admin 테스트 + 타입체크 + 빌드 (PR + develop push)
 │   ├── mobile-ci.yml     # Mobile lint/test (PR + develop push)
 │   ├── mobile-release-check.yml # Mobile Android release APK 빌드 검증 + artifact
 │   ├── mobile-store-release.yml # Mobile store release readiness (manual: android/ios)
@@ -103,6 +103,7 @@ cd apps/api
 cd apps/admin
 npm install
 npm run dev    # http://localhost:5173
+npm run test   # Vitest
 npm run build  # dist/ 출력
 ```
 
@@ -518,7 +519,7 @@ com.eunhyehymn/
 - **트리거**: PR 및 develop push (apps/admin/** 변경 시)
 - **환경**: ubuntu-latest, Node.js 20
 - **캐시**: npm
-- **실행**: `npm ci` → `tsc --noEmit` → `npm run build`
+- **실행**: `npm ci` → `npm run test` → `tsc --noEmit` → `npm run build`
 
 ### Mobile CI (`mobile-ci.yml`)
 - **트리거**: PR 및 develop push (apps/mobile/** 변경 시)
@@ -726,7 +727,7 @@ develop push → GitHub Actions
 - API Dockerfile (multi-stage)
 - Admin Dockerfile (multi-stage: Node build + Nginx serve)
 - Nginx 설정 (Admin 정적 파일 serve + API 리버스 프록시 + SPA fallback)
-- CI/CD (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test + Mobile release readiness + Staging 자동 배포)
+- CI/CD (API 테스트 + Admin 테스트/타입체크/빌드 + Mobile lint/test + Mobile release readiness + Staging 자동 배포)
 
 **AWS 인프라 (Terraform)**
 - VPC + 퍼블릭 서브넷 2개 + IGW + 라우트 테이블

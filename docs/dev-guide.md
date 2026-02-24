@@ -53,6 +53,8 @@ cd apps/api
 ```powershell
 cd apps/admin
 npm install
+npm run test
+npx tsc --noEmit
 npm run build
 ```
 
@@ -106,7 +108,7 @@ cd apps/mobile
 
 ## 8. CI 기준
 - API: 테스트
-- Admin: 타입체크 + 빌드
+- Admin: 테스트 + 타입체크 + 빌드
 - Mobile: analyze + test
 - Staging deploy 및 mobile release readiness workflow는 별도 문서(`docs/runbook.md`, `docs/mobile/README.md`) 기준으로 운영한다.
 

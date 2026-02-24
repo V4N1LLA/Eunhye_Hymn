@@ -59,8 +59,7 @@ Run commands from repo root unless noted.
 - Production build:
   - `cd apps/admin && npm run build`
 - Tests:
-  - No frontend test runner is currently configured in `package.json`.
-  - If adding tests, also add CI step + script in `apps/admin/package.json`.
+  - `cd apps/admin && npm run test`
 
 ### 4.3 Mobile (`apps/mobile`)
 
@@ -169,5 +168,5 @@ Run commands from repo root unless noted.
 
 - API all tests: `cd apps/api && ./gradlew test --no-daemon --stacktrace`
 - API single test: `cd apps/api && ./gradlew test --tests "*ClassName*" --no-daemon --stacktrace`
-- Admin typecheck+build: `cd apps/admin && npm ci && npx tsc --noEmit && npm run build`
+- Admin test+typecheck+build: `cd apps/admin && npm ci && npm run test && npx tsc --noEmit && npm run build`
 - Mobile analyze+test: `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 analyze && ..\\..\\scripts\\flutterw.ps1 test`

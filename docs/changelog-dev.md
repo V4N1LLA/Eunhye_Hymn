@@ -50,6 +50,21 @@
   - Added log dedup window (`-LogDedupWindowMinutes`, default 30) for repeated consolidated health rows
   - Passed dedup window through to nested `staging-ops-cycle.ps1` invocation
 
+### Admin test gate baseline (P1)
+- Added minimal unit test runner and first test target
+  - `apps/admin/package.json`
+  - `apps/admin/vitest.config.ts`
+  - `apps/admin/src/auth/tokenStore.test.ts`
+  - Added `npm run test` (Vitest + jsdom), and validated token migration/storage behavior with unit tests
+- Extended Admin CI quality gate
+  - `.github/workflows/admin-ci.yml`
+  - Added test step: `npm ci` -> `npm run test` -> `npx tsc --noEmit` -> `npm run build`
+- Synced command/docs references for Admin checks
+  - `AGENTS.md`
+  - `docs/dev-guide.md`
+  - `docs/LOCAL_SETUP.md`
+  - `CLAUDE.md`
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
