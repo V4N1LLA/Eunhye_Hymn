@@ -37,6 +37,7 @@
   - preflight + 최신 배포 게이트 + 수동 스모크 최신성(기본 7일) 게이트 + `docs/staging-smoke-log.md` 기록을 일괄 수행
   - 수동 스모크 완료 후 결과 기록:
     - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> -SkipPreflight -ManualSmokeResult PASS -ManualSmokeEvidence <증빙URL> [-ManualSmokeNotes "<요약>"]`
+    - `-ManualSmokeEvidence` 누락/링크 형식 이상이면 `EvidenceStatus=WARN` + `evidence warning:*` 노트가 로그/JSON에 기록됨
 - [ ] 통합 운영 헬스 사이클 실행(권장)
   - `.\scripts\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> [-AutoLogin] [-WaitForCompletion]`
   - staging 게이트 + 시크릿 로테이션 점검을 함께 실행하고 `docs/ops-health-log.md`에 결과를 누적
