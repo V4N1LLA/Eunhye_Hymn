@@ -59,6 +59,16 @@ function Ensure-ParentDirectory {
   }
 }
 
+function Escape-MarkdownCell {
+  param([string]$Value)
+
+  if ($null -eq $Value) {
+    return ""
+  }
+
+  return $Value.Replace("|", "\|").Trim()
+}
+
 function Ensure-LogFile {
   param([string]$Path)
 
@@ -71,7 +81,7 @@ function Ensure-LogFile {
   @"
 # Staging Rehearsal Log
 
-스테이징 리허설 실행 기록 문서다. `scripts/staging-rehearsal.ps1`가 자동으로 행을 추가한다.
+Operational rehearsal log. `scripts/staging-rehearsal.ps1` appends entries automatically.
 
 | UTC Time | Repo | Ref | Preflight | Workflow Run | Result | Notes |
 |----------|------|-----|-----------|--------------|--------|-------|
@@ -91,7 +101,15 @@ function Append-LogRow {
 
   Ensure-LogFile -Path $Path
   $utc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-  Add-Content -Path $Path -Value "| $utc | $RepoName | $BranchRef | $PreflightStatus | $RunUrl | $Result | $Notes |" -Encoding utf8
+  $line = "| {0} | {1} | {2} | {3} | {4} | {5} | {6} |" -f `
+    (Escape-MarkdownCell $utc),
+    (Escape-MarkdownCell $RepoName),
+    (Escape-MarkdownCell $BranchRef),
+    (Escape-MarkdownCell $PreflightStatus),
+    (Escape-MarkdownCell $RunUrl),
+    (Escape-MarkdownCell $Result),
+    (Escape-MarkdownCell $Notes)
+  Add-Content -Path $Path -Value $line -Encoding utf8
 }
 
 function Get-FirstUsefulLine {

@@ -12,17 +12,20 @@
   - `staging` <- `develop` 머지 반영 완료 (`e83ecbf`, logs `6459e95`)
   - `production` <- `staging` 머지 반영 완료 (`cde06d6`)
 - 스테이징 최신 증빙
-  - Deploy Staging run `22346810833` (preflight/deploy/verify PASS)
-  - `staging-ops-cycle`: `HOLD` (manual smoke recency missing)
-  - `ops-health-cycle`: `PASS` with staging `CONDITIONAL_GO` (recency gate skip), secrets `PASS`
-- 모바일 스토어 워크플로 충돌 해소
-  - `.github/workflows/mobile-store-release.yml`의 `API_BASE_URL` dart-define quoting 경로를 staging 기준으로 통일
-- 스크립트 리팩토링(로그 파서 안정화)
-  - `scripts/staging-ops-cycle.ps1`, `scripts/ops-health-cycle.ps1`
-  - markdown 로그 행 파서를 escaped pipe(`\|`) 인식 방식으로 개선
-- 릴리즈 프리플라이트 강화
-  - `scripts/release-preflight.ps1`에 `staging head alignment` 체크 추가
-  - 최신 staging 브랜치 HEAD와 최신 성공 deploy SHA가 다르면 `HOLD`
+  - Deploy Staging run `22347916528` (preflight/deploy/verify PASS)
+  - `staging-ops-cycle`: strict gate `HOLD` (manual smoke recency missing), skip gate `CONDITIONAL_GO`
+  - `ops-health-cycle`: `PASS` with staging `CONDITIONAL_GO`, secrets `PASS`
+- 릴리즈 프리플라이트/레디니스
+  - `scripts/release-preflight.ps1 -Version 1.0.1 -Branch staging` 결과 `READY`
+  - Release Readiness run `22351497696` 성공
+  - `scripts/release-preflight.ps1`의 `staging head alignment` 체크 유지
+- 모바일 스토어 사이클 최신 증빙 (production ref)
+  - Android `play_upload`: run `22351537681` 실패 (`android_play_upload`)
+  - iOS `testflight`: run `22351821815` 실패 (`ios_codesign_certificate_import`)
+  - both `build_only`: run `22351890816` 성공
+- 스크립트 리팩토링
+  - `scripts/staging-rehearsal.ps1`: markdown 셀 escape 추가(`\|`) 및 로그 헤더 문구 정규화
+  - `scripts/staging-ops-cycle.ps1`, `scripts/ops-health-cycle.ps1`: escaped pipe(`\|`) 인식 파서 유지
 
 ---
 
@@ -853,7 +856,7 @@ develop push → GitHub Actions
 - IAM 정책 샘플:
   - `infra/aws/terraform-deployer-iam-policy.json`
 - 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
-- 최신 점검(2026-02-23): deploy run `22230828133` 기준 수동 스모크 `PASS` 기록 반영, 통합 운영 판정 `PASS`.
+- 최신 점검(2026-02-24): deploy run `22347916528` 기준 자동 게이트 `PASS`, 수동 스모크 미기록으로 strict 판정 `HOLD`/skip 판정 `CONDITIONAL_GO`.
 
 **2. 운영 문서/절차 고도화**
 - `docs/runbook.md` + `docs/staging-smoke-checklist.md` + `docs/staging-feedback-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
@@ -876,8 +879,10 @@ develop push → GitHub Actions
 - 운영 루프 자동화 완료: preflight + dispatch + run watch + 로그 적재(`scripts/mobile-store-*.ps1`)
 - Android build-only 실검증 완료: run `22210175274`, `22210322592` 성공
 - publish 경로 실검증 실행:
-  - Android `play_upload`: run `22329008651` 실패 (Google Play 업로드 단계)
-  - iOS `testflight`: run `22329248773` 실패 (Apple 인증서 import 단계)
+  - Android `play_upload`: run `22329008651`, `22351537681` 실패 (Google Play 업로드 단계)
+  - iOS `testflight`: run `22329248773`, `22351821815` 실패 (Apple 인증서 import 단계)
+- build-only 최신 실검증:
+  - run `22351890816` 성공 (android signed AAB + iOS no-codesign artifact)
 - 실패 run 진단/복구 장치 추가 완료 (2026-02-24)
   - `scripts/mobile-store-diagnose.ps1`: 실패 step 기반 원인 키 + 복구 액션 출력
   - `scripts/mobile-store-cycle.ps1`: 실패 시 진단 요약(`failure_key`, `failed_step`, `recovery_hint`)을 로그 노트에 자동 반영
