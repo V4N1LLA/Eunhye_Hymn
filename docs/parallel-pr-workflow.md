@@ -40,3 +40,22 @@
 1. 먼저 `git fetch origin`
 2. 대상 브랜치 리베이스/머지 후 충돌 해결
 3. 충돌 파일이 공용 정책 파일이면 관련 터미널 담당자와 먼저 합의
+
+## Collision Guard Automation (2026-02-24)
+- `scripts/new-worktree-task.ps1` now validates ownership before creating a worktree.
+- Recommended command:
+
+```powershell
+.\scripts\new-worktree-task.ps1 `
+  -TaskName "admin-user-filter" `
+  -BaseBranch develop `
+  -Owner codex `
+  -ClaimedPaths "apps/admin/src/pages/UserListPage.tsx","docs/runbook.md"
+```
+
+- Guard rules enforced:
+  - block local/remote branch name collisions
+  - block task-board worktree path collisions
+  - block claimed-path overlap with active rows from other owners
+- On success, the script auto-upserts `docs/parallel-task-board.md` with `status=in_progress` and current UTC.
+- Use `-AllowClaimedPathConflict` only for explicit, coordinated exceptions.

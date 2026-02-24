@@ -797,6 +797,10 @@ develop push → GitHub Actions
   - `scripts/staging-ops-cycle.ps1`: `FailureCategory`/`FailureDetail` 추가, first-useful-line 추출 표준화
   - status 실패 경로에서 `status_command`/`status_json_parse` 카테고리와 핵심 실패 라인(JSON) 유지
   - 하위 PowerShell 호출 예외를 흡수해 구조화 결과(JSON) 누락 없이 반환
+- 병렬 작업 충돌 가드 자동화 반영 (2026-02-24)
+  - `scripts/new-worktree-task.ps1`: branch/worktree/claimed-path 소유권 충돌 사전 검증
+  - `docs/parallel-task-board.md` 자동 upsert(소유자/경로/상태/UTC), 충돌 시 생성 차단
+  - `-AllowClaimedPathConflict`로 예외 허용 가능(기본은 차단)
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`
