@@ -554,7 +554,9 @@ com.eunhyehymn/
 - **운영 스크립트**:
   - `scripts/mobile-store-preflight.ps1`
   - `scripts/mobile-store-cycle.ps1`
+  - `scripts/mobile-store-diagnose.ps1`
   - 실행 로그: `docs/mobile-store-release-log.md`
+  - 복구 가이드: `docs/mobile-store-recovery.md`
 
 ### Deploy Staging (`deploy-staging.yml`)
 - **트리거**: develop push + `workflow_dispatch`
@@ -839,6 +841,10 @@ develop push → GitHub Actions
 - publish 경로 실검증 실행:
   - Android `play_upload`: run `22329008651` 실패 (Google Play 업로드 단계)
   - iOS `testflight`: run `22329248773` 실패 (Apple 인증서 import 단계)
+- 실패 run 진단/복구 장치 추가 완료 (2026-02-24)
+  - `scripts/mobile-store-diagnose.ps1`: 실패 step 기반 원인 키 + 복구 액션 출력
+  - `scripts/mobile-store-cycle.ps1`: 실패 시 진단 요약(`failure_key`, `failed_step`, `recovery_hint`)을 로그 노트에 자동 반영
+  - `scripts/mobile-store-preflight.ps1`: 실패 체크별 recovery hint 출력
 - 남은 과제:
   - placeholder 시크릿을 실제 스토어 자격증명으로 교체
   - 교체 후 `play_upload`/`testflight` 재실행 및 성공 로그 확보

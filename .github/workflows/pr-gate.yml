@@ -169,7 +169,8 @@ jobs:
             "scripts/release-preflight.ps1",
             "scripts/new-worktree-task.ps1",
             "scripts/apply-branch-protection.ps1",
-            "scripts/check-doc-sync.ps1"
+            "scripts/check-doc-sync.ps1",
+            "scripts/mobile-store-diagnose.ps1"
           )
 
           $hasErrors = $false

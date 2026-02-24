@@ -196,8 +196,12 @@ Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
   - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode build_only -IosDistributionMode build_only`
   - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode play_upload -IosDistributionMode build_only`
   - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target ios -AndroidDistributionMode build_only -IosDistributionMode testflight`
+- 실패 run 진단:
+  - `.\scripts\mobile-store-diagnose.ps1 -Repo V4N1LLA/Eunhye_Hymn -RunId <run_id>`
 - 실행 로그:
   - `docs/mobile-store-release-log.md`
+- 복구 가이드:
+  - `docs/mobile-store-recovery.md`
 - 최근 검증(2026-02-23):
   - Android `play_upload`: run `22329008651` 실패 (`Upload Android AAB to Google Play`)
   - iOS `testflight`: run `22329248773` 실패 (`Import Apple code-sign certificate`)

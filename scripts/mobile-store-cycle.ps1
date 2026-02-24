@@ -103,6 +103,55 @@ function Get-FirstUsefulLine {
   return $lines[0]
 }
 
+function Build-FailureDiagnosisNote {
+  param(
+    [string]$Repo,
+    [string]$RunId,
+    [string]$DiagnoseScriptPath
+  )
+
+  if ([string]::IsNullOrWhiteSpace($RunId) -or -not (Test-Path $DiagnoseScriptPath)) {
+    return ""
+  }
+
+  $diagnoseResult = Invoke-PowerShellFile -ScriptPath $DiagnoseScriptPath -Arguments @(
+    "-Repo", $Repo,
+    "-RunId", $RunId,
+    "-AsJson"
+  )
+  if ($diagnoseResult.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($diagnoseResult.Output)) {
+    return ""
+  }
+
+  try {
+    $diag = $diagnoseResult.Output | ConvertFrom-Json
+    $parts = @()
+
+    if (-not [string]::IsNullOrWhiteSpace("$($diag.failureKey)")) {
+      $parts += ("failure_key=" + $diag.failureKey)
+    }
+    if (-not [string]::IsNullOrWhiteSpace("$($diag.failedStepName)")) {
+      $parts += ("failed_step=" + $diag.failedStepName)
+    }
+
+    $firstRecovery = ""
+    if ($diag.recoveryActions -and $diag.recoveryActions.Count -gt 0) {
+      $firstRecovery = "$($diag.recoveryActions[0])"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($firstRecovery)) {
+      $hint = $firstRecovery.Replace(";", ",")
+      if ($hint.Length -gt 160) {
+        $hint = $hint.Substring(0, 160) + "..."
+      }
+      $parts += ("recovery_hint=" + $hint)
+    }
+
+    return ($parts -join ", ")
+  } catch {
+    return ""
+  }
+}
+
 function Invoke-PowerShellFile {
   param(
     [Parameter(Mandatory = $true)]
@@ -354,6 +403,15 @@ $runInfo = $runView | ConvertFrom-Json
 $conclusion = if ([string]::IsNullOrWhiteSpace($runInfo.conclusion)) { "unknown" } else { $runInfo.conclusion }
 $result = if ($watchExitCode -eq 0 -and $conclusion -eq "success") { "SUCCESS" } else { "FAILED" }
 $notes = "conclusion=$conclusion, head_sha=$($runInfo.headSha)"
+$diagnosisNote = ""
+
+if ($result -ne "SUCCESS") {
+  $diagnoseScript = Join-Path $PSScriptRoot "mobile-store-diagnose.ps1"
+  $diagnosisNote = Build-FailureDiagnosisNote -Repo $Repo -RunId $runId -DiagnoseScriptPath $diagnoseScript
+  if (-not [string]::IsNullOrWhiteSpace($diagnosisNote)) {
+    $notes = "$notes, $diagnosisNote"
+  }
+}
 
 Append-LogRow -Path $LogFile -Row @{
   UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -379,6 +437,9 @@ Write-Host ("Conclusion: {0}" -f $conclusion)
 Write-Host ("Log: {0}" -f $LogFile)
 
 if ($result -ne "SUCCESS") {
+  if (-not [string]::IsNullOrWhiteSpace($diagnosisNote)) {
+    throw "workflow run failed (run id: $runId), $diagnosisNote"
+  }
   exit 1
 }
 
