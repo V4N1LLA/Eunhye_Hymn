@@ -793,6 +793,10 @@ develop push → GitHub Actions
   - `scripts/staging-ops-cycle.ps1`: `EvidenceStatus(OK|WARN)`/`EvidenceWarnings` 출력 및 `evidence warning:*` 노트 자동 기록
   - `-ManualSmokeEvidence` 누락/링크 형식 이상 시 경고, 최신 수동 스모크 재사용 경로에서도 증빙 누락 경고
   - `docs/runbook.md`: 수동 스모크 증빙 누락 시 WARN 기록 동작 명시
+- 스테이징 예외 관측성 표준화 반영 (2026-02-24)
+  - `scripts/staging-ops-cycle.ps1`: `FailureCategory`/`FailureDetail` 추가, first-useful-line 추출 표준화
+  - status 실패 경로에서 `status_command`/`status_json_parse` 카테고리와 핵심 실패 라인(JSON) 유지
+  - 하위 PowerShell 호출 예외를 흡수해 구조화 결과(JSON) 누락 없이 반환
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`

@@ -148,6 +148,17 @@
   - `docs/runbook.md`
   - documented WARN behavior and manual evidence requirement
 
+### Staging exception observability standardization
+- Standardized failure-line extraction and category/detail output
+  - `scripts/staging-ops-cycle.ps1`
+  - Added shared `Get-FirstUsefulLine` extraction for nested script errors
+  - Added `FailureCategory` and `FailureDetail` fields to JSON output for HOLD/error paths
+  - Added category codes:
+    - `run_conclusion`, `deploy_job`, `verify_step`, `deploy_freshness`
+    - `aws_preflight`, `manual_smoke_recency`, `manual_smoke_failed`, `manual_smoke_evidence_warn`
+    - `status_command`, `status_json_parse`
+  - Hardened nested PowerShell invocation to capture stderr/exception text without losing structured failure output
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
