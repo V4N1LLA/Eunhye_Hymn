@@ -48,7 +48,8 @@ jobs:
             "scripts/staging-sync-secrets.ps1",
             "scripts/release-preflight.ps1",
             "scripts/new-worktree-task.ps1",
-            "scripts/apply-branch-protection.ps1"
+            "scripts/apply-branch-protection.ps1",
+            "scripts/check-doc-sync.ps1"
           )
 
           $hasErrors = $false

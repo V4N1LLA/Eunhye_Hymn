@@ -81,6 +81,8 @@ Run commands from repo root unless noted.
   - `bash -n infra/aws/deploy.sh`
   - `bash -n infra/aws/verify-staging.sh`
 - PowerShell syntax checks are defined in `.github/workflows/workflow-lint.yml`.
+- Doc sync check:
+  - `pwsh -File scripts/check-doc-sync.ps1 -BaseRef origin/develop -HeadRef HEAD`
 
 ## 5) Coding Guidelines (Cross-cutting)
 

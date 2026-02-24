@@ -521,6 +521,13 @@ com.eunhyehymn/
 - **캐시**: npm
 - **실행**: `npm ci` → `npm run test` → `tsc --noEmit` → `npm run build`
 
+### PR Gate (`pr-gate.yml`)
+- **트리거**: PR 이벤트 (`opened`, `synchronize`, `reopened`, `ready_for_review`)
+- **역할**: 변경 영역별 CI 묶음 + 최종 gate 평가
+- **문서 동기화 검사**: `scripts/check-doc-sync.ps1`
+  - non-doc 파일이 변경되면 `docs/changelog-dev.md`, `CLAUDE.md` 동시 변경을 요구
+  - 누락 시 `doc_sync` job 실패로 PR gate 차단
+
 ### Mobile CI (`mobile-ci.yml`)
 - **트리거**: PR 및 develop push (apps/mobile/** 변경 시)
 - **환경**: ubuntu-latest, Flutter stable
