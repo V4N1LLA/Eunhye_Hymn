@@ -80,6 +80,29 @@ function Append-LogRow {
   Add-Content -Path $Path -Value $line -Encoding utf8
 }
 
+function Get-FirstUsefulLine {
+  param([string]$Output)
+
+  if ([string]::IsNullOrWhiteSpace($Output)) {
+    return ""
+  }
+
+  $lines = $Output -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+  if ($lines.Count -eq 0) {
+    return ""
+  }
+
+  foreach ($line in $lines) {
+    if ($line -eq "System.Management.Automation.RemoteException") { continue }
+    if ($line -like "At line:*") { continue }
+    if ($line -like "+ CategoryInfo:*") { continue }
+    if ($line -like "+ FullyQualifiedErrorId:*") { continue }
+    return $line
+  }
+
+  return $lines[0]
+}
+
 function Invoke-PowerShellFile {
   param(
     [Parameter(Mandatory = $true)]
@@ -147,6 +170,11 @@ if (-not $SkipPreflight) {
   if ($preflightResult.ExitCode -eq 0) {
     $preflightState = "PASS"
   } else {
+    $preflightDetail = Get-FirstUsefulLine -Output $preflightResult.Output
+    if ([string]::IsNullOrWhiteSpace($preflightDetail)) {
+      $preflightDetail = "preflight failed"
+    }
+
     $preflightState = "FAIL"
     Append-LogRow -Path $LogFile -Row @{
       UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -159,9 +187,9 @@ if (-not $SkipPreflight) {
       RunId = "-"
       Result = "ABORTED"
       Url = "-"
-      Notes = "preflight failed"
+      Notes = "preflight failed: $preflightDetail"
     }
-    throw "mobile store preflight failed; cycle aborted."
+    throw "mobile store preflight failed; cycle aborted. detail: $preflightDetail"
   }
 }
 

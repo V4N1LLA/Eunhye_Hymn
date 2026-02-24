@@ -768,6 +768,7 @@ develop push → GitHub Actions
   - `scripts/mobile-store-cycle.ps1`: preflight 호출 실행기 cross-platform 처리
   - `scripts/run-mobile-emulator.ps1`: flutter wrapper 호출 실행기 cross-platform 처리
   - `.github/workflows/deploy-staging.yml`, `.github/workflows/ops-health-scheduled.yml`: workflow_dispatch boolean 입력 false 보존식으로 정규화
+  - `scripts/staging-rehearsal.ps1`, `scripts/mobile-store-cycle.ps1`: preflight 실패 시 first-useful-line 추출로 로그/예외 원인 가시성 강화
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`

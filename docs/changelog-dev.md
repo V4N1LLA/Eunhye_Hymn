@@ -37,6 +37,12 @@
   - `.github/workflows/ops-health-scheduled.yml`
   - Preserved explicit `false` values for workflow_dispatch boolean inputs (`enable_awslogs`, `include_mobile_release_secrets`, `wait_for_completion`)
 
+### Preflight failure diagnostics hardening
+- `scripts/mobile-store-cycle.ps1`
+  - Added first-useful-line extraction for preflight failures and propagated detail into log notes/exception message
+- `scripts/staging-rehearsal.ps1`
+  - Captured preflight output and surfaced first-useful-line detail in log notes/exception message
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
