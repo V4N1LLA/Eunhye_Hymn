@@ -101,6 +101,25 @@
   - `AGENTS.md`
   - `CLAUDE.md`
 
+### Mobile store failure diagnosis + recovery runbook
+- Added failed-run diagnosis script
+  - `scripts/mobile-store-diagnose.ps1`
+  - Extracts failed job/step from GitHub Actions run and maps to recovery actions
+- Enhanced mobile store cycle/preflight diagnostics
+  - `scripts/mobile-store-cycle.ps1`
+    - Appends failure diagnosis (`failure_key`, `failed_step`, `recovery_hint`) to log notes when run fails
+  - `scripts/mobile-store-preflight.ps1`
+    - Prints check-specific recovery hints for missing/invalid prerequisites
+- CI syntax-check coverage update
+  - `.github/workflows/pr-gate.yml`
+  - `.github/workflows/workflow-lint.yml`
+  - Added `scripts/mobile-store-diagnose.ps1` to PowerShell syntax validation target list
+- Added recovery documentation
+  - `docs/mobile-store-recovery.md`
+  - `docs/mobile/README.md`
+  - `apps/mobile/README.md`
+  - `docs/runbook.md`
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation

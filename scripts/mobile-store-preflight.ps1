@@ -44,6 +44,34 @@ function Add-SecretCheck {
   Add-Check ("secret " + $SecretName) $false ("missing: " + $Reason)
 }
 
+function Get-RecoveryHintForCheck {
+  param([string]$CheckName)
+
+  if ($CheckName -like "secret MOBILE_ANDROID_*") {
+    return "Update Android signing secrets from a valid release keystore and retry preflight."
+  }
+  if ($CheckName -eq "secret GOOGLE_PLAY_SERVICE_ACCOUNT_JSON") {
+    return "Set a Play service account JSON key with upload/release permissions for the target package."
+  }
+  if ($CheckName -eq "android package name") {
+    return "Pass -AndroidPackageName or set GOOGLE_PLAY_PACKAGE_NAME secret."
+  }
+  if ($CheckName -eq "ios bundle id" -or $CheckName -eq "secret MOBILE_IOS_BUNDLE_ID") {
+    return "Pass -IosBundleId or set MOBILE_IOS_BUNDLE_ID to a real App Store bundle id."
+  }
+  if ($CheckName -like "secret MOBILE_IOS_*") {
+    return "Update iOS TestFlight secrets (team, p12, App Store key trio) and retry preflight."
+  }
+  if ($CheckName -eq "gh auth status") {
+    return "Run gh auth login and re-run preflight."
+  }
+  if ($CheckName -eq "gh secret list") {
+    return "Verify repository access and token scope, then re-run preflight."
+  }
+
+  return "Review workflow configuration and corresponding secret/input values."
+}
+
 Add-Check "gh cli" (Test-CommandExists "gh") "required"
 if (-not (Test-CommandExists "gh")) {
   $checks | Format-Table -AutoSize
@@ -120,6 +148,12 @@ $checks | Format-Table -AutoSize
 
 $failed = @($checks | Where-Object { -not $_.Passed })
 if ($failed.Count -gt 0) {
+  Write-Host ""
+  Write-Host "Recovery hints:"
+  foreach ($item in $failed) {
+    $hint = Get-RecoveryHintForCheck -CheckName "$($item.Name)"
+    Write-Host ("- " + $item.Name + ": " + $hint)
+  }
   exit 1
 }
 

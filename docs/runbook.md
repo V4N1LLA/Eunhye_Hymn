@@ -116,3 +116,16 @@
   - `ai_recommend_requests_total`, `ai_recommend_latency_seconds`, `ai_recommend_fallback_total`
   - 기준: success rate >= 99%, p95 latency <= 2.0s, fallback ratio <= 5%
 - 월 1회 롤백 시나리오 점검
+
+## 10. Mobile Store Failure Recovery
+- Preflight before dispatch:
+  - `.\scripts\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target android -AndroidDistributionMode play_upload`
+  - `.\scripts\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target ios -IosDistributionMode testflight`
+- Diagnose failed run:
+  - `.\scripts\mobile-store-diagnose.ps1 -Repo V4N1LLA/Eunhye_Hymn -RunId <run_id>`
+- Re-run cycle after credential/input fixes:
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode play_upload -IosDistributionMode build_only`
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target ios -AndroidDistributionMode build_only -IosDistributionMode testflight`
+- Reference docs:
+  - `docs/mobile-store-recovery.md`
+  - `docs/mobile-store-release-log.md`
