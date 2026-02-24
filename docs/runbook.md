@@ -107,6 +107,15 @@
   - 결과는 `docs/ops-health-log.md`에 자동 누적되고, 실패 원인은 `FailureCategory`로 분류됨
   - GitHub Actions 스케줄 실행: `.github/workflows/ops-health-scheduled.yml` (매주 월요일 02:00 UTC)
   - HOLD/ERROR 시 `scripts/ops-health-issue-alert.ps1`가 이슈를 자동 생성/업데이트
+  - 알림 노이즈 정책 기본값:
+    - dedup window: `30m`
+    - HOLD re-alert cooldown: `480m`
+    - ERROR re-alert cooldown: `120m`
+  - 필요 시 다음 파라미터로 조정:
+    - `-AlertDedupWindowMinutes <int>`
+    - `-AlertHoldReAlertWindowMinutes <int>`
+    - `-AlertErrorReAlertWindowMinutes <int>`
+    - `-AlertForce` (긴급 상황에서 쿨다운 무시)
 - 월 1회 시크릿 교체 상태 점검
   - `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <담당자> -MaxAgeDays 90`
   - 모바일 릴리즈 시크릿 포함 점검: `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <담당자> -MaxAgeDays 90 -IncludeMobileReleaseSecrets`

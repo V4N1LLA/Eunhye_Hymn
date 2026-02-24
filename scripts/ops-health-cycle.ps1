@@ -25,6 +25,10 @@ param(
   [switch]$AlertOnFailure,
   [string]$AlertRepo = "",
   [switch]$AlertDryRun,
+  [int]$AlertDedupWindowMinutes = 30,
+  [int]$AlertHoldReAlertWindowMinutes = 480,
+  [int]$AlertErrorReAlertWindowMinutes = 120,
+  [switch]$AlertForce,
   [switch]$AsJson
 )
 
@@ -303,6 +307,15 @@ if ($SecretsMaxAgeDays -lt 1) {
 if ($LogDedupWindowMinutes -lt 0) {
   throw "LogDedupWindowMinutes must be >= 0"
 }
+if ($AlertDedupWindowMinutes -lt 0) {
+  throw "AlertDedupWindowMinutes must be >= 0"
+}
+if ($AlertHoldReAlertWindowMinutes -lt 0) {
+  throw "AlertHoldReAlertWindowMinutes must be >= 0"
+}
+if ($AlertErrorReAlertWindowMinutes -lt 0) {
+  throw "AlertErrorReAlertWindowMinutes must be >= 0"
+}
 if ([string]::IsNullOrWhiteSpace($ManualSmokeResult) -and (
     -not [string]::IsNullOrWhiteSpace($ManualSmokeEvidence) -or
     -not [string]::IsNullOrWhiteSpace($ManualSmokeNotes)
@@ -508,10 +521,16 @@ if ($AlertOnFailure -and $overall -ne "PASS") {
       "-Notes", ($notes -join "; "),
       "-Operator", $Owner,
       "-SourceLog", $OpsHealthLogFile,
+      "-DedupWindowMinutes", "$AlertDedupWindowMinutes",
+      "-HoldReAlertWindowMinutes", "$AlertHoldReAlertWindowMinutes",
+      "-ErrorReAlertWindowMinutes", "$AlertErrorReAlertWindowMinutes",
       "-AsJson"
     )
     if ($AlertDryRun) {
       $alertArgs += "-DryRun"
+    }
+    if ($AlertForce) {
+      $alertArgs += "-ForceAlert"
     }
 
     $alertInvocation = Invoke-PowerShellFile -ScriptPath $alertScript -Arguments $alertArgs

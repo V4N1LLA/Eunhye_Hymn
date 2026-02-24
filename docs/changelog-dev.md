@@ -120,6 +120,23 @@
   - `apps/mobile/README.md`
   - `docs/runbook.md`
 
+### Ops alert noise reduction (HOLD/ERROR)
+- Added alert dedup + re-alert cooldown policy
+  - `scripts/ops-health-issue-alert.ps1`
+  - New options:
+    - `-DedupWindowMinutes` (default 30)
+    - `-HoldReAlertWindowMinutes` (default 480)
+    - `-ErrorReAlertWindowMinutes` (default 120)
+    - `-ForceAlert` (override skip policy)
+  - Existing open issue alerts now skip repeated comments inside dedup/cooldown windows and return explicit skip reason (`dedup_window` / `realert_cooldown`)
+- Added pass-through controls in orchestrator
+  - `scripts/ops-health-cycle.ps1`
+  - New options:
+    - `-AlertDedupWindowMinutes`
+    - `-AlertHoldReAlertWindowMinutes`
+    - `-AlertErrorReAlertWindowMinutes`
+    - `-AlertForce`
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
