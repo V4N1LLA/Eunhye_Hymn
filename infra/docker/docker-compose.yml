@@ -1,0 +1,112 @@
+services:
+  # ── PostgreSQL 15 ────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: eunhye-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-eunhye_hymn}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - eunhye-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${POSTGRES_DB:-eunhye_hymn}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── LocalStack (S3 only) ────────────────────────────────────
+  localstack:
+    image: localstack/localstack:latest
+    container_name: eunhye-localstack
+    restart: unless-stopped
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+      DEFAULT_REGION: ${S3_REGION:-ap-northeast-2}
+    networks:
+      - eunhye-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:4566/_localstack/health | grep -q '\"s3\": \"available\"' || curl -sf http://localhost:4566/_localstack/health | grep -q '\"s3\": \"running\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── S3 Bucket Initialization ────────────────────────────────
+  init-s3:
+    image: amazon/aws-cli:latest
+    container_name: eunhye-init-s3
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: ${S3_REGION:-ap-northeast-2}
+      AWS_ENDPOINT_URL: http://localstack:4566
+      S3_BUCKET: ${S3_BUCKET:-local-bucket}
+    entrypoint: ["/bin/sh", "/init-s3.sh"]
+    volumes:
+      - ./init-s3.sh:/init-s3.sh:ro
+    networks:
+      - eunhye-net
+
+  # ── Spring Boot API ────────────────────────────────────────
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    container_name: eunhye-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      init-s3:
+        condition: service_completed_successfully
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-eunhye_hymn}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${DB_PASS:-postgres}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS:-3600}
+      JWT_REFRESH_TTL_SECONDS: ${JWT_REFRESH_TTL_SECONDS:-604800}
+      INVITE_CODE: ${INVITE_CODE}
+      S3_BUCKET: ${S3_BUCKET:-local-bucket}
+      S3_REGION: ${S3_REGION:-ap-northeast-2}
+      S3_ENDPOINT: http://localstack:4566
+      S3_PUBLIC_BASE_URL: http://localhost:4566/${S3_BUCKET:-local-bucket}
+      S3_PRESIGN_EXPIRES_MINUTES: ${S3_PRESIGN_EXPIRES_MINUTES:-15}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      ADMIN_LOGIN_ID: ${ADMIN_LOGIN_ID:-local_admin}
+      ADMIN_LOGIN_PASSWORD: ${ADMIN_LOGIN_PASSWORD:-local_admin_2026!}
+      AI_GEMINI_ENABLED: ${AI_GEMINI_ENABLED:-false}
+      AI_GEMINI_API_KEY: ${AI_GEMINI_API_KEY:-}
+      AI_GEMINI_MODEL: ${AI_GEMINI_MODEL:-gemini-2.5-flash-lite}
+      AI_GEMINI_CONNECT_TIMEOUT_SECONDS: ${AI_GEMINI_CONNECT_TIMEOUT_SECONDS:-3}
+      AI_GEMINI_READ_TIMEOUT_SECONDS: ${AI_GEMINI_READ_TIMEOUT_SECONDS:-8}
+      AI_GEMINI_TEMPERATURE: ${AI_GEMINI_TEMPERATURE:-0.1}
+      AI_GEMINI_MAX_OUTPUT_TOKENS: ${AI_GEMINI_MAX_OUTPUT_TOKENS:-160}
+      AI_RECOMMEND_MAX_CANDIDATE_HYMNS: ${AI_RECOMMEND_MAX_CANDIDATE_HYMNS:-25}
+      AI_RECOMMEND_MAX_RESULTS: ${AI_RECOMMEND_MAX_RESULTS:-3}
+      AI_RECOMMEND_MAX_SITUATION_CHARS: ${AI_RECOMMEND_MAX_SITUATION_CHARS:-180}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+    networks:
+      - eunhye-net
+
+networks:
+  eunhye-net:
+    driver: bridge
+
+volumes:
+  postgres-data:

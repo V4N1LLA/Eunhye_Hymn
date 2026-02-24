@@ -1,0 +1,46 @@
+name: API CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - staging
+      - production
+    paths:
+      - "apps/api/**"
+      - ".github/workflows/api-ci.yml"
+  push:
+    branches:
+      - develop
+      - staging
+      - production
+    paths:
+      - "apps/api/**"
+      - ".github/workflows/api-ci.yml"
+
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+      - name: Java 17 설정
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            apps/api/**/*.gradle*
+            apps/api/**/gradle-wrapper.properties
+      - name: Gradle Wrapper 실행 권한 부여
+        run: chmod +x gradlew
+      - name: 테스트 실행
+        run: ./gradlew test --no-daemon --stacktrace

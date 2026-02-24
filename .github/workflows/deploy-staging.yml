@@ -1,0 +1,196 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - staging
+    paths:
+      - "apps/api/**"
+      - "apps/admin/**"
+      - "infra/aws/**"
+      - ".github/workflows/deploy-staging.yml"
+  workflow_dispatch:
+    inputs:
+      enable_awslogs:
+        description: "Enable CloudWatch awslogs overlay during deploy"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  preflight-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required secrets
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
+        run: |
+          missing=()
+          [ -z "${AWS_ACCESS_KEY_ID}" ] && missing+=("AWS_ACCESS_KEY_ID")
+          [ -z "${AWS_SECRET_ACCESS_KEY}" ] && missing+=("AWS_SECRET_ACCESS_KEY")
+          [ -z "${AWS_REGION}" ] && missing+=("AWS_REGION")
+          [ -z "${ECR_REGISTRY}" ] && missing+=("ECR_REGISTRY")
+          [ -z "${EC2_HOST}" ] && missing+=("EC2_HOST")
+          [ -z "${EC2_SSH_KEY}" ] && missing+=("EC2_SSH_KEY")
+          [ -z "${DEPLOY_ENV_FILE}" ] && missing+=("DEPLOY_ENV_FILE")
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+
+          echo "All required secrets are set."
+
+  # ── 1. API Tests ─────────────────────────────────────────────
+  test-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            apps/api/**/*.gradle*
+            apps/api/**/gradle-wrapper.properties
+      - run: chmod +x gradlew
+      - run: ./gradlew test --no-daemon --stacktrace
+
+  # ── 2. Admin Build Check ─────────────────────────────────────
+  check-admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+  # ── 3. Build & Push Docker Images ────────────────────────────
+  build-and-push:
+    needs: [preflight-secrets, test-api, check-admin]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push API image
+        working-directory: apps/api
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t "${ECR_REGISTRY}/eunhye-hymn/api:${IMAGE_TAG}" -t "${ECR_REGISTRY}/eunhye-hymn/api:latest" .
+          docker push "${ECR_REGISTRY}/eunhye-hymn/api:${IMAGE_TAG}"
+          docker push "${ECR_REGISTRY}/eunhye-hymn/api:latest"
+
+      - name: Build and push Admin image
+        working-directory: apps/admin
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t "${ECR_REGISTRY}/eunhye-hymn/admin:${IMAGE_TAG}" -t "${ECR_REGISTRY}/eunhye-hymn/admin:latest" .
+          docker push "${ECR_REGISTRY}/eunhye-hymn/admin:${IMAGE_TAG}"
+          docker push "${ECR_REGISTRY}/eunhye-hymn/admin:latest"
+
+  # ── 4. Deploy to EC2 ─────────────────────────────────────────
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 30
+    concurrency:
+      group: staging-ec2-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Ensure remote app directory exists
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ec2-user@${{ secrets.EC2_HOST }} \
+            "mkdir -p /home/ec2-user/app"
+
+      - name: Copy compose file and deploy script to EC2
+        run: |
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            infra/aws/docker-compose.prod.yml \
+            infra/aws/docker-compose.prod.awslogs.yml \
+            infra/aws/deploy.sh \
+            ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/app/
+
+      - name: Write .env file on EC2
+        run: |
+          cat <<'EOF' > /tmp/.env.deploy
+          ${{ secrets.DEPLOY_ENV_FILE }}
+          EOF
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            /tmp/.env.deploy \
+            ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/app/.env
+          rm -f /tmp/.env.deploy
+
+      - name: Run deploy script
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ github.sha }}
+          ENABLE_AWSLOGS: ${{ github.event_name == 'workflow_dispatch' && (inputs.enable_awslogs && 'true' || 'false') || secrets.ENABLE_AWSLOGS }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ec2-user@${{ secrets.EC2_HOST }} \
+            "cd /home/ec2-user/app && \
+             export ECR_REGISTRY=${ECR_REGISTRY} && \
+             export IMAGE_TAG=${IMAGE_TAG} && \
+             export AWS_REGION=${{ env.AWS_REGION }} && \
+             export ENABLE_AWSLOGS=${ENABLE_AWSLOGS} && \
+             chmod +x deploy.sh && \
+             ./deploy.sh"
+
+      - name: Verify deployment
+        env:
+          STAGING_HOST: ${{ secrets.EC2_HOST }}
+          STAGING_SSH_KEY: /home/runner/.ssh/deploy_key
+          EXPECTED_IMAGE_TAG: ${{ github.sha }}
+        run: |
+          chmod +x infra/aws/verify-staging.sh
+          infra/aws/verify-staging.sh

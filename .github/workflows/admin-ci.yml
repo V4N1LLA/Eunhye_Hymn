@@ -1,0 +1,47 @@
+name: Admin CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - staging
+      - production
+    paths:
+      - "apps/admin/**"
+      - ".github/workflows/admin-ci.yml"
+  push:
+    branches:
+      - develop
+      - staging
+      - production
+    paths:
+      - "apps/admin/**"
+      - ".github/workflows/admin-ci.yml"
+
+concurrency:
+  group: admin-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/admin
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Unit tests
+        run: npm run test
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+      - name: Build
+        run: npm run build

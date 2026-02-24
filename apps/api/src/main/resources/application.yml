@@ -1,0 +1,106 @@
+server:
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: eunhye-hymn-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/eunhye_hymn}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS}
+    refresh-token-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS}
+  rate-limit:
+    auth:
+      enabled: ${AUTH_RATE_LIMIT_ENABLED:true}
+      window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+      max-attempts-per-key: ${AUTH_RATE_LIMIT_MAX_ATTEMPTS_PER_KEY:25}
+      trust-forwarded-ip-header: ${AUTH_RATE_LIMIT_TRUST_FORWARDED_IP_HEADER:false}
+  invite:
+    code: ${INVITE_CODE}
+  admin:
+    # Comma-separated lists. If enforce-admin-only=true, only allowlisted operators can log in.
+    emails: ${ADMIN_EMAILS:}
+    kakao-subjects: ${ADMIN_KAKAO_SUBJECTS:}
+    enforce-admin-only: ${ADMIN_ENFORCE_ADMIN_ONLY:false}
+    # Admin web ID/password login (staging/ops only)
+    login-id: ${ADMIN_LOGIN_ID:}
+    login-password: ${ADMIN_LOGIN_PASSWORD:}
+
+sms:
+  verification:
+    code-length: ${SMS_CODE_LENGTH:6}
+    expires-seconds: ${SMS_EXPIRES_SECONDS:300}
+    cooldown-seconds: ${SMS_COOLDOWN_SECONDS:30}
+    max-attempts: ${SMS_MAX_ATTEMPTS:5}
+  twilio:
+    enabled: ${SMS_TWILIO_ENABLED:false}
+    account-sid: ${SMS_TWILIO_ACCOUNT_SID:}
+    auth-token: ${SMS_TWILIO_AUTH_TOKEN:}
+    from-number: ${SMS_TWILIO_FROM_NUMBER:}
+    message-template: ${SMS_TWILIO_MESSAGE_TEMPLATE:[Eunhye Hymn] Verification code is %s.}
+
+storage:
+  s3:
+    bucket: ${S3_BUCKET:local-bucket}
+    region: ${S3_REGION:ap-northeast-2}
+    endpoint: ${S3_ENDPOINT:}
+    public-base-url: ${S3_PUBLIC_BASE_URL:}
+    presign-expires-minutes: ${S3_PRESIGN_EXPIRES_MINUTES:15}
+
+events:
+  export:
+    jobs:
+      retention-days: ${EVENT_EXPORT_JOB_RETENTION_DAYS:7}
+      cleanup-cron: ${EVENT_EXPORT_JOB_CLEANUP_CRON:0 15 3 * * *}
+      cleanup-zone: ${EVENT_EXPORT_JOB_CLEANUP_ZONE:UTC}
+      recovery:
+        stale-running-minutes: ${EVENT_EXPORT_JOB_RECOVERY_STALE_RUNNING_MINUTES:15}
+        dispatch-batch-size: ${EVENT_EXPORT_JOB_RECOVERY_DISPATCH_BATCH_SIZE:20}
+        cron: ${EVENT_EXPORT_JOB_RECOVERY_CRON:0/30 * * * * *}
+        zone: ${EVENT_EXPORT_JOB_RECOVERY_ZONE:UTC}
+      alert:
+        window-days: ${EVENT_EXPORT_JOB_ALERT_WINDOW_DAYS:1}
+        min-finished-jobs: ${EVENT_EXPORT_JOB_ALERT_MIN_FINISHED_JOBS:5}
+        max-queued-jobs: ${EVENT_EXPORT_JOB_ALERT_MAX_QUEUED_JOBS:20}
+        max-failure-rate-percent: ${EVENT_EXPORT_JOB_ALERT_MAX_FAILURE_RATE_PERCENT:20}
+        max-p95-seconds: ${EVENT_EXPORT_JOB_ALERT_MAX_P95_SECONDS:120}
+        cron: ${EVENT_EXPORT_JOB_ALERT_CRON:0 */10 * * * *}
+        zone: ${EVENT_EXPORT_JOB_ALERT_ZONE:UTC}
+
+ai:
+  gemini:
+    enabled: ${AI_GEMINI_ENABLED:false}
+    api-key: ${AI_GEMINI_API_KEY:}
+    base-url: ${AI_GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+    model: ${AI_GEMINI_MODEL:gemini-2.5-flash-lite}
+    connect-timeout-seconds: ${AI_GEMINI_CONNECT_TIMEOUT_SECONDS:3}
+    read-timeout-seconds: ${AI_GEMINI_READ_TIMEOUT_SECONDS:8}
+    temperature: ${AI_GEMINI_TEMPERATURE:0.1}
+    max-output-tokens: ${AI_GEMINI_MAX_OUTPUT_TOKENS:160}
+  recommendations:
+    max-candidate-hymns: ${AI_RECOMMEND_MAX_CANDIDATE_HYMNS:25}
+    max-results: ${AI_RECOMMEND_MAX_RESULTS:3}
+    max-situation-chars: ${AI_RECOMMEND_MAX_SITUATION_CHARS:180}
