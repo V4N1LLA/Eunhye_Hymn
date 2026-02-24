@@ -126,6 +126,24 @@ function Get-LatestRunForWorkflowSha {
     Select-Object -First 1
 }
 
+function Get-BranchHeadSha {
+  param(
+    [string]$Repository,
+    [string]$TargetBranch
+  )
+
+  $encodedBranch = [Uri]::EscapeDataString($TargetBranch)
+  $branch = Invoke-GhJson -Args @(
+    "api",
+    "repos/$Repository/branches/$encodedBranch"
+  )
+  if ($null -eq $branch -or $null -eq $branch.commit) {
+    return ""
+  }
+
+  return "$($branch.commit.sha)"
+}
+
 $tag = "v$Version"
 $semverPattern = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$'
 
@@ -160,6 +178,7 @@ if ($isSemVer) {
 
 $stagingSummary = $null
 $deployHeadSha = ""
+$branchHeadSha = ""
 $statusScript = Join-Path $PSScriptRoot "staging-latest-status.ps1"
 $powershellCmd = if (Test-CommandExists "powershell.exe") {
   "powershell.exe"
@@ -207,6 +226,28 @@ if (-not (Test-Path $statusScript)) {
   }
 }
 
+$headAlignmentPassed = $false
+if ([string]::IsNullOrWhiteSpace($deployHeadSha)) {
+  Add-Check "staging head alignment" $false "skipped (staging deploy gate unavailable)"
+} else {
+  try {
+    $branchHeadSha = Get-BranchHeadSha -Repository $Repo -TargetBranch $Branch
+    if ([string]::IsNullOrWhiteSpace($branchHeadSha)) {
+      Add-Check "staging head alignment" $false "failed: branch head not found"
+    } else {
+      $headAlignmentPassed = ($branchHeadSha -eq $deployHeadSha)
+      Add-Check "staging head alignment" $headAlignmentPassed `
+        ($(if ($headAlignmentPassed) {
+              "sha=$branchHeadSha"
+            } else {
+              "branch_head=$branchHeadSha, deploy_sha=$deployHeadSha"
+            }))
+    }
+  } catch {
+    Add-Check "staging head alignment" $false ("failed: " + $_.Exception.Message)
+  }
+}
+
 $requiredWorkflows = @(
   "API CI",
   "Admin CI",
@@ -248,6 +289,7 @@ $result = [PSCustomObject]@{
   Ready = $ready
   StagingRunId = $(if ($null -eq $stagingSummary) { "" } else { "$($stagingSummary.RunId)" })
   StagingHeadSha = $deployHeadSha
+  BranchHeadSha = $branchHeadSha
   StagingUrl = $(if ($null -eq $stagingSummary) { "" } else { "$($stagingSummary.Url)" })
   Checks = $checks
 }
