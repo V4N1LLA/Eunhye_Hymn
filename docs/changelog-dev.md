@@ -65,6 +65,22 @@
   - `docs/LOCAL_SETUP.md`
   - `CLAUDE.md`
 
+### API complex use case test hardening (P1)
+- Added exception-path coverage for event export job use case
+  - `apps/api/src/test/java/com/eunhyehymn/application/usecases/AdminEventExportJobUseCaseTest.java`
+  - Added tests for:
+    - failed processing path with long error-message truncation (500 chars)
+    - `getDownload` failure mapping (`FAILED` -> `409 export_job_failed`)
+    - `getDownload` corruption guard (`COMPLETED` with missing payload -> `500 export_job_corrupted`)
+- Added validation/error-path coverage for AI recommendation use case
+  - `apps/api/src/test/java/com/eunhyehymn/application/usecases/RecommendHymnsUseCaseTest.java`
+  - Added tests for:
+    - blank situation validation (`400 validation_error`)
+    - external AI exception mapping (`503 ai_unavailable`)
+    - result clamp/sanitization behavior (maxResults clamp, duplicate/unknown recommendation filtering, reason length cap)
+- Verification
+  - `cd apps/api && ./gradlew test --tests "*AdminEventExportJobUseCaseTest*" --tests "*RecommendHymnsUseCaseTest*" --no-daemon --stacktrace`
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation

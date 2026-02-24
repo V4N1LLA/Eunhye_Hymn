@@ -699,6 +699,7 @@ develop push → GitHub Actions
 - 비동기 export 결과 정리 배치 (완료/실패 작업 기본 7일 보관 후 정리)
 - 비동기 export 운영 지표 API (`/admin/events/export-jobs/metrics`) + cleanup 실행 이력 기록
 - DB 스키마 Flyway 마이그레이션 (V1~V16)
+- 복잡 유스케이스 예외 경로 테스트 보강 (`AdminEventExportJobUseCaseTest`, `RecommendHymnsUseCaseTest`)
 - 핵심 테스트 스위트 통과 (API/Admin/Mobile)
 
 **Admin 프론트엔드**
@@ -711,6 +712,7 @@ develop push → GitHub Actions
 - Access Token 자동 갱신 (401 → refresh → 재시도, mutex 패턴)
 - 인증 컨텍스트 (`loginWithSocial`, `setTokensAndUser`), 공통 API 클라이언트, 사이드바 레이아웃
 - Dev Login (개발용, 접이식)
+- Vitest 기반 최소 단위 테스트 게이트 도입 (`npm run test`, `tokenStore` 테스트 + CI 연동)
 
 **Mobile 앱 (Flutter MVP)**
 - 소셜 SDK 직접 로그인 (Kakao 모바일, Kakao 웹은 토큰 입력 fallback) + Dev 로그인
@@ -764,6 +766,9 @@ develop push → GitHub Actions
   - `scripts/sync-skills.ps1`: source/destination 경로 겹침 방지 가드 추가
   - `.github/workflows/secrets-rotation-scheduled.yml`: workflow_dispatch boolean false 보존
   - `skills/secrets-rotation-auditor/references/commands.md`: 필수 인자 누락 예시 보강
+- 테스트 게이트/유스케이스 예외경로 보강 (2026-02-24)
+  - `apps/admin`: Vitest+jsdom 도입, `tokenStore` 테스트 추가, `admin-ci` 테스트 단계 추가
+  - `apps/api`: `AdminEventExportJobUseCaseTest`, `RecommendHymnsUseCaseTest` 예외/경계 경로 테스트 추가
 - 운영 스크립트 호환성 후속 반영 (2026-02-24)
   - `scripts/staging-rehearsal.ps1`: preflight 실행기 cross-platform 처리 + 동시 dispatch 환경 run 선택 안정화(earliest/new-run 기준)
   - `scripts/mobile-store-cycle.ps1`: preflight 호출 실행기 cross-platform 처리
