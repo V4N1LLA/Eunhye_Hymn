@@ -205,6 +205,29 @@
     - `scripts/staging-ops-cycle.ps1 -Branch staging -SkipPreflight -SkipManualSmokeRecencyGate -AsJson`
     - `scripts/ops-health-cycle.ps1 -Branch staging -SkipPreflight -SkipManualSmokeRecencyGate -IncludeMobileReleaseSecrets -AsJson`
 
+### Full cycle rerun + rehearsal log hardening
+- Staging and release gates rerun (latest evidence refresh)
+  - `scripts/staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -AutoLogin`
+  - `scripts/staging-ops-cycle.ps1 -Branch staging -AutoLogin -WaitForCompletion -AsJson`
+    - strict gate result: `HOLD` (manual smoke recency missing)
+  - `scripts/staging-ops-cycle.ps1 -Branch staging -SkipPreflight -SkipManualSmokeRecencyGate -AsJson`
+    - skip gate result: `CONDITIONAL_GO`
+  - `scripts/ops-health-cycle.ps1 -Branch staging -SkipManualSmokeRecencyGate -IncludeMobileReleaseSecrets -AsJson`
+    - overall `PASS`
+  - `scripts/release-preflight.ps1 -Version 1.0.1 -Branch staging -MaxStagingAgeMinutes 1440 -AsJson`
+    - release decision `READY`
+  - Release Readiness workflow run `22351497696` success
+- Mobile store cycle rerun on `production`
+  - Android `play_upload`: run `22351537681` failed at `Upload Android AAB to Google Play` (`android_play_upload`)
+  - iOS `testflight`: run `22351821815` failed at `Import Apple code-sign certificate` (`ios_codesign_certificate_import`)
+  - both `build_only`: run `22351890816` success
+  - updated `docs/mobile-store-release-log.md` with failure diagnosis notes and success evidence
+- Script refactor (code review follow-up)
+  - `scripts/staging-rehearsal.ps1`
+    - escaped markdown-cell logging (`\|`) to prevent table breakage when notes include pipe
+    - normalized default log header description to non-garbled text
+  - synced header text in `docs/staging-rehearsal-log.md`
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
