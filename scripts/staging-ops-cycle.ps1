@@ -197,11 +197,44 @@ function Invoke-PowerShellFile {
     throw "missing powershell command (powershell.exe/pwsh)"
   }
 
-  $output = & $script:PowerShellCommand -NoProfile -File $ScriptPath @Arguments 2>&1
-  return [PSCustomObject]@{
-    ExitCode = $LASTEXITCODE
-    Output = ($output -join "`n")
+  $exitCode = 0
+  $outputText = ""
+  try {
+    $output = & $script:PowerShellCommand -NoProfile -File $ScriptPath @Arguments 2>&1
+    $exitCode = $LASTEXITCODE
+    $outputText = ($output -join "`n")
+  } catch {
+    $exitCode = if ($LASTEXITCODE -ne 0) { $LASTEXITCODE } else { 1 }
+    $outputText = "$($_.Exception.Message)"
   }
+
+  return [PSCustomObject]@{
+    ExitCode = $exitCode
+    Output = $outputText
+  }
+}
+
+function Get-FirstUsefulLine {
+  param([string]$Output)
+
+  if ([string]::IsNullOrWhiteSpace($Output)) {
+    return ""
+  }
+
+  $lines = $Output -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+  if ($lines.Count -eq 0) {
+    return ""
+  }
+
+  foreach ($line in $lines) {
+    if ($line -eq "System.Management.Automation.RemoteException") { continue }
+    if ($line -like "At line:*") { continue }
+    if ($line -like "+ CategoryInfo:*") { continue }
+    if ($line -like "+ FullyQualifiedErrorId:*") { continue }
+    return $line
+  }
+
+  return $lines[0]
 }
 
 function Get-LatestManualSmokeRecord {
@@ -310,6 +343,68 @@ function Test-EvidenceReference {
   return $false
 }
 
+function Get-FailureCategoryCode {
+  param(
+    [bool]$RunGate,
+    [bool]$DeployGate,
+    [bool]$VerifyGate,
+    [bool]$AgeGate,
+    [bool]$PreflightGate,
+    [bool]$ManualSmokeRecencyGate,
+    [bool]$ManualSmokeOutcomeGate,
+    [bool]$HasEvidenceWarning
+  )
+
+  if (-not $RunGate) { return "run_conclusion" }
+  if (-not $DeployGate) { return "deploy_job" }
+  if (-not $VerifyGate) { return "verify_step" }
+  if (-not $AgeGate) { return "deploy_freshness" }
+  if (-not $PreflightGate) { return "aws_preflight" }
+  if (-not $ManualSmokeRecencyGate) { return "manual_smoke_recency" }
+  if (-not $ManualSmokeOutcomeGate) { return "manual_smoke_failed" }
+  if ($HasEvidenceWarning) { return "manual_smoke_evidence_warn" }
+
+  return "-"
+}
+
+function Get-FailureDetail {
+  param(
+    [string]$FailureCategory,
+    [string]$RunConclusion,
+    [string]$DeployConclusion,
+    [string]$VerifyConclusion,
+    [string]$RunAgeMinutes,
+    [int]$MaxAgeMinutes,
+    [string[]]$Notes = @(),
+    [string[]]$EvidenceWarnings = @()
+  )
+
+  switch ($FailureCategory) {
+    "run_conclusion" { return ("run conclusion=" + $RunConclusion) }
+    "deploy_job" { return ("deploy=" + $DeployConclusion) }
+    "verify_step" { return ("verify=" + $VerifyConclusion) }
+    "deploy_freshness" { return ("run too old(age=" + $RunAgeMinutes + ", max=" + $MaxAgeMinutes + ")") }
+    "aws_preflight" {
+      $preflightDetail = @($Notes | Where-Object { $_ -like "preflight*" } | Select-Object -First 1)
+      if ($preflightDetail.Count -gt 0) { return "$($preflightDetail[0])" }
+      return "preflight failed"
+    }
+    "manual_smoke_recency" {
+      $recencyDetail = @($Notes | Where-Object { $_ -match "manual smoke (record missing|stale|recency gate failed)" } | Select-Object -First 1)
+      if ($recencyDetail.Count -gt 0) { return "$($recencyDetail[0])" }
+      return "manual smoke recency gate failed"
+    }
+    "manual_smoke_failed" { return "manual smoke outcome gate failed" }
+    "manual_smoke_evidence_warn" {
+      if ($EvidenceWarnings.Count -gt 0) {
+        return ("evidence warning: " + $EvidenceWarnings[0])
+      }
+      return "manual smoke evidence warning"
+    }
+    default { return "-" }
+  }
+}
+
 $script:PowerShellCommand = Get-PowerShellCommand
 if ([string]::IsNullOrWhiteSpace($script:PowerShellCommand)) {
   throw "missing powershell command (powershell.exe/pwsh)"
@@ -388,7 +483,10 @@ if ($WaitForCompletion) {
 
 $statusResult = Invoke-PowerShellFile -ScriptPath $statusScript -Arguments $statusArgs
 if ($statusResult.ExitCode -ne 0) {
-  $tail = if ([string]::IsNullOrWhiteSpace($statusResult.Output)) { "status command failed" } else { $statusResult.Output.Split("`n")[-1].Trim() }
+  $tail = Get-FirstUsefulLine -Output $statusResult.Output
+  if ([string]::IsNullOrWhiteSpace($tail)) {
+    $tail = "status command failed"
+  }
   $errorUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
   $errorRow = @{
     UtcTime = $errorUtc
@@ -425,6 +523,8 @@ if ($statusResult.ExitCode -ne 0) {
       Decision = "HOLD"
       ManualSmoke = "NOT_STARTED"
       ManualSmokeAgeDays = "-"
+      FailureCategory = "status_command"
+      FailureDetail = $tail
       Evidence = "-"
       Owner = $Owner
       Notes = "status error: $tail"
@@ -474,6 +574,8 @@ try {
       Decision = "HOLD"
       ManualSmoke = "NOT_STARTED"
       ManualSmokeAgeDays = "-"
+      FailureCategory = "status_json_parse"
+      FailureDetail = "status output is not valid json"
       Evidence = "-"
       Owner = $Owner
       Notes = "status output is not valid json"
@@ -586,6 +688,26 @@ foreach ($warning in $evidenceWarnings) {
   $notes += ("evidence warning: " + $warning)
 }
 
+$failureCategory = Get-FailureCategoryCode `
+  -RunGate $runGate `
+  -DeployGate $deployGate `
+  -VerifyGate $verifyGate `
+  -AgeGate $ageGate `
+  -PreflightGate $preflightGate `
+  -ManualSmokeRecencyGate $manualSmokeRecencyGate `
+  -ManualSmokeOutcomeGate $manualSmokeOutcomeGate `
+  -HasEvidenceWarning ($evidenceWarnings.Count -gt 0)
+
+$failureDetail = Get-FailureDetail `
+  -FailureCategory $failureCategory `
+  -RunConclusion "$($summary.Conclusion)" `
+  -DeployConclusion "$($summary.DeployJobConclusion)" `
+  -VerifyConclusion "$($summary.VerifyStepConclusion)" `
+  -RunAgeMinutes "$($summary.RunAgeMinutes)" `
+  -MaxAgeMinutes $MaxAgeMinutes `
+  -Notes $notes `
+  -EvidenceWarnings $evidenceWarnings
+
 $logRow = @{
   UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
   Repo = $Repo
@@ -623,6 +745,8 @@ $resultPayload = [PSCustomObject]@{
   Decision = $decision
   ManualSmoke = $manualSmoke
   ManualSmokeAgeDays = "$manualSmokeAgeDaysDisplay"
+  FailureCategory = $failureCategory
+  FailureDetail = $failureDetail
   EvidenceStatus = $(if ($evidenceWarnings.Count -gt 0) { "WARN" } else { "OK" })
   EvidenceWarnings = $evidenceWarnings
   Evidence = $evidence
@@ -662,6 +786,10 @@ if ($AsJson) {
   Write-Host ("Decision: {0}" -f $decision)
   Write-Host ("ManualSmoke: {0}" -f $manualSmoke)
   Write-Host ("ManualSmokeAgeDays: {0}" -f $manualSmokeAgeDaysDisplay)
+  Write-Host ("FailureCategory: {0}" -f $failureCategory)
+  if ($failureDetail -ne "-") {
+    Write-Host ("FailureDetail: {0}" -f $failureDetail)
+  }
   Write-Host ("Log: {0}" -f $LogFile)
   Write-Host ""
   Write-Host "Update manual smoke results in:"

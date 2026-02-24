@@ -248,6 +248,10 @@ function Get-FailureCategory {
 
   if ($Step -eq "staging") {
     if ($null -ne $Json) {
+      $jsonCategory = "$($Json.FailureCategory)"
+      if (-not [string]::IsNullOrWhiteSpace($jsonCategory) -and $jsonCategory -ne "-") {
+        return $jsonCategory
+      }
       $notesText = "$($Json.Notes)"
       if ($Json.ManualSmoke -eq "OVERDUE" -or $notesText -match $manualSmokeRecencyPattern) {
         return "manual_smoke_recency"
@@ -275,6 +279,10 @@ function Get-FailureCategory {
 
   if ($Step -eq "secrets") {
     if ($null -ne $Json) {
+      $jsonCategory = "$($Json.FailureCategory)"
+      if (-not [string]::IsNullOrWhiteSpace($jsonCategory) -and $jsonCategory -ne "-") {
+        return $jsonCategory
+      }
       if ([int]$Json.MissingCount -gt 0) { return "secret_missing" }
       if ([int]$Json.StaleCount -gt 0) { return "secret_stale" }
       if ([int]$Json.UnknownCount -gt 0) { return "secret_unknown" }
