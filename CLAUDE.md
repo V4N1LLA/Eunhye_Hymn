@@ -20,6 +20,9 @@
 - 스크립트 리팩토링(로그 파서 안정화)
   - `scripts/staging-ops-cycle.ps1`, `scripts/ops-health-cycle.ps1`
   - markdown 로그 행 파서를 escaped pipe(`\|`) 인식 방식으로 개선
+- 릴리즈 프리플라이트 강화
+  - `scripts/release-preflight.ps1`에 `staging head alignment` 체크 추가
+  - 최신 staging 브랜치 HEAD와 최신 성공 deploy SHA가 다르면 `HOLD`
 
 ---
 

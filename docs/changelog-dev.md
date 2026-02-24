@@ -197,7 +197,9 @@
   - `scripts/staging-ops-cycle.ps1`
   - `scripts/ops-health-cycle.ps1`
   - replaced naive markdown row parsing (`Split("|")`) with escaped-pipe aware row parser to avoid false parsing when log cells include `\|`
-  - re-validated with:
+  - `scripts/release-preflight.ps1`
+    - added `staging head alignment` gate (latest branch HEAD must match latest successful staging deploy SHA)
+- re-validated with:
     - `scripts/staging-preflight.ps1 -SkipTerraformPlan`
     - `scripts/staging-rehearsal.ps1 -Ref staging -SkipPreflight -DryRun`
     - `scripts/staging-ops-cycle.ps1 -Branch staging -SkipPreflight -SkipManualSmokeRecencyGate -AsJson`
