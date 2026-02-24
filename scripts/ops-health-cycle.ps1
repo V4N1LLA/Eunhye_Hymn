@@ -21,6 +21,7 @@ param(
   [int]$SecretsMaxAgeDays = 90,
   [switch]$IncludeMobileReleaseSecrets,
   [string]$SecretsLogFile = "docs/secrets-rotation-log.md",
+  [int]$LogDedupWindowMinutes = 30,
   [switch]$AlertOnFailure,
   [string]$AlertRepo = "",
   [switch]$AlertDryRun,
@@ -103,6 +104,81 @@ function Append-LogRow {
     (Escape-MarkdownCell $Row.Notes)
 
   Add-Content -Path $Path -Value $line -Encoding utf8
+}
+
+function Get-LatestLogRow {
+  param([string]$Path)
+
+  if (-not (Test-Path $Path)) {
+    return $null
+  }
+
+  $lines = Get-Content -Path $Path -Encoding utf8
+  for ($index = $lines.Count - 1; $index -ge 0; $index--) {
+    $line = $lines[$index]
+    $trimmed = $line.Trim()
+    if (-not $trimmed.StartsWith("|")) {
+      continue
+    }
+    if ($trimmed -match "^\|\s*-+\s*\|") {
+      continue
+    }
+
+    $parts = $line.Split("|")
+    if ($parts.Count -lt 11) {
+      continue
+    }
+
+    [datetime]$rowUtc = [datetime]::MinValue
+    if (-not [datetime]::TryParse($parts[1].Trim(), [ref]$rowUtc)) {
+      continue
+    }
+
+    return [PSCustomObject]@{
+      UtcTime = $rowUtc.ToUniversalTime()
+      Repo = $parts[2].Trim()
+      Branch = $parts[3].Trim()
+      Staging = $parts[4].Trim()
+      Secrets = $parts[5].Trim()
+      Overall = $parts[6].Trim()
+      FailureCategory = $parts[7].Trim()
+      Evidence = $parts[8].Trim()
+      Owner = $parts[9].Trim()
+      Notes = $parts[10].Trim()
+    }
+  }
+
+  return $null
+}
+
+function Should-SkipLogAppend {
+  param(
+    [string]$Path,
+    [hashtable]$Row,
+    [int]$WindowMinutes = 30
+  )
+
+  if ($WindowMinutes -le 0) {
+    return $false
+  }
+
+  $latest = Get-LatestLogRow -Path $Path
+  if ($null -eq $latest) {
+    return $false
+  }
+
+  if ((([DateTime]::UtcNow - $latest.UtcTime).TotalMinutes) -gt $WindowMinutes) {
+    return $false
+  }
+
+  if ("$($latest.Repo)" -ne "$($Row.Repo)") { return $false }
+  if ("$($latest.Branch)" -ne "$($Row.Branch)") { return $false }
+  if ("$($latest.Staging)" -ne "$($Row.Staging)") { return $false }
+  if ("$($latest.Secrets)" -ne "$($Row.Secrets)") { return $false }
+  if ("$($latest.Overall)" -ne "$($Row.Overall)") { return $false }
+  if ("$($latest.FailureCategory)" -ne "$($Row.FailureCategory)") { return $false }
+
+  return $true
 }
 
 function Get-FirstUsefulLine {
@@ -224,6 +300,9 @@ if ($ManualSmokeMaxAgeDays -lt 1) {
 if ($SecretsMaxAgeDays -lt 1) {
   throw "SecretsMaxAgeDays must be >= 1"
 }
+if ($LogDedupWindowMinutes -lt 0) {
+  throw "LogDedupWindowMinutes must be >= 0"
+}
 if ([string]::IsNullOrWhiteSpace($ManualSmokeResult) -and (
     -not [string]::IsNullOrWhiteSpace($ManualSmokeEvidence) -or
     -not [string]::IsNullOrWhiteSpace($ManualSmokeNotes)
@@ -270,6 +349,7 @@ if (-not $SkipStagingOps) {
     "-Owner", $Owner,
     "-MaxAgeMinutes", "$StagingMaxAgeMinutes",
     "-ManualSmokeMaxAgeDays", "$ManualSmokeMaxAgeDays",
+    "-LogDedupWindowMinutes", "$LogDedupWindowMinutes",
     "-LogFile", $StagingLogFile,
     "-AsJson"
   )
@@ -376,7 +456,7 @@ if (-not [string]::IsNullOrWhiteSpace($secretsResult.Evidence) -and $secretsResu
 $evidence = if ($evidenceItems.Count -eq 0) { "-" } else { ($evidenceItems -join " ; ") }
 
 $utcNow = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-Append-LogRow -Path $OpsHealthLogFile -Row @{
+$logRow = @{
   UtcTime = $utcNow
   Repo = $Repo
   Branch = $Branch
@@ -387,6 +467,11 @@ Append-LogRow -Path $OpsHealthLogFile -Row @{
   Evidence = $evidence
   Owner = $Owner
   Notes = ($notes -join "; ")
+}
+if (-not (Should-SkipLogAppend -Path $OpsHealthLogFile -Row $logRow -WindowMinutes $LogDedupWindowMinutes)) {
+  Append-LogRow -Path $OpsHealthLogFile -Row $logRow
+} elseif (-not $AsJson) {
+  Write-Host ("Skip duplicate ops-health log row (window={0}m)." -f $LogDedupWindowMinutes)
 }
 
 $resultPayload = [PSCustomObject]@{
