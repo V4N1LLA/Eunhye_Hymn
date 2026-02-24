@@ -268,6 +268,48 @@ function Get-LatestManualSmokeRecord {
   return $latest
 }
 
+function Get-ManualSmokeEvidencePortion {
+  param([string]$EvidenceText)
+
+  if ([string]::IsNullOrWhiteSpace($EvidenceText)) {
+    return ""
+  }
+
+  $parts = @($EvidenceText -split ";" | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+  if ($parts.Count -le 1) {
+    return ""
+  }
+
+  return ($parts[1..($parts.Count - 1)] -join " ; ")
+}
+
+function Test-EvidenceReference {
+  param([string]$Value)
+
+  if ([string]::IsNullOrWhiteSpace($Value)) {
+    return $false
+  }
+
+  $trimmed = $Value.Trim()
+  if ($trimmed -eq "-") {
+    return $false
+  }
+  if ($trimmed -match "https?://") {
+    return $true
+  }
+  if ($trimmed -match "\[[^\]]+\]\([^)]+\)") {
+    return $true
+  }
+  if ($trimmed -match "(^|[ ;])(docs|apps|infra|scripts|\.github)/[A-Za-z0-9._/\-]+") {
+    return $true
+  }
+  if ($trimmed -match "(^|[ ;])[A-Za-z0-9._/\-]+#L\d+") {
+    return $true
+  }
+
+  return $false
+}
+
 $script:PowerShellCommand = Get-PowerShellCommand
 if ([string]::IsNullOrWhiteSpace($script:PowerShellCommand)) {
   throw "missing powershell command (powershell.exe/pwsh)"
@@ -291,6 +333,7 @@ if ([string]::IsNullOrWhiteSpace($ManualSmokeResult) -and (
 
 $preflightState = "SKIPPED"
 $notes = @()
+$evidenceWarnings = @()
 
 if (-not $SkipPreflight) {
   $preflightScript = Join-Path $PSScriptRoot "staging-preflight.ps1"
@@ -458,6 +501,11 @@ if (-not [string]::IsNullOrWhiteSpace($ManualSmokeResult)) {
     $manualSmokeOutcomeGate = $false
     $notes += "manual smoke result=FAIL"
   }
+  if ([string]::IsNullOrWhiteSpace($ManualSmokeEvidence)) {
+    $evidenceWarnings += "manual smoke evidence missing"
+  } elseif (-not (Test-EvidenceReference -Value $ManualSmokeEvidence)) {
+    $evidenceWarnings += "manual smoke evidence has no link/reference"
+  }
 } elseif (-not $SkipManualSmokeRecencyGate) {
   $latestManualSmoke = Get-LatestManualSmokeRecord -Path $LogFile -Repo $Repo -Branch $Branch
   if ($null -eq $latestManualSmoke) {
@@ -472,6 +520,13 @@ if (-not [string]::IsNullOrWhiteSpace($ManualSmokeResult)) {
     if ($manualSmokeAgeDays -gt [double]$ManualSmokeMaxAgeDays) {
       $manualSmokeRecencyGate = $false
       $notes += "manual smoke stale(ageDays=$manualSmokeAgeDaysDisplay, maxDays=$ManualSmokeMaxAgeDays)"
+    }
+
+    $latestManualEvidence = Get-ManualSmokeEvidencePortion -EvidenceText "$($latestManualSmoke.Evidence)"
+    if ([string]::IsNullOrWhiteSpace($latestManualEvidence)) {
+      $evidenceWarnings += "latest manual smoke evidence missing"
+    } elseif (-not (Test-EvidenceReference -Value $latestManualEvidence)) {
+      $evidenceWarnings += "latest manual smoke evidence has no link/reference"
     }
   }
 } else {
@@ -526,6 +581,11 @@ if (-not $manualSmokeOutcomeGate) {
   $notes += "manual smoke outcome gate failed"
 }
 
+$evidenceWarnings = @($evidenceWarnings | Select-Object -Unique)
+foreach ($warning in $evidenceWarnings) {
+  $notes += ("evidence warning: " + $warning)
+}
+
 $logRow = @{
   UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
   Repo = $Repo
@@ -563,6 +623,8 @@ $resultPayload = [PSCustomObject]@{
   Decision = $decision
   ManualSmoke = $manualSmoke
   ManualSmokeAgeDays = "$manualSmokeAgeDaysDisplay"
+  EvidenceStatus = $(if ($evidenceWarnings.Count -gt 0) { "WARN" } else { "OK" })
+  EvidenceWarnings = $evidenceWarnings
   Evidence = $evidence
   Owner = $Owner
   Notes = ($notes -join "; ")

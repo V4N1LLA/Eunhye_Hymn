@@ -789,6 +789,10 @@ develop push → GitHub Actions
   - `scripts/ops-health-issue-alert.ps1`: dedup/re-alert cooldown(`30m`/`480m`/`120m`) + `-ForceAlert` 지원
   - `scripts/ops-health-cycle.ps1`: `-AlertDedupWindowMinutes`, `-AlertHoldReAlertWindowMinutes`, `-AlertErrorReAlertWindowMinutes`, `-AlertForce` 전달
   - `docs/runbook.md`: 알림 볼륨 조정 파라미터 운영 가이드 추가
+- 스테이징 수동 스모크 증빙 경고 자동화 반영 (2026-02-24)
+  - `scripts/staging-ops-cycle.ps1`: `EvidenceStatus(OK|WARN)`/`EvidenceWarnings` 출력 및 `evidence warning:*` 노트 자동 기록
+  - `-ManualSmokeEvidence` 누락/링크 형식 이상 시 경고, 최신 수동 스모크 재사용 경로에서도 증빙 누락 경고
+  - `docs/runbook.md`: 수동 스모크 증빙 누락 시 WARN 기록 동작 명시
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`

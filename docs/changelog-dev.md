@@ -137,6 +137,17 @@
     - `-AlertErrorReAlertWindowMinutes`
     - `-AlertForce`
 
+### Staging smoke evidence warning automation
+- Added evidence warning detection for manual smoke records
+  - `scripts/staging-ops-cycle.ps1`
+  - New behavior:
+    - emits `EvidenceStatus=OK|WARN` and `EvidenceWarnings` in JSON output
+    - appends `evidence warning:*` note when manual smoke evidence link is missing or not link-like
+    - validates both current manual smoke submission (`-ManualSmokeEvidence`) and latest-record reuse path
+- Updated runbook guidance
+  - `docs/runbook.md`
+  - documented WARN behavior and manual evidence requirement
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
