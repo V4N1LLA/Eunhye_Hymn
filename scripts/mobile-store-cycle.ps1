@@ -87,7 +87,11 @@ function Invoke-PowerShellFile {
     [string[]]$Arguments = @()
   )
 
-  $output = & powershell.exe -NoProfile -File $ScriptPath @Arguments 2>&1
+  if ([string]::IsNullOrWhiteSpace($script:PowerShellCommand)) {
+    throw "missing powershell command (powershell.exe/pwsh)"
+  }
+
+  $output = & $script:PowerShellCommand -NoProfile -File $ScriptPath @Arguments 2>&1
   return [PSCustomObject]@{
     ExitCode = $LASTEXITCODE
     Output = ($output -join "`n")
@@ -99,8 +103,23 @@ function Test-CommandExists {
   return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+function Get-PowerShellCommand {
+  if (Test-CommandExists "powershell.exe") {
+    return "powershell.exe"
+  }
+  if (Test-CommandExists "pwsh") {
+    return "pwsh"
+  }
+  return ""
+}
+
 if (-not (Test-CommandExists "gh")) {
   throw "gh CLI is required."
+}
+
+$script:PowerShellCommand = Get-PowerShellCommand
+if ([string]::IsNullOrWhiteSpace($script:PowerShellCommand)) {
+  throw "missing powershell command (powershell.exe/pwsh)"
 }
 
 $preflightState = "SKIPPED"

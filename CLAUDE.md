@@ -763,6 +763,10 @@ develop push → GitHub Actions
   - `scripts/sync-skills.ps1`: source/destination 경로 겹침 방지 가드 추가
   - `.github/workflows/secrets-rotation-scheduled.yml`: workflow_dispatch boolean false 보존
   - `skills/secrets-rotation-auditor/references/commands.md`: 필수 인자 누락 예시 보강
+- 운영 스크립트 호환성 후속 반영 (2026-02-24)
+  - `scripts/staging-rehearsal.ps1`: preflight 실행기 cross-platform 처리 + 동시 dispatch 환경 run 선택 안정화(earliest/new-run 기준)
+  - `scripts/mobile-store-cycle.ps1`: preflight 호출 실행기 cross-platform 처리
+  - `scripts/run-mobile-emulator.ps1`: flutter wrapper 호출 실행기 cross-platform 처리
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`
