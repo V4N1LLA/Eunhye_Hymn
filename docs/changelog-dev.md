@@ -81,6 +81,11 @@
 - Verification
   - `cd apps/api && ./gradlew test --tests "*AdminEventExportJobUseCaseTest*" --tests "*RecommendHymnsUseCaseTest*" --no-daemon --stacktrace`
 
+### PR gate Admin test enforcement follow-up
+- Fixed CI gap where PR gate did not execute Admin unit tests
+  - `.github/workflows/pr-gate.yml`
+  - Updated `admin_build` job flow to: `npm ci` -> `npm run test` -> `npx tsc --noEmit` -> `npm run build`
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation

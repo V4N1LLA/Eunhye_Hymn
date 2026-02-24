@@ -767,7 +767,7 @@ develop push → GitHub Actions
   - `.github/workflows/secrets-rotation-scheduled.yml`: workflow_dispatch boolean false 보존
   - `skills/secrets-rotation-auditor/references/commands.md`: 필수 인자 누락 예시 보강
 - 테스트 게이트/유스케이스 예외경로 보강 (2026-02-24)
-  - `apps/admin`: Vitest+jsdom 도입, `tokenStore` 테스트 추가, `admin-ci` 테스트 단계 추가
+  - `apps/admin`: Vitest+jsdom 도입, `tokenStore` 테스트 추가, `admin-ci` + `pr-gate(admin_build)` 테스트 단계 추가
   - `apps/api`: `AdminEventExportJobUseCaseTest`, `RecommendHymnsUseCaseTest` 예외/경계 경로 테스트 추가
 - 운영 스크립트 호환성 후속 반영 (2026-02-24)
   - `scripts/staging-rehearsal.ps1`: preflight 실행기 cross-platform 처리 + 동시 dispatch 환경 run 선택 안정화(earliest/new-run 기준)
