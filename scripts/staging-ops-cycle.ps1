@@ -102,6 +102,49 @@ function Append-LogRow {
   Add-Content -Path $Path -Value $line -Encoding utf8
 }
 
+function Split-MarkdownRowCells {
+  param([string]$Line)
+
+  if ([string]::IsNullOrWhiteSpace($Line)) {
+    return @()
+  }
+
+  $trimmed = $Line.Trim()
+  if (-not ($trimmed.StartsWith("|") -and $trimmed.EndsWith("|"))) {
+    return @()
+  }
+
+  $inner = $trimmed.Substring(1, $trimmed.Length - 2)
+  $cells = [System.Collections.Generic.List[string]]::new()
+  $buffer = [System.Text.StringBuilder]::new()
+  $chars = $inner.ToCharArray()
+
+  for ($i = 0; $i -lt $chars.Length; $i++) {
+    $ch = $chars[$i]
+    if ($ch -eq "\") {
+      $next = $i + 1
+      if ($next -lt $chars.Length -and ($chars[$next] -eq "|" -or $chars[$next] -eq "\")) {
+        [void]$buffer.Append($chars[$next])
+        $i = $next
+        continue
+      }
+      [void]$buffer.Append($ch)
+      continue
+    }
+
+    if ($ch -eq "|") {
+      $cells.Add($buffer.ToString())
+      [void]$buffer.Clear()
+      continue
+    }
+
+    [void]$buffer.Append($ch)
+  }
+
+  $cells.Add($buffer.ToString())
+  return @($cells.ToArray())
+}
+
 function Get-LatestLogRow {
   param([string]$Path)
 
@@ -120,32 +163,32 @@ function Get-LatestLogRow {
       continue
     }
 
-    $parts = $line.Split("|")
-    if ($parts.Count -lt 16) {
+    $parts = Split-MarkdownRowCells -Line $line
+    if ($parts.Count -lt 15) {
       continue
     }
 
     [datetime]$rowUtc = [datetime]::MinValue
-    if (-not [datetime]::TryParse($parts[1].Trim(), [ref]$rowUtc)) {
+    if (-not [datetime]::TryParse($parts[0].Trim(), [ref]$rowUtc)) {
       continue
     }
 
     return [PSCustomObject]@{
       UtcTime = $rowUtc.ToUniversalTime()
-      Repo = $parts[2].Trim()
-      Branch = $parts[3].Trim()
-      RunId = $parts[4].Trim()
-      HeadSha = $parts[5].Trim()
-      Preflight = $parts[6].Trim()
-      RunGate = $parts[7].Trim()
-      DeployGate = $parts[8].Trim()
-      VerifyGate = $parts[9].Trim()
-      AgeMin = $parts[10].Trim()
-      Decision = $parts[11].Trim()
-      ManualSmoke = $parts[12].Trim()
-      Evidence = $parts[13].Trim()
-      Owner = $parts[14].Trim()
-      Notes = $parts[15].Trim()
+      Repo = $parts[1].Trim()
+      Branch = $parts[2].Trim()
+      RunId = $parts[3].Trim()
+      HeadSha = $parts[4].Trim()
+      Preflight = $parts[5].Trim()
+      RunGate = $parts[6].Trim()
+      DeployGate = $parts[7].Trim()
+      VerifyGate = $parts[8].Trim()
+      AgeMin = $parts[9].Trim()
+      Decision = $parts[10].Trim()
+      ManualSmoke = $parts[11].Trim()
+      Evidence = $parts[12].Trim()
+      Owner = $parts[13].Trim()
+      Notes = $parts[14].Trim()
     }
   }
 
@@ -260,15 +303,15 @@ function Get-LatestManualSmokeRecord {
       continue
     }
 
-    $parts = $line.Split("|")
-    if ($parts.Count -lt 16) {
+    $parts = Split-MarkdownRowCells -Line $line
+    if ($parts.Count -lt 15) {
       continue
     }
 
-    $rowUtc = $parts[1].Trim()
-    $rowRepo = $parts[2].Trim()
-    $rowBranch = $parts[3].Trim()
-    $rowManualSmoke = $parts[12].Trim().ToUpperInvariant()
+    $rowUtc = $parts[0].Trim()
+    $rowRepo = $parts[1].Trim()
+    $rowBranch = $parts[2].Trim()
+    $rowManualSmoke = $parts[11].Trim().ToUpperInvariant()
     if (-not ($rowManualSmoke -eq "PASS" -or $rowManualSmoke -eq "FAIL")) {
       continue
     }
@@ -291,9 +334,9 @@ function Get-LatestManualSmokeRecord {
         Repo = $rowRepo
         Branch = $rowBranch
         ManualSmoke = $rowManualSmoke
-        Evidence = $parts[13].Trim()
-        Owner = $parts[14].Trim()
-        Notes = $parts[15].Trim()
+        Evidence = $parts[12].Trim()
+        Owner = $parts[13].Trim()
+        Notes = $parts[14].Trim()
       }
     }
   }
