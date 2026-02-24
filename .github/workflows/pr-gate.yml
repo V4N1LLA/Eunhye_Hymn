@@ -88,6 +88,21 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run build
 
+  doc_sync:
+    needs: detect_changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch base branch
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}" --depth=1
+      - name: Validate doc sync requirements
+        shell: pwsh
+        run: |
+          ./scripts/check-doc-sync.ps1 -BaseRef "origin/${{ github.base_ref }}" -HeadRef "HEAD"
+
   mobile_ci:
     needs: detect_changes
     if: needs.detect_changes.outputs.mobile == 'true' || needs.detect_changes.outputs.workflows == 'true'
@@ -153,7 +168,8 @@ jobs:
             "scripts/staging-sync-secrets.ps1",
             "scripts/release-preflight.ps1",
             "scripts/new-worktree-task.ps1",
-            "scripts/apply-branch-protection.ps1"
+            "scripts/apply-branch-protection.ps1",
+            "scripts/check-doc-sync.ps1"
           )
 
           $hasErrors = $false
@@ -184,6 +200,7 @@ jobs:
       - detect_changes
       - api_test
       - admin_build
+      - doc_sync
       - mobile_ci
       - mobile_release_check
       - workflow_lint
@@ -194,12 +211,14 @@ jobs:
         env:
           API_TEST_RESULT: ${{ needs.api_test.result }}
           ADMIN_BUILD_RESULT: ${{ needs.admin_build.result }}
+          DOC_SYNC_RESULT: ${{ needs.doc_sync.result }}
           MOBILE_CI_RESULT: ${{ needs.mobile_ci.result }}
           MOBILE_RELEASE_RESULT: ${{ needs.mobile_release_check.result }}
           WORKFLOW_LINT_RESULT: ${{ needs.workflow_lint.result }}
         run: |
           echo "api_test=${API_TEST_RESULT}"
           echo "admin_build=${ADMIN_BUILD_RESULT}"
+          echo "doc_sync=${DOC_SYNC_RESULT}"
           echo "mobile_ci=${MOBILE_CI_RESULT}"
           echo "mobile_release_check=${MOBILE_RELEASE_RESULT}"
           echo "workflow_lint=${WORKFLOW_LINT_RESULT}"
@@ -207,6 +226,7 @@ jobs:
           for result in \
             "${API_TEST_RESULT}" \
             "${ADMIN_BUILD_RESULT}" \
+            "${DOC_SYNC_RESULT}" \
             "${MOBILE_CI_RESULT}" \
             "${MOBILE_RELEASE_RESULT}" \
             "${WORKFLOW_LINT_RESULT}"; do

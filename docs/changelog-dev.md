@@ -86,6 +86,21 @@
   - `.github/workflows/pr-gate.yml`
   - Updated `admin_build` job flow to: `npm ci` -> `npm run test` -> `npx tsc --noEmit` -> `npm run build`
 
+### Doc sync gate automation
+- Added changed-file-based doc sync checker
+  - `scripts/check-doc-sync.ps1`
+  - Enforces `docs/changelog-dev.md` + `CLAUDE.md` updates when non-doc files are changed
+  - Supports `-ChangedFiles` input and `git diff` mode via `-BaseRef/-HeadRef`
+- Integrated checker into PR gate
+  - `.github/workflows/pr-gate.yml`
+  - Added `doc_sync` job and included its result in the final `gate` decision
+- Workflow lint coverage update
+  - `.github/workflows/workflow-lint.yml`
+  - Added syntax check target for `scripts/check-doc-sync.ps1`
+- Docs sync
+  - `AGENTS.md`
+  - `CLAUDE.md`
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
