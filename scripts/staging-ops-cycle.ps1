@@ -15,6 +15,7 @@ param(
   [string]$ManualSmokeNotes = "",
   [int]$ManualSmokeMaxAgeDays = 7,
   [switch]$SkipManualSmokeRecencyGate,
+  [int]$LogDedupWindowMinutes = 30,
   [switch]$AsJson
 )
 
@@ -99,6 +100,90 @@ function Append-LogRow {
     (Escape-MarkdownCell $Row.Notes)
 
   Add-Content -Path $Path -Value $line -Encoding utf8
+}
+
+function Get-LatestLogRow {
+  param([string]$Path)
+
+  if (-not (Test-Path $Path)) {
+    return $null
+  }
+
+  $lines = Get-Content -Path $Path -Encoding utf8
+  for ($index = $lines.Count - 1; $index -ge 0; $index--) {
+    $line = $lines[$index]
+    $trimmed = $line.Trim()
+    if (-not $trimmed.StartsWith("|")) {
+      continue
+    }
+    if ($trimmed -match "^\|\s*-+\s*\|") {
+      continue
+    }
+
+    $parts = $line.Split("|")
+    if ($parts.Count -lt 16) {
+      continue
+    }
+
+    [datetime]$rowUtc = [datetime]::MinValue
+    if (-not [datetime]::TryParse($parts[1].Trim(), [ref]$rowUtc)) {
+      continue
+    }
+
+    return [PSCustomObject]@{
+      UtcTime = $rowUtc.ToUniversalTime()
+      Repo = $parts[2].Trim()
+      Branch = $parts[3].Trim()
+      RunId = $parts[4].Trim()
+      HeadSha = $parts[5].Trim()
+      Preflight = $parts[6].Trim()
+      RunGate = $parts[7].Trim()
+      DeployGate = $parts[8].Trim()
+      VerifyGate = $parts[9].Trim()
+      AgeMin = $parts[10].Trim()
+      Decision = $parts[11].Trim()
+      ManualSmoke = $parts[12].Trim()
+      Evidence = $parts[13].Trim()
+      Owner = $parts[14].Trim()
+      Notes = $parts[15].Trim()
+    }
+  }
+
+  return $null
+}
+
+function Should-SkipLogAppend {
+  param(
+    [string]$Path,
+    [hashtable]$Row,
+    [int]$WindowMinutes = 30
+  )
+
+  if ($WindowMinutes -le 0) {
+    return $false
+  }
+
+  $latest = Get-LatestLogRow -Path $Path
+  if ($null -eq $latest) {
+    return $false
+  }
+
+  if ((([DateTime]::UtcNow - $latest.UtcTime).TotalMinutes) -gt $WindowMinutes) {
+    return $false
+  }
+
+  if ("$($latest.Repo)" -ne "$($Row.Repo)") { return $false }
+  if ("$($latest.Branch)" -ne "$($Row.Branch)") { return $false }
+  if ("$($latest.RunId)" -ne "$($Row.RunId)") { return $false }
+  if ("$($latest.HeadSha)" -ne "$($Row.HeadSha)") { return $false }
+  if ("$($latest.Preflight)" -ne "$($Row.Preflight)") { return $false }
+  if ("$($latest.RunGate)" -ne "$($Row.RunGate)") { return $false }
+  if ("$($latest.DeployGate)" -ne "$($Row.DeployGate)") { return $false }
+  if ("$($latest.VerifyGate)" -ne "$($Row.VerifyGate)") { return $false }
+  if ("$($latest.Decision)" -ne "$($Row.Decision)") { return $false }
+  if ("$($latest.ManualSmoke)" -ne "$($Row.ManualSmoke)") { return $false }
+
+  return $true
 }
 
 function Invoke-PowerShellFile {
@@ -194,6 +279,9 @@ if ($MaxAgeMinutes -lt 0) {
 if ($ManualSmokeMaxAgeDays -lt 1) {
   throw "ManualSmokeMaxAgeDays must be >= 1"
 }
+if ($LogDedupWindowMinutes -lt 0) {
+  throw "LogDedupWindowMinutes must be >= 0"
+}
 if ([string]::IsNullOrWhiteSpace($ManualSmokeResult) -and (
     -not [string]::IsNullOrWhiteSpace($ManualSmokeEvidence) -or
     -not [string]::IsNullOrWhiteSpace($ManualSmokeNotes)
@@ -259,7 +347,7 @@ $statusResult = Invoke-PowerShellFile -ScriptPath $statusScript -Arguments $stat
 if ($statusResult.ExitCode -ne 0) {
   $tail = if ([string]::IsNullOrWhiteSpace($statusResult.Output)) { "status command failed" } else { $statusResult.Output.Split("`n")[-1].Trim() }
   $errorUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-  Append-LogRow -Path $LogFile -Row @{
+  $errorRow = @{
     UtcTime = $errorUtc
     Repo = $Repo
     Branch = $Branch
@@ -275,6 +363,9 @@ if ($statusResult.ExitCode -ne 0) {
     Evidence = "-"
     Owner = $Owner
     Notes = "status error: $tail"
+  }
+  if (-not (Should-SkipLogAppend -Path $LogFile -Row $errorRow -WindowMinutes $LogDedupWindowMinutes)) {
+    Append-LogRow -Path $LogFile -Row $errorRow
   }
   if ($AsJson) {
     [PSCustomObject]@{
@@ -305,7 +396,7 @@ try {
   $statusPayload = $statusResult.Output | ConvertFrom-Json
 } catch {
   $errorUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-  Append-LogRow -Path $LogFile -Row @{
+  $errorRow = @{
     UtcTime = $errorUtc
     Repo = $Repo
     Branch = $Branch
@@ -321,6 +412,9 @@ try {
     Evidence = "-"
     Owner = $Owner
     Notes = "status output is not valid json"
+  }
+  if (-not (Should-SkipLogAppend -Path $LogFile -Row $errorRow -WindowMinutes $LogDedupWindowMinutes)) {
+    Append-LogRow -Path $LogFile -Row $errorRow
   }
   if ($AsJson) {
     [PSCustomObject]@{
@@ -432,7 +526,7 @@ if (-not $manualSmokeOutcomeGate) {
   $notes += "manual smoke outcome gate failed"
 }
 
-Append-LogRow -Path $LogFile -Row @{
+$logRow = @{
   UtcTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
   Repo = $Repo
   Branch = $Branch
@@ -448,6 +542,11 @@ Append-LogRow -Path $LogFile -Row @{
   Evidence = $evidence
   Owner = $Owner
   Notes = ($notes -join "; ")
+}
+if (-not (Should-SkipLogAppend -Path $LogFile -Row $logRow -WindowMinutes $LogDedupWindowMinutes)) {
+  Append-LogRow -Path $LogFile -Row $logRow
+} elseif (-not $AsJson) {
+  Write-Host ("Skip duplicate staging log row (window={0}m)." -f $LogDedupWindowMinutes)
 }
 
 $resultPayload = [PSCustomObject]@{

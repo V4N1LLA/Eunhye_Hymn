@@ -43,6 +43,13 @@
 - `scripts/staging-rehearsal.ps1`
   - Captured preflight output and surfaced first-useful-line detail in log notes/exception message
 
+### Ops log dedup hardening
+- `scripts/staging-ops-cycle.ps1`
+  - Added log dedup window (`-LogDedupWindowMinutes`, default 30) to skip repeated writes for the same run/gate decision within a short interval
+- `scripts/ops-health-cycle.ps1`
+  - Added log dedup window (`-LogDedupWindowMinutes`, default 30) for repeated consolidated health rows
+  - Passed dedup window through to nested `staging-ops-cycle.ps1` invocation
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
