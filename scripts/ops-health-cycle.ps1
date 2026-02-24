@@ -110,6 +110,49 @@ function Append-LogRow {
   Add-Content -Path $Path -Value $line -Encoding utf8
 }
 
+function Split-MarkdownRowCells {
+  param([string]$Line)
+
+  if ([string]::IsNullOrWhiteSpace($Line)) {
+    return @()
+  }
+
+  $trimmed = $Line.Trim()
+  if (-not ($trimmed.StartsWith("|") -and $trimmed.EndsWith("|"))) {
+    return @()
+  }
+
+  $inner = $trimmed.Substring(1, $trimmed.Length - 2)
+  $cells = [System.Collections.Generic.List[string]]::new()
+  $buffer = [System.Text.StringBuilder]::new()
+  $chars = $inner.ToCharArray()
+
+  for ($i = 0; $i -lt $chars.Length; $i++) {
+    $ch = $chars[$i]
+    if ($ch -eq "\") {
+      $next = $i + 1
+      if ($next -lt $chars.Length -and ($chars[$next] -eq "|" -or $chars[$next] -eq "\")) {
+        [void]$buffer.Append($chars[$next])
+        $i = $next
+        continue
+      }
+      [void]$buffer.Append($ch)
+      continue
+    }
+
+    if ($ch -eq "|") {
+      $cells.Add($buffer.ToString())
+      [void]$buffer.Clear()
+      continue
+    }
+
+    [void]$buffer.Append($ch)
+  }
+
+  $cells.Add($buffer.ToString())
+  return @($cells.ToArray())
+}
+
 function Get-LatestLogRow {
   param([string]$Path)
 
@@ -128,27 +171,27 @@ function Get-LatestLogRow {
       continue
     }
 
-    $parts = $line.Split("|")
-    if ($parts.Count -lt 11) {
+    $parts = Split-MarkdownRowCells -Line $line
+    if ($parts.Count -lt 10) {
       continue
     }
 
     [datetime]$rowUtc = [datetime]::MinValue
-    if (-not [datetime]::TryParse($parts[1].Trim(), [ref]$rowUtc)) {
+    if (-not [datetime]::TryParse($parts[0].Trim(), [ref]$rowUtc)) {
       continue
     }
 
     return [PSCustomObject]@{
       UtcTime = $rowUtc.ToUniversalTime()
-      Repo = $parts[2].Trim()
-      Branch = $parts[3].Trim()
-      Staging = $parts[4].Trim()
-      Secrets = $parts[5].Trim()
-      Overall = $parts[6].Trim()
-      FailureCategory = $parts[7].Trim()
-      Evidence = $parts[8].Trim()
-      Owner = $parts[9].Trim()
-      Notes = $parts[10].Trim()
+      Repo = $parts[1].Trim()
+      Branch = $parts[2].Trim()
+      Staging = $parts[3].Trim()
+      Secrets = $parts[4].Trim()
+      Overall = $parts[5].Trim()
+      FailureCategory = $parts[6].Trim()
+      Evidence = $parts[7].Trim()
+      Owner = $parts[8].Trim()
+      Notes = $parts[9].Trim()
     }
   }
 

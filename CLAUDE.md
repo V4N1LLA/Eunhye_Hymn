@@ -6,6 +6,23 @@
 
 ---
 
+## 최근 운영 상태 (2026-02-24)
+
+- 릴리즈 준비 브랜치 정렬
+  - `staging` <- `develop` 머지 반영 완료 (`e83ecbf`, logs `6459e95`)
+  - `production` <- `staging` 머지 반영 완료 (`cde06d6`)
+- 스테이징 최신 증빙
+  - Deploy Staging run `22346810833` (preflight/deploy/verify PASS)
+  - `staging-ops-cycle`: `HOLD` (manual smoke recency missing)
+  - `ops-health-cycle`: `PASS` with staging `CONDITIONAL_GO` (recency gate skip), secrets `PASS`
+- 모바일 스토어 워크플로 충돌 해소
+  - `.github/workflows/mobile-store-release.yml`의 `API_BASE_URL` dart-define quoting 경로를 staging 기준으로 통일
+- 스크립트 리팩토링(로그 파서 안정화)
+  - `scripts/staging-ops-cycle.ps1`, `scripts/ops-health-cycle.ps1`
+  - markdown 로그 행 파서를 escaped pipe(`\|`) 인식 방식으로 개선
+
+---
+
 ## 1. 프로젝트 개요
 
 **Eunhye Hymn**은 교회 내부용 찬양 악보(PNG) 및 파트 연습 음원(MIDI) 관리 시스템입니다.

@@ -177,6 +177,32 @@
   - `docs/parallel-pr-workflow.md`
   - `docs/parallel-task-board.md`
 
+### Staging/production pre-release cycle + log parser refactor
+- Release-line preparation
+  - merged `origin/develop` into `staging` and pushed (`e83ecbf`, then ops-log commit `6459e95`)
+  - merged `origin/staging` into `production` and pushed (`cde06d6`)
+  - resolved workflow conflict in:
+    - `.github/workflows/mobile-store-release.yml`
+    - standardized Flutter `--dart-define=API_BASE_URL` quoting path
+- Staging cycle evidence refresh
+  - `scripts/staging-ops-cycle.ps1 -Branch staging -AutoLogin -WaitForCompletion -AsJson`
+    - run `22346810833`: preflight/deploy/verify PASS, decision HOLD (manual smoke record missing)
+  - `scripts/ops-health-cycle.ps1 -Branch staging -SkipManualSmokeRecencyGate -IncludeMobileReleaseSecrets -AsJson`
+    - overall PASS, staging decision CONDITIONAL_GO, secrets PASS
+  - updated logs:
+    - `docs/staging-smoke-log.md`
+    - `docs/secrets-rotation-log.md`
+    - `docs/ops-health-log.md`
+- Script reliability refactor (code review driven)
+  - `scripts/staging-ops-cycle.ps1`
+  - `scripts/ops-health-cycle.ps1`
+  - replaced naive markdown row parsing (`Split("|")`) with escaped-pipe aware row parser to avoid false parsing when log cells include `\|`
+  - re-validated with:
+    - `scripts/staging-preflight.ps1 -SkipTerraformPlan`
+    - `scripts/staging-rehearsal.ps1 -Ref staging -SkipPreflight -DryRun`
+    - `scripts/staging-ops-cycle.ps1 -Branch staging -SkipPreflight -SkipManualSmokeRecencyGate -AsJson`
+    - `scripts/ops-health-cycle.ps1 -Branch staging -SkipPreflight -SkipManualSmokeRecencyGate -IncludeMobileReleaseSecrets -AsJson`
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
