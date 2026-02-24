@@ -13,6 +13,21 @@ if ($MaxAgeDays -lt 1) {
   throw "MaxAgeDays must be >= 1"
 }
 
+function Test-CommandExists {
+  param([string]$Name)
+  return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Get-PowerShellCommand {
+  if (Test-CommandExists "powershell.exe") {
+    return "powershell.exe"
+  }
+  if (Test-CommandExists "pwsh") {
+    return "pwsh"
+  }
+  return ""
+}
+
 function Escape-MarkdownCell {
   param([string]$Value)
 
@@ -82,11 +97,20 @@ function Invoke-PowerShellFile {
     [string[]]$Arguments = @()
   )
 
-  $output = & powershell.exe -NoProfile -File $ScriptPath @Arguments 2>&1
+  if ([string]::IsNullOrWhiteSpace($script:PowerShellCommand)) {
+    throw "missing powershell command (powershell.exe/pwsh)"
+  }
+
+  $output = & $script:PowerShellCommand -NoProfile -File $ScriptPath @Arguments 2>&1
   return [PSCustomObject]@{
     ExitCode = $LASTEXITCODE
     Output = ($output -join "`n")
   }
+}
+
+$script:PowerShellCommand = Get-PowerShellCommand
+if ([string]::IsNullOrWhiteSpace($script:PowerShellCommand)) {
+  throw "missing powershell command (powershell.exe/pwsh)"
 }
 
 $auditScript = Join-Path $PSScriptRoot "staging-secret-rotation-audit.ps1"

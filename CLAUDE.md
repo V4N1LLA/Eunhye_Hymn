@@ -1,7 +1,7 @@
 ﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-23
+> 마지막 업데이트: 2026-02-24
 > 정합성 기준 문서: `docs/api-contract.md`, `docs/data-model.md`, `.env.example`, `apps/api/.env.example`
 
 ---
@@ -757,6 +757,12 @@ develop push → GitHub Actions
   - `docs/deployment-readiness-audit.md` (최신 Actions 실행 근거/잔여 리스크 갱신)
 - 개발 변경 이력 동기화
   - `docs/changelog-dev.md`
+- 리뷰 코멘트 후속 리팩토링 반영 (2026-02-24)
+  - `scripts/ops-health-cycle.ps1`: 수동 스모크 recency 분류 정밀화 + cross-platform 하위 스크립트 실행
+  - `scripts/staging-ops-cycle.ps1`, `scripts/secrets-rotation-cycle.ps1`: cross-platform PowerShell 실행기 선택
+  - `scripts/sync-skills.ps1`: source/destination 경로 겹침 방지 가드 추가
+  - `.github/workflows/secrets-rotation-scheduled.yml`: workflow_dispatch boolean false 보존
+  - `skills/secrets-rotation-auditor/references/commands.md`: 필수 인자 누락 예시 보강
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`

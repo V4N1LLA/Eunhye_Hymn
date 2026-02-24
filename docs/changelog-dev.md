@@ -2,6 +2,27 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-24
+
+### Review-comment refactor follow-up
+- Script reliability hardening
+  - `scripts/ops-health-cycle.ps1`
+  - `scripts/staging-ops-cycle.ps1`
+  - `scripts/secrets-rotation-cycle.ps1`
+  - Switched nested script invocation to cross-platform PowerShell command resolution (`powershell.exe`/`pwsh`)
+- Failure-category precision update
+  - `scripts/ops-health-cycle.ps1`
+  - Narrowed manual-smoke recency detection to explicit recency failure signals only
+- Safety guard for skill sync
+  - `scripts/sync-skills.ps1`
+  - Added source/destination overlap guard to prevent destructive self-sync path combinations
+- Workflow input correctness
+  - `.github/workflows/secrets-rotation-scheduled.yml`
+  - Preserved explicit `false` for `include_mobile_release_secrets` on manual dispatch
+- Skill reference sync
+  - `skills/secrets-rotation-auditor/references/commands.md`
+  - Added required parameters to the `staging-sync-secrets.ps1` command example
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
