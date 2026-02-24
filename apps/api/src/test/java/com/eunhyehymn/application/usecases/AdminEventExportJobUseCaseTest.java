@@ -1,7 +1,9 @@
 package com.eunhyehymn.application.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.eunhyehymn.common.error.ApiException;
 import com.eunhyehymn.domain.model.Event;
 import com.eunhyehymn.domain.model.EventExportJob;
 import com.eunhyehymn.domain.model.EventExportJobStatus;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 
 class AdminEventExportJobUseCaseTest {
     @Test
@@ -83,6 +86,109 @@ class AdminEventExportJobUseCaseTest {
         assertThat(jobRepository.findQueuedLimitHistory).containsExactly(1, 200);
     }
 
+    @Test
+    void processMarksJobFailedAndTruncatesLongErrorMessage() {
+        InMemoryEventExportJobRepository jobRepository = new InMemoryEventExportJobRepository();
+        NoopEventRepository eventRepository = new NoopEventRepository();
+        AdminEventExportJobUseCase useCase = new AdminEventExportJobUseCase(eventRepository, jobRepository);
+        EventExportJob runningJob = new EventExportJob(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            null,
+            null,
+            null,
+            null,
+            Instant.now(),
+            100,
+            EventExportJobStatus.RUNNING,
+            null,
+            null,
+            null,
+            null,
+            Instant.now(),
+            Instant.now(),
+            null
+        );
+        String longMessage = "x".repeat(700);
+        eventRepository.findRecentException = new RuntimeException(longMessage);
+        jobRepository.claimQueuedResult = Optional.of(runningJob);
+
+        EventExportJob result = useCase.process(runningJob.id());
+
+        assertThat(result.status()).isEqualTo(EventExportJobStatus.FAILED);
+        assertThat(result.errorMessage()).hasSize(500);
+        assertThat(jobRepository.savedJobs).hasSize(1);
+    }
+
+    @Test
+    void getDownloadThrowsConflictWhenJobFailed() {
+        InMemoryEventExportJobRepository jobRepository = new InMemoryEventExportJobRepository();
+        AdminEventExportJobUseCase useCase = new AdminEventExportJobUseCase(new NoopEventRepository(), jobRepository);
+        UUID requestedBy = UUID.randomUUID();
+        EventExportJob failedJob = new EventExportJob(
+            UUID.randomUUID(),
+            requestedBy,
+            null,
+            null,
+            null,
+            null,
+            Instant.now(),
+            100,
+            EventExportJobStatus.FAILED,
+            null,
+            null,
+            null,
+            "Export failed for timeout",
+            Instant.now(),
+            Instant.now(),
+            Instant.now()
+        );
+        jobRepository.findByIdResult = Optional.of(failedJob);
+
+        assertThatThrownBy(() -> useCase.getDownload(failedJob.id(), requestedBy))
+            .isInstanceOf(ApiException.class)
+            .satisfies(throwable -> {
+                ApiException ex = (ApiException) throwable;
+                assertThat(ex.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                assertThat(ex.getCode()).isEqualTo("export_job_failed");
+                assertThat(ex).hasMessage("Export failed for timeout");
+            });
+    }
+
+    @Test
+    void getDownloadThrowsServerErrorWhenCompletedResultIsMissing() {
+        InMemoryEventExportJobRepository jobRepository = new InMemoryEventExportJobRepository();
+        AdminEventExportJobUseCase useCase = new AdminEventExportJobUseCase(new NoopEventRepository(), jobRepository);
+        UUID requestedBy = UUID.randomUUID();
+        EventExportJob corruptedCompletedJob = new EventExportJob(
+            UUID.randomUUID(),
+            requestedBy,
+            null,
+            null,
+            null,
+            null,
+            Instant.now(),
+            100,
+            EventExportJobStatus.COMPLETED,
+            10L,
+            null,
+            "csv-content",
+            null,
+            Instant.now(),
+            Instant.now(),
+            Instant.now()
+        );
+        jobRepository.findByIdResult = Optional.of(corruptedCompletedJob);
+
+        assertThatThrownBy(() -> useCase.getDownload(corruptedCompletedJob.id(), requestedBy))
+            .isInstanceOf(ApiException.class)
+            .satisfies(throwable -> {
+                ApiException ex = (ApiException) throwable;
+                assertThat(ex.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+                assertThat(ex.getCode()).isEqualTo("export_job_corrupted");
+            });
+    }
+
     private static final class InMemoryEventExportJobRepository implements EventExportJobRepository {
         private Optional<EventExportJob> findByIdResult = Optional.empty();
         private Optional<EventExportJob> claimQueuedResult = Optional.empty();
@@ -130,6 +236,8 @@ class AdminEventExportJobUseCaseTest {
     }
 
     private static final class NoopEventRepository implements EventRepository {
+        private RuntimeException findRecentException;
+
         @Override
         public Event save(Event event) {
             throw new UnsupportedOperationException();
@@ -155,6 +263,9 @@ class AdminEventExportJobUseCaseTest {
             int page,
             int size
         ) {
+            if (findRecentException != null) {
+                throw findRecentException;
+            }
             return List.of();
         }
 
