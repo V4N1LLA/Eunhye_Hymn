@@ -159,6 +159,24 @@
     - `status_command`, `status_json_parse`
   - Hardened nested PowerShell invocation to capture stderr/exception text without losing structured failure output
 
+### Parallel work collision guard automation
+- Upgraded worktree bootstrap with ownership validation
+  - `scripts/new-worktree-task.ps1`
+  - Added ownership/collision parameters:
+    - `-Owner`
+    - `-ClaimedPaths`
+    - `-TaskBoardPath`
+    - `-SkipTaskBoardUpdate`
+    - `-AllowClaimedPathConflict`
+  - Added automated checks before worktree creation:
+    - local/remote branch existence collision
+    - worktree path ownership collision (task board)
+    - claimed path overlap collision (task board active rows)
+  - Added automatic task-board upsert (`in_progress`, UTC timestamp) after successful worktree creation
+- Updated parallel-work docs
+  - `docs/parallel-pr-workflow.md`
+  - `docs/parallel-task-board.md`
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation
