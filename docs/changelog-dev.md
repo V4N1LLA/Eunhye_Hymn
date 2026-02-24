@@ -23,6 +23,20 @@
   - `skills/secrets-rotation-auditor/references/commands.md`
   - Added required parameters to the `staging-sync-secrets.ps1` command example
 
+### Ops script compatibility follow-up
+- Cross-platform PowerShell invocation hardening
+  - `scripts/mobile-store-cycle.ps1`
+  - `scripts/staging-rehearsal.ps1`
+  - `scripts/run-mobile-emulator.ps1`
+  - Replaced remaining direct `powershell.exe` script-launch usage with `powershell.exe`/`pwsh` resolution
+- Rehearsal run-detection reliability
+  - `scripts/staging-rehearsal.ps1`
+  - Added baseline run-id tracking and earliest-post-dispatch selection to reduce concurrent workflow run misattribution
+- Workflow dispatch boolean hardening
+  - `.github/workflows/deploy-staging.yml`
+  - `.github/workflows/ops-health-scheduled.yml`
+  - Preserved explicit `false` values for workflow_dispatch boolean inputs (`enable_awslogs`, `include_mobile_release_secrets`, `wait_for_completion`)
+
 ## 2026-02-23
 
 ### Staging manual smoke recency gate + log automation

@@ -174,7 +174,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
-          ENABLE_AWSLOGS: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_awslogs || secrets.ENABLE_AWSLOGS }}
+          ENABLE_AWSLOGS: ${{ github.event_name == 'workflow_dispatch' && (inputs.enable_awslogs && 'true' || 'false') || secrets.ENABLE_AWSLOGS }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ec2-user@${{ secrets.EC2_HOST }} \

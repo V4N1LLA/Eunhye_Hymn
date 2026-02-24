@@ -47,23 +47,38 @@ function Read-EnvValue {
 }
 
 function Read-JsonValue {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string] $Path,
-        [Parameter(Mandatory = $true)]
-        [string] $Name
-    )
+  param(
+    [Parameter(Mandatory = $true)]
+    [string] $Path,
+    [Parameter(Mandatory = $true)]
+    [string] $Name
+  )
 
-    $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
-    if ([string]::IsNullOrWhiteSpace($raw)) {
-        return $null
-    }
-    $json = $raw | ConvertFrom-Json
-    $value = $json.$Name
-    if ($null -eq $value) {
-        return $null
-    }
-    return $value.ToString()
+  $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+  if ([string]::IsNullOrWhiteSpace($raw)) {
+    return $null
+  }
+  $json = $raw | ConvertFrom-Json
+  $value = $json.$Name
+  if ($null -eq $value) {
+    return $null
+  }
+  return $value.ToString()
+}
+
+function Test-CommandExists {
+  param([string] $Name)
+  return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Get-PowerShellCommand {
+  if (Test-CommandExists "powershell.exe") {
+    return "powershell.exe"
+  }
+  if (Test-CommandExists "pwsh") {
+    return "pwsh"
+  }
+  return ""
 }
 
 $profileApiBaseUrl = Read-JsonValue -Path $profileFile -Name "API_BASE_URL"
@@ -100,6 +115,11 @@ if ([string]::IsNullOrWhiteSpace($resolvedKakaoKey)) {
     throw "KAKAO_NATIVE_APP_KEY is required. Set it in apps/mobile/.env, .env, or pass -KakaoNativeAppKey."
 }
 
+$powerShellCommand = Get-PowerShellCommand
+if ([string]::IsNullOrWhiteSpace($powerShellCommand)) {
+    throw "missing powershell command (powershell.exe/pwsh)"
+}
+
 $dartDefines = @(
     "--dart-define-from-file=" + $profileFile
     "--dart-define=KAKAO_NATIVE_APP_KEY=" + $resolvedKakaoKey.Trim()
@@ -112,7 +132,7 @@ if ($resolvedApiBaseUrl.Trim() -ne $profileApiBaseUrl) {
 Push-Location $mobileDir
 try {
     Write-Host ("[run-mobile-emulator] environment={0} api={1}" -f $Environment, $resolvedApiBaseUrl.Trim())
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $flutterWrapper run -d $DeviceId @dartDefines
+    & $powerShellCommand -NoProfile -ExecutionPolicy Bypass -File $flutterWrapper run -d $DeviceId @dartDefines
 } finally {
     Pop-Location
 }

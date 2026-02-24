@@ -21,6 +21,16 @@ function Test-CommandExists {
   return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+function Get-PowerShellCommand {
+  if (Test-CommandExists "powershell.exe") {
+    return "powershell.exe"
+  }
+  if (Test-CommandExists "pwsh") {
+    return "pwsh"
+  }
+  return ""
+}
+
 function Invoke-CommandStrict {
   param(
     [string]$Name,
@@ -88,6 +98,11 @@ if (-not (Test-CommandExists "gh")) {
   throw "gh CLI is required."
 }
 
+$script:PowerShellCommand = Get-PowerShellCommand
+if ([string]::IsNullOrWhiteSpace($script:PowerShellCommand)) {
+  throw "missing powershell command (powershell.exe/pwsh)"
+}
+
 $preflightStatus = "SKIPPED"
 $notes = "enable_awslogs=$($EnableAwsLogs.IsPresent.ToString().ToLower())"
 
@@ -98,6 +113,7 @@ if (-not $SkipPreflight) {
   }
 
   $preflightArgs = @(
+    "-NoProfile",
     "-File", $preflightScript,
     "-Repo", $Repo
   )
@@ -111,7 +127,7 @@ if (-not $SkipPreflight) {
     $preflightArgs += "-SkipTerraformPlan"
   }
 
-  & powershell.exe @preflightArgs
+  & $script:PowerShellCommand @preflightArgs
   if ($LASTEXITCODE -ne 0) {
     $preflightStatus = "FAILED"
     Append-LogRow -Path $LogFile -RepoName $Repo -BranchRef $Ref -PreflightStatus $preflightStatus -RunUrl "-" -Result "ABORTED" -Notes "preflight failed"
@@ -120,7 +136,6 @@ if (-not $SkipPreflight) {
   $preflightStatus = "PASS"
 }
 
-$triggeredAfter = (Get-Date).ToUniversalTime()
 $enableValue = if ($EnableAwsLogs) { "true" } else { "false" }
 
 if (Test-CommitShaRef -Value $Ref) {
@@ -137,6 +152,25 @@ if ($DryRun) {
   exit 0
 }
 
+$baselineRuns = gh run list --repo $Repo --workflow $Workflow --event workflow_dispatch --limit 30 --json databaseId 2>$null
+$knownRunIds = @{}
+if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($baselineRuns)) {
+  try {
+    $known = $baselineRuns | ConvertFrom-Json
+    foreach ($run in $known) {
+      $id = "$($run.databaseId)"
+      if (-not [string]::IsNullOrWhiteSpace($id)) {
+        $knownRunIds[$id] = $true
+      }
+    }
+  } catch {
+    # Best-effort baseline only.
+  }
+}
+
+$triggeredAfter = (Get-Date).ToUniversalTime()
+$dispatchWindowStart = $triggeredAfter.AddMinutes(-2)
+
 Invoke-CommandStrict -Name "gh workflow run" -Command {
   gh workflow run $Workflow --repo $Repo --ref $Ref -f "enable_awslogs=$enableValue"
 }
@@ -144,17 +178,38 @@ Invoke-CommandStrict -Name "gh workflow run" -Command {
 $runId = $null
 $runUrl = $null
 for ($i = 0; $i -lt $RunDetectRetries; $i++) {
-  $runJson = gh run list --repo $Repo --workflow $Workflow --branch $Ref --event workflow_dispatch --limit 5 --json databaseId,createdAt,url,status
+  $runJson = gh run list --repo $Repo --workflow $Workflow --event workflow_dispatch --limit 30 --json databaseId,createdAt,url,status,headBranch
   if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($runJson)) {
     $runs = $runJson | ConvertFrom-Json
-    $candidate = $runs |
-      Where-Object { ([DateTime]$_.createdAt).ToUniversalTime() -ge $triggeredAfter.AddSeconds(-5) } |
-      Sort-Object { [DateTime]$_.createdAt } -Descending |
-      Select-Object -First 1
+    $runsWithCreatedAt = $runs | ForEach-Object {
+      [PSCustomObject]@{
+        Run = $_
+        CreatedAtUtc = ([DateTime]$_.createdAt).ToUniversalTime()
+      }
+    }
 
-    if ($null -ne $candidate) {
-      $runId = "$($candidate.databaseId)"
-      $runUrl = "$($candidate.url)"
+    $strictCandidates = $runsWithCreatedAt |
+      Where-Object {
+        (-not $knownRunIds.ContainsKey("$($_.Run.databaseId)")) -and
+        ($_.CreatedAtUtc -ge $triggeredAfter) -and
+        ([string]::IsNullOrWhiteSpace($_.Run.headBranch) -or $_.Run.headBranch -eq $Ref)
+      }
+    # Select the earliest matching run after dispatch to avoid attaching to later concurrent runs.
+    $selected = $strictCandidates | Sort-Object CreatedAtUtc | Select-Object -First 1
+
+    if ($null -eq $selected) {
+      $fallbackCandidates = $runsWithCreatedAt |
+        Where-Object {
+          (-not $knownRunIds.ContainsKey("$($_.Run.databaseId)")) -and
+          ($_.CreatedAtUtc -ge $dispatchWindowStart) -and
+          ([string]::IsNullOrWhiteSpace($_.Run.headBranch) -or $_.Run.headBranch -eq $Ref)
+        }
+      $selected = $fallbackCandidates | Sort-Object CreatedAtUtc | Select-Object -First 1
+    }
+
+    if ($null -ne $selected) {
+      $runId = "$($selected.Run.databaseId)"
+      $runUrl = "$($selected.Run.url)"
       break
     }
   }
