@@ -18,8 +18,6 @@ import com.eunhyehymn.infrastructure.persistence.AuthIdentityJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnNoteJpaRepository;
-import com.eunhyehymn.infrastructure.persistence.InviteCodeEntity;
-import com.eunhyehymn.infrastructure.persistence.InviteCodeJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.RefreshTokenJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserEntity;
 import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
@@ -55,14 +53,12 @@ class SocialLoginApiTest {
     @Autowired private EventJpaRepository eventJpaRepository;
     @Autowired private AuthIdentityJpaRepository authIdentityJpaRepository;
     @Autowired private RefreshTokenJpaRepository refreshTokenJpaRepository;
-    @Autowired private InviteCodeJpaRepository inviteCodeJpaRepository;
 
     @MockBean
     private SocialTokenVerifier socialTokenVerifier;
 
     @BeforeEach
     void setUp() {
-        inviteCodeJpaRepository.deleteAll();
         eventJpaRepository.deleteAll();
         userHymnStateJpaRepository.deleteAll();
         hymnNoteJpaRepository.deleteAll();
@@ -74,18 +70,13 @@ class SocialLoginApiTest {
     }
 
     @Test
-    void newUserWithValidInviteCodeCreatesAccountAndReturnsTokens() throws Exception {
-        inviteCodeJpaRepository.save(new InviteCodeEntity(
-            "SOCIAL-TEST-CODE", null, "test", null, 0, true, null, Instant.now()
-        ));
-
+    void newUserWithoutInviteCodeCreatesAccountAndReturnsTokens() throws Exception {
         when(socialTokenVerifier.verify(eq("KAKAO"), eq("valid-kakao-token")))
             .thenReturn(new SocialUserInfo("kakao-sub-123", "test@kakao.com", "Test User"));
 
         Map<String, String> request = new HashMap<>();
         request.put("provider", "KAKAO");
         request.put("token", "valid-kakao-token");
-        request.put("inviteCode", "SOCIAL-TEST-CODE");
 
         String response = mockMvc.perform(post("/auth/social")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -113,7 +104,8 @@ class SocialLoginApiTest {
         mockMvc.perform(get("/me/profile")
                 .header("Authorization", "Bearer " + accessToken))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.role").value("USER"));
+            .andExpect(jsonPath("$.data.role").value("USER"))
+            .andExpect(jsonPath("$.data.verified").value(false));
     }
 
     @Test
@@ -145,20 +137,27 @@ class SocialLoginApiTest {
     }
 
     @Test
-    void newUserWithoutInviteCodeIsForbidden() throws Exception {
-        when(socialTokenVerifier.verify(eq("KAKAO"), eq("valid-kakao-token")))
-            .thenReturn(new SocialUserInfo("kakao-new-sub", "new@kakao.com", "New User"));
+    void disabledUserCannotLogin() throws Exception {
+        UUID userId = UUID.randomUUID();
+        userJpaRepository.save(new UserEntity(
+            userId, "Disabled User", Role.USER, UserStatus.DISABLED, Instant.now(), Instant.now()
+        ));
+        authIdentityJpaRepository.save(new AuthIdentityEntity(
+            UUID.randomUUID(), userId, "KAKAO", "disabled-subject", "disabled@kakao.com", Instant.now()
+        ));
+
+        when(socialTokenVerifier.verify(eq("KAKAO"), eq("disabled-token")))
+            .thenReturn(new SocialUserInfo("disabled-subject", "disabled@kakao.com", "Disabled User"));
 
         Map<String, String> request = new HashMap<>();
         request.put("provider", "KAKAO");
-        request.put("token", "valid-kakao-token");
+        request.put("token", "disabled-token");
 
         mockMvc.perform(post("/auth/social")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isForbidden())
-            .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.error.code").value("invalid_invite_code"));
+            .andExpect(jsonPath("$.error.code").value("account_disabled"));
     }
 
     @Test
@@ -169,7 +168,6 @@ class SocialLoginApiTest {
         Map<String, String> request = new HashMap<>();
         request.put("provider", "KAKAO");
         request.put("token", "invalid-token");
-        request.put("inviteCode", "ANY-CODE");
 
         mockMvc.perform(post("/auth/social")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -181,17 +179,12 @@ class SocialLoginApiTest {
 
     @Test
     void providerIsCaseInsensitive() throws Exception {
-        inviteCodeJpaRepository.save(new InviteCodeEntity(
-            "CASE-CODE", null, "case", null, 0, true, null, Instant.now()
-        ));
-
         when(socialTokenVerifier.verify(eq("KAKAO"), eq("case-token")))
             .thenReturn(new SocialUserInfo("case-sub", "case@kakao.com", "Case User"));
 
         Map<String, String> request = new HashMap<>();
         request.put("provider", "kakao");
         request.put("token", "case-token");
-        request.put("inviteCode", "CASE-CODE");
 
         mockMvc.perform(post("/auth/social")
                 .contentType(MediaType.APPLICATION_JSON)

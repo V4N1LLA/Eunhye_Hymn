@@ -137,16 +137,33 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 사전 점검:
 
 ```powershell
-.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile eunhye-staging]
+.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile eunhye-staging] [-AutoLogin]
 ```
+
+`-AutoLogin`은 세션 만료 시 `aws sso login` 또는 `aws login`을 자동 재시도한다.
+
+시크릿 로테이션 상태 점검(월 1회 권장):
+
+```powershell
+.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <operator> -MaxAgeDays 90
+.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <operator> -MaxAgeDays 90 -IncludeMobileReleaseSecrets
+```
+
+출력 상태:
+- `OK`: 기준 일수 이내
+- `STALE`: 기준 일수 초과(교체 권장)
+- `MISSING`: 필수 시크릿 누락
+- 실행 이력은 `docs/secrets-rotation-log.md`에 자동 누적된다.
+- 스케줄 자동 실행: `.github/workflows/secrets-rotation-scheduled.yml` (매월 1일 03:00 UTC)
 
 리허설 자동 실행(권장):
 
 ```powershell
 .\scripts\staging-rehearsal.ps1 `
   -Repo V4N1LLA/Eunhye_Hymn `
-  -Ref develop `
-  [-AwsProfile eunhye-staging]
+  -Ref staging `
+  [-AwsProfile eunhye-staging] `
+  [-AutoLogin]
 ```
 
 이 스크립트는 `staging-preflight.ps1` 실행 후 `deploy-staging.yml`을 `workflow_dispatch`로 트리거하고 run 완료까지 대기한 다음 `docs/staging-rehearsal-log.md`에 결과를 기록한다.
@@ -158,11 +175,43 @@ Terraform 적용 후 아래 스크립트로 필수 Secrets를 한 번에 동기�
 ```powershell
 .\scripts\staging-ops-cycle.ps1 `
   -Repo V4N1LLA/Eunhye_Hymn `
-  -Branch develop `
-  -Owner <operator>
+  -Branch staging `
+  -Owner <operator> `
+  [-AutoLogin] `
+  [-WaitForCompletion] `
+  [-ManualSmokeMaxAgeDays 7]
 ```
 
 이 스크립트는 preflight와 최신 배포 게이트를 함께 확인하고 `docs/staging-smoke-log.md`에 판정(`CONDITIONAL_GO`/`HOLD`)을 기록한다.
+또한 기본적으로 수동 스모크 최신성(7일)을 확인하며, 최신 기록이 없거나 오래되면 `Manual Smoke=OVERDUE`로 `HOLD` 처리한다.
+
+수동 스모크 완료 결과를 로그에 자동 기록하려면:
+
+```powershell
+.\scripts\staging-ops-cycle.ps1 `
+  -Repo V4N1LLA/Eunhye_Hymn `
+  -Branch staging `
+  -Owner <operator> `
+  -SkipPreflight `
+  -ManualSmokeResult PASS `
+  -ManualSmokeEvidence <evidence-url-or-ticket> `
+  [-ManualSmokeNotes "<summary>"]
+```
+
+통합 운영 헬스 사이클(게이트 + 시크릿 점검)을 함께 실행하려면:
+
+```powershell
+.\scripts\ops-health-cycle.ps1 `
+  -Repo V4N1LLA/Eunhye_Hymn `
+  -Branch staging `
+  -Owner <operator> `
+  [-AutoLogin] `
+  [-WaitForCompletion]
+```
+
+결과는 `docs/ops-health-log.md`에 자동 누적되며, 실패 원인은 `FailureCategory`로 분류된다.
+HOLD/ERROR는 `scripts/ops-health-issue-alert.ps1`를 통해 이슈로 자동 승격할 수 있다.
+스케줄 자동 실행은 `.github/workflows/ops-health-scheduled.yml`에서 관리한다(매주 월요일 02:00 UTC).
 
 최신 배포 run 상태(특히 deploy/verify 성공 여부) 확인:
 
@@ -208,13 +257,34 @@ ADMIN_KAKAO_SUBJECTS=
 ADMIN_ENFORCE_ADMIN_ONLY=false
 ADMIN_LOGIN_ID=
 ADMIN_LOGIN_PASSWORD=
+SMS_CODE_LENGTH=6
+SMS_EXPIRES_SECONDS=300
+SMS_COOLDOWN_SECONDS=30
+SMS_MAX_ATTEMPTS=5
+SMS_TWILIO_ENABLED=false
+SMS_TWILIO_ACCOUNT_SID=
+SMS_TWILIO_AUTH_TOKEN=
+SMS_TWILIO_FROM_NUMBER=
+SMS_TWILIO_MESSAGE_TEMPLATE=[Eunhye Hymn] Verification code is %s.
 S3_BUCKET=<terraform output s3_bucket_name>
 S3_REGION=ap-northeast-2
 S3_ENDPOINT=
 S3_PUBLIC_BASE_URL=<terraform output s3_bucket_url>
 S3_PRESIGN_EXPIRES_MINUTES=15
+AI_GEMINI_ENABLED=false
+AI_GEMINI_API_KEY=
+AI_GEMINI_MODEL=gemini-2.5-flash-lite
+AI_GEMINI_CONNECT_TIMEOUT_SECONDS=3
+AI_GEMINI_READ_TIMEOUT_SECONDS=8
+AI_GEMINI_TEMPERATURE=0.1
+AI_GEMINI_MAX_OUTPUT_TOKENS=160
+AI_RECOMMEND_MAX_CANDIDATE_HYMNS=25
+AI_RECOMMEND_MAX_RESULTS=3
+AI_RECOMMEND_MAX_SITUATION_CHARS=180
 SPRING_PROFILES_ACTIVE=prod
 ```
+
+운영에서 AI 추천을 사용하지 않으면 `AI_GEMINI_ENABLED=false`를 유지하고 `AI_GEMINI_API_KEY`는 비워둔다.
 
 ## 수동 배포
 

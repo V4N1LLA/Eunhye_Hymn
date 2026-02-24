@@ -13,6 +13,7 @@ import com.eunhyehymn.infrastructure.persistence.AuthIdentityJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.EventJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.HymnNoteJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.InviteCodeEntity;
 import com.eunhyehymn.infrastructure.persistence.InviteCodeJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.RefreshTokenJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserEntity;
@@ -132,6 +133,20 @@ class AdminInviteCodeApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isOk());
+
+        mockMvc.perform(post("/admin/invite-codes")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
+    void duplicateCodeReturnsConflictEvenWhenLegacyCodeHasDifferentCase() throws Exception {
+        inviteCodeJpaRepository.save(new InviteCodeEntity(
+            "legacy-code", null, "legacy", null, 0, true, null, Instant.now()
+        ));
+        String payload = objectMapper.writeValueAsString(Map.of("code", "LEGACY-CODE"));
 
         mockMvc.perform(post("/admin/invite-codes")
                 .header("Authorization", "Bearer " + adminToken)

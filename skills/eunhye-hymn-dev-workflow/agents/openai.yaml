@@ -1,0 +1,7 @@
+interface:
+  display_name: "Eunhye Hymn Dev Workflow"
+  short_description: "Route docs, apply changes, and validate safely."
+  default_prompt: "Use $eunhye-hymn-dev-workflow to implement and validate this Eunhye Hymn monorepo task."
+
+policy:
+  allow_implicit_invocation: true

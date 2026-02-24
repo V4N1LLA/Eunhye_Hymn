@@ -1,0 +1,7 @@
+interface:
+  display_name: "Parallel Worktree Manager"
+  short_description: "Create isolated worktrees and track task ownership."
+  default_prompt: "Use $parallel-worktree-manager to set up a new parallel task worktree."
+
+policy:
+  allow_implicit_invocation: true

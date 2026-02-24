@@ -130,7 +130,8 @@ jobs:
         run: flutter pub get
 
       - name: Build Android signed AAB
-        run: flutter build appbundle --release --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+        run: |
+          flutter build appbundle --release --dart-define=API_BASE_URL="${API_BASE_URL}"
 
       - name: Upload Android AAB artifact
         uses: actions/upload-artifact@v4
@@ -171,7 +172,8 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS release (no codesign)
-        run: flutter build ios --release --no-codesign --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+        run: |
+          flutter build ios --release --no-codesign --dart-define=API_BASE_URL="${API_BASE_URL}"
 
       - name: Upload iOS app artifact
         uses: actions/upload-artifact@v4
@@ -247,7 +249,7 @@ jobs:
       - name: Build iOS signed archive and IPA
         run: |
           set -euo pipefail
-          flutter build ios --release --no-codesign --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+          flutter build ios --release --no-codesign --dart-define=API_BASE_URL="${API_BASE_URL}"
 
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \

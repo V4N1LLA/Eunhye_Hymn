@@ -23,7 +23,7 @@ public class InviteCodeRepositoryAdapter implements InviteCodeRepository {
 
     @Override
     public Optional<InviteCode> findByCode(String code) {
-        return jpaRepository.findById(code).map(InviteCodeMapper::toDomain);
+        return findExistingEntityByCode(code).map(InviteCodeMapper::toDomain);
     }
 
     @Override
@@ -35,6 +35,16 @@ public class InviteCodeRepositoryAdapter implements InviteCodeRepository {
 
     @Override
     public boolean incrementUsedCount(String code) {
-        return jpaRepository.incrementUsedCount(code) > 0;
+        return findExistingEntityByCode(code)
+            .map(entity -> jpaRepository.incrementUsedCount(entity.getCode()) > 0)
+            .orElse(false);
+    }
+
+    private Optional<InviteCodeEntity> findExistingEntityByCode(String code) {
+        if (code == null) {
+            return Optional.empty();
+        }
+        return jpaRepository.findById(code)
+            .or(() -> jpaRepository.findFirstByCodeIgnoreCaseOrderByCreatedAtAsc(code));
     }
 }

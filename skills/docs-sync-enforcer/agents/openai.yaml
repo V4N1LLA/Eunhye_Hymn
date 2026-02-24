@@ -1,0 +1,7 @@
+interface:
+  display_name: "Docs Sync Enforcer"
+  short_description: "Map code changes to required document updates."
+  default_prompt: "Use $docs-sync-enforcer to sync docs for this code and ops change."
+
+policy:
+  allow_implicit_invocation: true

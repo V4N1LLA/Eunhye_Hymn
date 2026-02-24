@@ -168,11 +168,51 @@ class HistoryItem {
   }
 }
 
+class HymnRecommendationItem {
+  final String id;
+  final String title;
+  final String? number;
+  final String? tags;
+  final String reason;
+
+  const HymnRecommendationItem({
+    required this.id,
+    required this.title,
+    required this.number,
+    required this.tags,
+    required this.reason,
+  });
+
+  factory HymnRecommendationItem.fromJson(Map<String, dynamic> item) {
+    return HymnRecommendationItem(
+      id: item['id'].toString(),
+      title: item['title']?.toString() ?? '(제목 없음)',
+      number: item['number']?.toString(),
+      tags: item['tags']?.toString(),
+      reason: item['reason']?.toString() ?? '',
+    );
+  }
+}
+
+class HymnRecommendationResult {
+  final List<HymnRecommendationItem> items;
+  final int requestedMaxResults;
+  final int candidateCount;
+
+  const HymnRecommendationResult({
+    required this.items,
+    required this.requestedMaxResults,
+    required this.candidateCount,
+  });
+}
+
 class HymnRepository {
   final ApiClient apiClient;
   String? _sessionUserId;
 
   HymnRepository({required this.apiClient});
+
+  String? get sessionUserId => _sessionUserId;
 
   static const _hymnListCacheKey = 'mobile.cache.hymn.list';
   static const _historyCacheKey = 'mobile.cache.history';
@@ -180,6 +220,26 @@ class HymnRepository {
 
   void bindSessionUser(String? userId) {
     _sessionUserId = userId;
+  }
+
+  Future<void> clearPersonalCache() async {
+    final userId = _sessionUserId;
+    if (userId == null || userId.isEmpty) {
+      throw ApiException('로그인 세션이 없습니다.');
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final suffix = '.$userId';
+    final keys = prefs
+        .getKeys()
+        .where(
+          (key) => key.startsWith('mobile.cache.') && key.endsWith(suffix),
+        )
+        .toList();
+
+    for (final key in keys) {
+      await prefs.remove(key);
+    }
   }
 
   Future<List<HymnSummary>> listHymns() async {
@@ -208,6 +268,45 @@ class HymnRepository {
       }
       rethrow;
     }
+  }
+
+  Future<HymnRecommendationResult> recommendHymns({
+    required String situation,
+    int maxResults = 3,
+  }) async {
+    final normalizedSituation = situation.trim();
+    if (normalizedSituation.isEmpty) {
+      throw ApiException('상황 설명을 입력해 주세요.');
+    }
+
+    final normalizedMaxResults = maxResults.clamp(1, 5);
+    final raw = await apiClient.post(
+      '/ai/hymn-recommendations',
+      body: {
+        'situation': normalizedSituation,
+        'maxResults': normalizedMaxResults,
+      },
+    );
+
+    if (raw is! Map<String, dynamic>) {
+      throw ApiException('AI 추천 응답 형식이 올바르지 않습니다.');
+    }
+
+    final itemsRaw = raw['items'];
+    if (itemsRaw is! List) {
+      throw ApiException('AI 추천 응답 형식이 올바르지 않습니다.');
+    }
+
+    final items = itemsRaw
+        .whereType<Map<String, dynamic>>()
+        .map(HymnRecommendationItem.fromJson)
+        .toList();
+
+    return HymnRecommendationResult(
+      items: items,
+      requestedMaxResults: _toInt(raw['requestedMaxResults'], fallback: 3),
+      candidateCount: _toInt(raw['candidateCount'], fallback: 0),
+    );
   }
 
   Future<HymnDetail> getHymnDetail(String hymnId) async {
@@ -472,6 +571,14 @@ class HymnRepository {
       return null;
     }
     return null;
+  }
+
+  int _toInt(Object? value, {required int fallback}) {
+    if (value is int) {
+      return value;
+    }
+    final parsed = int.tryParse(value?.toString() ?? '');
+    return parsed ?? fallback;
   }
 }
 

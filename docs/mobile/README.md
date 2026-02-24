@@ -8,16 +8,23 @@
 
 - 로그인
   - 소셜 SDK 직접 로그인 (Kakao 모바일)
+  - ID/PW 로그인/회원가입
   - 로그인 화면에서 Kakao 버튼 클릭 시 provider 앱/브라우저로 리디렉션
-  - 초대코드 입력 지원 (최초 1회)
-  - Dev 로그인은 `ENABLE_DEV_LOGIN=true`일 때만 노출
+  - 성도 인증 플로우: `Login -> InviteCode -> PhoneNumber -> SmsCode -> Home`
+  - 초대코드 인증(`POST /auth/invite/validate`)
+  - 휴대폰 인증번호 발송/검증(`POST /auth/sms/request`, `POST /auth/sms/verify`)
+  - 회원탈퇴(`POST /auth/withdraw`)
 - 찬양
   - 목록 조회 + 검색
+  - AI 상황 기반 찬송 추천 (`POST /ai/hymn-recommendations`)
   - 목록 화면 태그 필터 + 검색어/필터 초기화 + 빈 상태 가이드
   - 상세 조회
   - PNG 에셋 이미지 표시 (한 곡 다중 페이지 지원)
+  - 로컬 악보 파일 디코딩 실패 시 원본 URL로 자동 fallback
   - MIDI 에셋 앱 내 재생 UX (재생/일시정지/정지/속도)
 - 개인화
+  - 내 정보(교회/이름/구역) 조회/수정
+  - 개인정보 변경 요청 생성/최신 상태 조회
   - 즐겨찾기 토글
   - 메모 조회/저장
   - 최근 열람 히스토리 조회 (검색 + 기간 필터 + 빈 상태 가이드)
@@ -31,15 +38,20 @@
 ## 2. 화면 인벤토리
 
 1. 로그인 화면
-2. 찬양 목록 화면
-3. 찬양 상세 화면
-4. 최근 열람 히스토리 화면
+2. 초대코드 입력 화면
+3. 휴대폰 번호 입력 화면
+4. SMS 인증코드 입력 화면
+5. 찬양 목록 화면
+6. AI 찬송 추천 화면
+7. 찬양 상세 화면
+8. 최근 열람 히스토리 화면
 
 ## 3. 네비게이션
 
-- 로그인 성공 후 Home 진입
+- 로그인 + 성도 인증 완료 후 Home 진입
 - Home 하단 탭:
   - 찬양 목록
+  - AI 추천
   - 최근 열람
 - 목록/히스토리에서 상세 화면으로 이동
 
@@ -48,13 +60,22 @@
 - Base URL: `/api/v1`
 - 사용 API:
   - `POST /auth/social`
-  - `POST /auth/dev/login`
+  - `POST /auth/signup`
+  - `POST /auth/login`
+  - `POST /auth/invite/validate`
+  - `POST /auth/sms/request`
+  - `POST /auth/sms/verify`
+  - `POST /auth/withdraw`
   - `POST /auth/refresh`
   - `POST /auth/logout`
   - `GET /me/profile`
+  - `PUT /me/profile`
+  - `POST /me/profile-change-requests`
+  - `GET /me/profile-change-requests/latest`
   - `GET /me/favorites/{hymnId}`
   - `GET /hymns`
   - `GET /hymns/{id}`
+  - `POST /ai/hymn-recommendations`
   - `POST /me/favorites/{hymnId}`
   - `GET /me/hymns/{hymnId}/note`
   - `PUT /me/hymns/{hymnId}/note`
@@ -69,24 +90,20 @@
 cd apps/mobile
 ..\..\scripts\flutterw.ps1 pub get
 
-# 웹 실행
-..\..\scripts\flutterw.ps1 run -d chrome --dart-define=API_BASE_URL=http://10.0.2.2:8080/api/v1
-
-# Android 에뮬레이터/실기기 (staging)
-..\..\scripts\flutterw.ps1 run -d emulator-5554 --dart-define=API_BASE_URL=http://13.209.200.12
-
-# 소셜 로그인 포함 실행 (권장)
-..\..\scripts\flutterw.ps1 run -d emulator-5554 `
-  --dart-define=API_BASE_URL=http://13.209.200.12 `
-  --dart-define=KAKAO_NATIVE_APP_KEY=<kakao_native_app_key>
+# 환경 프로파일(local/staging/release) 기반 실행
+cd ..\..
+.\scripts\run-mobile-emulator.ps1 -Environment local -DeviceId emulator-5554
+.\scripts\run-mobile-emulator.ps1 -Environment staging -DeviceId emulator-5554
 ```
 
 실기기에서는 `10.0.2.2` 대신 로컬 서버 IP를 사용한다.
 `API_BASE_URL`에 `/api/v1`를 생략해도 앱에서 자동으로 보정한다.
 Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
-앱 실행 시 `--dart-define=KAKAO_NATIVE_APP_KEY=...` 값이 누락/불일치하면
+`run-mobile-emulator.ps1`가 읽는 `apps/mobile/.env`(fallback: 루트 `.env`)의 키 값이 누락/불일치하면
 동의 화면의 "계속하기" 이후 앱으로 복귀하지 않을 수 있다.
-로컬 개발용 로그인 화면이 필요하면 `--dart-define=ENABLE_DEV_LOGIN=true`를 함께 사용한다.
+민감 정보 관리 원칙은 `docs/SECRETS_MANAGEMENT.md`를 따른다.
+프로필 API(`/me/profile`)의 `inviteVerified`, `phoneVerified`, `verified` 값을 기준으로
+인증 완료 여부를 판단한다.
 
 ## 5.1 배포 범위 주의
 
@@ -120,8 +137,11 @@ Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
 예시:
 
 ```powershell
-cd apps/mobile
-..\..\scripts\flutterw.ps1 build apk --release --dart-define=API_BASE_URL=https://example.com/api/v1
+# staging debug APK + install
+.\scripts\build-mobile-apk.ps1 -Environment staging -BuildMode debug -Install
+
+# release APK (운영 URL 명시 필요)
+.\scripts\build-mobile-apk.ps1 -Environment release -BuildMode release -ApiBaseUrl https://<prod-domain>/api/v1
 ```
 
 ## 6.2 Store release readiness
@@ -138,6 +158,9 @@ cd apps/mobile
   - `android_track`: `internal` | `alpha` | `beta` | `production` (play upload 시)
   - `android_release_status`: `draft` | `completed` | `inProgress` | `halted` (play upload 시)
   - `android_changes_not_sent_for_review`: `true` | `false` (play upload 시)
+  - `ios_distribution_mode`: `build_only` | `testflight`
+  - `ios_bundle_id`: iOS bundle id 1회 오버라이드(미입력 시 `MOBILE_IOS_BUNDLE_ID` 사용)
+  - `release_notes`: TestFlight release notes
   - `api_base_url`: 릴리즈 빌드 시 주입할 API URL
 - Android 경로:
   - 서명형 AAB 빌드(`flutter build appbundle --release`)
@@ -149,9 +172,40 @@ cd apps/mobile
     - `MOBILE_ANDROID_STORE_PASSWORD`
     - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (play upload 시)
     - `GOOGLE_PLAY_PACKAGE_NAME` (입력 미지정 시)
+- iOS 경로:
+  - `ios_distribution_mode=build_only`: no-codesign 릴리즈 빌드 후 artifact 업로드
+  - `ios_distribution_mode=testflight`: signed archive/IPA 빌드 후 TestFlight 업로드
+  - 필요한 Secrets (testflight 시):
+    - `MOBILE_IOS_BUNDLE_ID` (입력 미지정 시)
+    - `MOBILE_IOS_TEAM_ID`
+    - `MOBILE_IOS_P12_BASE64`
+    - `MOBILE_IOS_P12_PASSWORD`
+    - `MOBILE_IOS_APPSTORE_ISSUER_ID`
+    - `MOBILE_IOS_APPSTORE_API_KEY_ID`
+    - `MOBILE_IOS_APPSTORE_API_PRIVATE_KEY`
 - Android 서명 설정:
   - `apps/mobile/android/key.properties.example`를 기준으로 `apps/mobile/android/key.properties` 구성
   - `key.properties`가 없으면 로컬 릴리즈 체크는 debug signing fallback을 사용
+
+## 6.3 Store release 사이클 자동화
+
+- preflight(권장):
+  - `.\scripts\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target android -AndroidDistributionMode build_only`
+  - `.\scripts\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target ios -IosDistributionMode testflight`
+- 사이클 실행(권장):
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode build_only -IosDistributionMode build_only`
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode play_upload -IosDistributionMode build_only`
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target ios -AndroidDistributionMode build_only -IosDistributionMode testflight`
+- 실패 run 진단:
+  - `.\scripts\mobile-store-diagnose.ps1 -Repo V4N1LLA/Eunhye_Hymn -RunId <run_id>`
+- 실행 로그:
+  - `docs/mobile-store-release-log.md`
+- 복구 가이드:
+  - `docs/mobile-store-recovery.md`
+- 최근 검증(2026-02-23):
+  - Android `play_upload`: run `22329008651` 실패 (`Upload Android AAB to Google Play`)
+  - iOS `testflight`: run `22329248773` 실패 (`Import Apple code-sign certificate`)
+  - 두 경로 모두 preflight는 PASS이며, 실제 배포용 자격증명 교체 후 재검증이 필요함
 
 ## 7. 운영 연계 체크포인트
 

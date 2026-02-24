@@ -3,6 +3,7 @@ package com.eunhyehymn.infrastructure.persistence;
 import com.eunhyehymn.domain.model.RefreshToken;
 import com.eunhyehymn.domain.repository.RefreshTokenRepository;
 import com.eunhyehymn.infrastructure.persistence.mapper.RefreshTokenMapper;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
@@ -29,5 +30,10 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
     @Override
     public Optional<RefreshToken> findByTokenHash(String tokenHash) {
         return refreshTokenJpaRepository.findByTokenHash(tokenHash).map(RefreshTokenMapper::toDomain);
+    }
+
+    @Override
+    public int revokeAllByUserId(UUID userId, Instant revokedAt) {
+        return refreshTokenJpaRepository.revokeAllByUserId(userId, revokedAt);
     }
 }

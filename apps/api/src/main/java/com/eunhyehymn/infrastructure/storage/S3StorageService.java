@@ -1,8 +1,8 @@
 package com.eunhyehymn.infrastructure.storage;
 
 import com.eunhyehymn.application.ports.StorageService;
-import java.net.URI;
 import java.net.URLEncoder;
+import java.net.URI;
 import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -57,8 +57,9 @@ public class S3StorageService implements StorageService {
 
         PresignedPutObjectRequest presigned = presigner.presignPutObject(presignRequest);
         String publicUrl = resolvePublicUrl(objectKey);
+        String uploadUrl = presigned.url().toString();
 
-        return new PresignResult(presigned.url().toString(), publicUrl, objectKey);
+        return new PresignResult(rewriteToLocalPublicHost(uploadUrl), publicUrl, objectKey);
     }
 
     @Override
@@ -77,7 +78,7 @@ public class S3StorageService implements StorageService {
                 .getObjectRequest(getObjectRequest)
                 .build();
             PresignedGetObjectRequest presigned = presigner.presignGetObject(presignRequest);
-            return presigned.url().toString();
+            return rewriteToLocalPublicHost(presigned.url().toString());
         } catch (Exception ignored) {
             return fallbackUrl;
         }
@@ -98,5 +99,51 @@ public class S3StorageService implements StorageService {
             return base + "/" + bucket + "/" + objectKey;
         }
         return String.format("https://%s.s3.amazonaws.com/%s", bucket, objectKey);
+    }
+
+    private String rewriteToLocalPublicHost(String sourceUrl) {
+        if (sourceUrl == null || sourceUrl.isBlank()) {
+            return sourceUrl;
+        }
+        if (publicBaseUrl == null || publicBaseUrl.isBlank()) {
+            return sourceUrl;
+        }
+
+        try {
+            URI source = URI.create(sourceUrl);
+            URI publicUri = URI.create(publicBaseUrl);
+            String publicHost = publicUri.getHost();
+            if (publicHost == null) {
+                return sourceUrl;
+            }
+            if (!isLocalHost(publicHost)) {
+                return sourceUrl;
+            }
+
+            int publicPort = publicUri.getPort();
+            StringBuilder rewritten = new StringBuilder();
+            rewritten.append(publicUri.getScheme() != null ? publicUri.getScheme() : source.getScheme());
+            rewritten.append("://");
+            rewritten.append(publicHost);
+            if (publicPort != -1) {
+                rewritten.append(":").append(publicPort);
+            }
+            rewritten.append(source.getRawPath());
+            if (source.getRawQuery() != null) {
+                rewritten.append("?").append(source.getRawQuery());
+            }
+            return rewritten.toString();
+        } catch (Exception ignored) {
+            return sourceUrl;
+        }
+    }
+
+    private boolean isLocalHost(String host) {
+        if (host == null || host.isBlank()) {
+            return false;
+        }
+        return "localhost".equalsIgnoreCase(host)
+            || "127.0.0.1".equals(host)
+            || host.startsWith("10.0.2.");
     }
 }

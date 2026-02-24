@@ -1,7 +1,7 @@
 # Staging 스모크 테스트 체크리스트
 
 - 작성일: 2026-02-14
-- 최종 수정일: 2026-02-15
+- 최종 수정일: 2026-02-20
 - 대상 브랜치: `develop`
 - 목적: 배포 직후 핵심 사용자 흐름을 15~20분 내 검증해 Go/No-Go를 결정한다.
 
@@ -11,8 +11,9 @@
   - `.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120`
   - 기록용 표가 필요하면 `-AsMarkdown` 옵션 사용
 - [ ] 운영 사이클 자동 점검 실행 (권장)
-  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자>`
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자> [-AutoLogin] [-WaitForCompletion] [-ManualSmokeMaxAgeDays 7]`
   - 결과는 `docs/staging-smoke-log.md`에 자동 기록
+  - `Manual Smoke=OVERDUE`이면 수동 스모크 최신성 게이트 실패 상태이므로 스모크 실행 후 결과를 기록해야 한다
 - [ ] 점검 대상 커밋 SHA/배포 시각/담당자 확정
 - [ ] 자동 리허설 로그(`docs/staging-rehearsal-log.md`) 최신 행 확인
 - [ ] 관리자 계정 및 모바일 테스트 계정 준비
@@ -20,7 +21,8 @@
 - [ ] 로그 확인 경로 준비 (EC2 docker logs, CloudWatch)
 
 권장 실행:
-- `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>]`
+- `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>] [-AutoLogin]`
+- AWS SSO 세션 만료가 잦은 환경은 `-AutoLogin`을 우선 사용
 
 ## 2. API 기본 점검
 
@@ -85,6 +87,19 @@
 | 오프라인 동기화 |  |  |  |  |
 | 최종 판정(Go/No-Go) |  |  |  |  |
 
+수동 스모크를 완료하면 아래 명령으로 로그를 자동 누적한다.
+
+```powershell
+.\scripts\staging-ops-cycle.ps1 `
+  -Repo V4N1LLA/Eunhye_Hymn `
+  -Branch develop `
+  -Owner <담당자> `
+  -SkipPreflight `
+  -ManualSmokeResult PASS `
+  -ManualSmokeEvidence <증빙URL> `
+  [-ManualSmokeNotes "<요약>"]
+```
+
 ## 6. 실행 기록 (2026-02-14)
 
 | 항목 | 결과(PASS/FAIL) | 증상 요약 | 로그/증빙 | 담당자 |
@@ -111,5 +126,29 @@
   - preflight: FAIL (`aws sts get-caller-identity`: session expired)
   - 판정: `HOLD` (수동 스모크 시작 전 AWS 재인증 필요)
   - `-SkipPreflight` 실행 시 판정: `CONDITIONAL_GO` (수동 스모크 `PENDING`)
+- 로그 문서:
+  - `docs/staging-smoke-log.md`
+
+## 9. 운영 사이클 실행 기록 (2026-02-20)
+
+- 실행 명령:
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -AutoLogin -WaitForCompletion`
+- 결과:
+  - 배포 게이트: PASS (`run 22206920873`, `deploy/verify success`)
+  - preflight: FAIL (`aws session recovery`: profile `default`에 `sso_start_url` 미설정)
+  - 판정: `HOLD` (AWS 인증 프로필 정비 후 재실행 필요)
+- 로그 문서:
+  - `docs/staging-smoke-log.md`
+
+## 10. 운영 사이클 실행 기록 (2026-02-20, 재실행)
+
+- 실행 명령:
+  - `aws logout --profile default`
+  - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -AutoLogin`
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -AutoLogin -WaitForCompletion`
+- 결과:
+  - preflight: PASS (`aws login` fallback 자동 복구 확인)
+  - 배포 게이트: PASS (`run 22207213127`, `deploy/verify success`)
+  - 판정: `CONDITIONAL_GO` (수동 스모크 `PENDING`)
 - 로그 문서:
   - `docs/staging-smoke-log.md`

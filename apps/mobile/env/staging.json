@@ -1,0 +1,5 @@
+{
+  "APP_ENV": "staging",
+  "API_BASE_URL": "http://13.209.200.12/api/v1",
+  "ENABLE_DEV_LOGIN": "false"
+}

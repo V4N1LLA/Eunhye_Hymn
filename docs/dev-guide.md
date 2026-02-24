@@ -1,24 +1,22 @@
 # Eunhye Hymn 개발 가이드
 
-## 1. 로컬 개발 계획
-- API는 로컬에서 실행한다.
-- DB는 로컬 PostgreSQL 또는 Docker로 실행한다.
-- S3는 실제 S3 또는 로컬 endpoint를 사용한다.
+## 1. 로컬 개발 원칙
+- API는 `apps/api`에서 실행하고, DB/S3는 Docker(LocalStack) 또는 로컬 대체를 사용한다.
+- 환경변수는 템플릿(`.env.example`, `apps/api/.env.example`)에서 시작한다.
+- 인증/운영 기능 변경 시 문서(`README`, `docs/api-contract.md`, `docs/data-model.md`)를 함께 갱신한다.
 
 ## 2. 사전 준비
 - Java 17+
-- PostgreSQL (로컬 설치 또는 Docker)
-- (선택) Docker Desktop
+- Node.js 20+, npm 10+
+- PostgreSQL (로컬 또는 Docker)
+- Docker Desktop (권장)
 
 ## 3. API 로컬 실행
 1. 환경 변수 파일 생성:
    ```bash
    cp apps/api/.env.example apps/api/.env
    ```
-2. `apps/api/.env` 값을 로컬 환경에 맞게 수정.
-   - `JWT_SECRET`, `INVITE_CODE`, `JWT_ACCESS_TTL_SECONDS`, `JWT_REFRESH_TTL_SECONDS`는 필수값이다.
-   - 누락되거나 빈값이면 애플리케이션이 부팅 단계에서 즉시 실패한다.
-3. 환경 변수 로드:
+2. PowerShell에서 환경 변수 로드:
    ```powershell
    Get-Content apps/api/.env | ForEach-Object {
      if ($_ -match '^\s*#' -or $_ -match '^\s*$') { return }
@@ -26,57 +24,114 @@
      Set-Item -Path "Env:$name" -Value $value
    }
    ```
-4. PostgreSQL 실행 (`DB_URL` 기준).
-5. API 실행:
-   ```bash
+3. PostgreSQL 실행 (`DB_URL` 확인).
+4. API 실행:
+   ```powershell
    cd apps/api
-   ./gradlew bootRun
+   .\gradlew.bat bootRun
    ```
-   - Windows PowerShell: `gradlew.bat bootRun`
-6. 헬스체크 확인:
-   ```bash
+5. 헬스 체크:
+   ```powershell
    curl http://localhost:8080/api/v1/actuator/health
    ```
 
-## 4. 테스트 실행
-- `apps/api`에서 실행:
-  ```bash
-  ./gradlew test --no-daemon --stacktrace
-  ```
-  - Windows PowerShell: `gradlew.bat test --no-daemon --stacktrace`
-
-## 5. DB 환경 변수 설명
-- `DB_URL`: JDBC 접속 URL (예: `jdbc:postgresql://localhost:5432/eunhye_hymn`)
-- `DB_USER`: DB 사용자명
-- `DB_PASS`: DB 비밀번호
-
-## 6. Flyway 베이스라인
-- 초기 마이그레이션 파일은 `V1__baseline.sql`로 비어 있으며,
-  Flyway가 정상 실행되는지 확인하기 위한 용도다.
-- 실제 테이블 생성은 이후 마이그레이션에서 진행한다.
-
-## 7. 테스트 DB 동작
-- 테스트 프로파일은 H2 인메모리 DB를 사용한다.
-- 테스트 실행 시 Flyway가 동일하게 적용되어 외부 DB 의존이 없다.
-
-## 8. 환경 변수 목록
-- `DB_URL`
-- `DB_USER`
-- `DB_PASS`
+필수값이 비어 있으면 부팅 실패:
 - `JWT_SECRET`
 - `JWT_ACCESS_TTL_SECONDS`
 - `JWT_REFRESH_TTL_SECONDS`
 - `INVITE_CODE`
-- `S3_BUCKET`
-- `S3_REGION`
-- `S3_ENDPOINT`
-- `S3_PUBLIC_BASE_URL`
+
+## 4. 테스트 실행
+
+### API
+```powershell
+cd apps/api
+.\gradlew.bat test --no-daemon --stacktrace
+```
+
+### Admin
+```powershell
+cd apps/admin
+npm install
+npm run test
+npx tsc --noEmit
+npm run build
+```
+
+### Mobile
+```powershell
+.\scripts\flutterw.ps1 analyze apps/mobile/lib
+cd apps/mobile
+..\..\scripts\flutterw.ps1 test
+```
+
+## 5. 주요 환경변수 그룹
+
+### 5.1 DB/인증
+- `DB_URL`, `DB_USER`, `DB_PASS`
+- `JWT_SECRET`, `JWT_ACCESS_TTL_SECONDS`, `JWT_REFRESH_TTL_SECONDS`
+- `INVITE_CODE`
+- `ADMIN_EMAILS`, `ADMIN_KAKAO_SUBJECTS`, `ADMIN_ENFORCE_ADMIN_ONLY`
+- `ADMIN_LOGIN_ID`, `ADMIN_LOGIN_PASSWORD`
+
+### 5.2 SMS 인증
+- `SMS_CODE_LENGTH`, `SMS_EXPIRES_SECONDS`, `SMS_COOLDOWN_SECONDS`, `SMS_MAX_ATTEMPTS`
+- `SMS_TWILIO_ENABLED`
+- `SMS_TWILIO_ACCOUNT_SID`, `SMS_TWILIO_AUTH_TOKEN`, `SMS_TWILIO_FROM_NUMBER`
+- `SMS_TWILIO_MESSAGE_TEMPLATE`
+
+### 5.3 스토리지
+- `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_PUBLIC_BASE_URL`
 - `S3_PRESIGN_EXPIRES_MINUTES`
 
-## 9. Gradle Wrapper 정책
-- 로컬/CI 모두 Gradle Wrapper(`./gradlew`, Windows는 `gradlew.bat`)를 사용한다.
-- 시스템 Gradle은 필수가 아니다.
+### 5.4 이벤트 export 운영
+- `EVENT_EXPORT_JOB_RETENTION_DAYS`
+- `EVENT_EXPORT_JOB_CLEANUP_CRON`, `EVENT_EXPORT_JOB_CLEANUP_ZONE`
+- `EVENT_EXPORT_JOB_RECOVERY_*`
+- `EVENT_EXPORT_JOB_ALERT_*`
 
-## 10. CI 자동 테스트
-- PR을 올리면 GitHub Actions에서 자동으로 테스트가 실행됩니다.
-- CI 환경에서도 Gradle 플러그인 해석을 위해 pluginManagement 설정이 필요합니다.
+### 5.5 AI 추천 (Gemini Flash-Lite)
+- `AI_GEMINI_ENABLED`, `AI_GEMINI_API_KEY`, `AI_GEMINI_MODEL`
+- `AI_GEMINI_CONNECT_TIMEOUT_SECONDS`, `AI_GEMINI_READ_TIMEOUT_SECONDS`
+- `AI_GEMINI_TEMPERATURE`, `AI_GEMINI_MAX_OUTPUT_TOKENS`
+- `AI_RECOMMEND_MAX_CANDIDATE_HYMNS`, `AI_RECOMMEND_MAX_RESULTS`, `AI_RECOMMEND_MAX_SITUATION_CHARS`
+- 운영 관측 지표(Micrometer): `ai_recommend_requests_total`, `ai_recommend_latency_seconds`, `ai_recommend_fallback_total`, `ai_recommend_candidate_count`, `ai_recommend_response_items`
+
+## 6. Flyway/테스트 DB
+- `V1__baseline.sql`은 베이스라인용 빈 파일이다.
+- 실제 스키마는 `V2__init.sql` 이후 마이그레이션에서 생성한다.
+- 테스트는 H2 인메모리 DB + Flyway를 사용한다.
+
+## 7. Gradle Wrapper 정책
+- 로컬/CI 모두 Wrapper 사용: `./gradlew` (`gradlew.bat`)
+- 시스템 Gradle 설치는 필수가 아니다.
+
+## 8. CI 기준
+- API: 테스트
+- Admin: 테스트 + 타입체크 + 빌드
+- Mobile: analyze + test
+- Staging deploy 및 mobile release readiness workflow는 별도 문서(`docs/runbook.md`, `docs/mobile/README.md`) 기준으로 운영한다.
+
+## 9. Codex 스킬 동기화 (다른 PC 포함)
+
+저장소의 `skills/`를 로컬 Codex 스킬 디렉터리(`$CODEX_HOME/skills` 또는 `~/.codex/skills`)로 동기화한다.
+
+전체 동기화:
+
+```powershell
+.\scripts\sync-skills.ps1
+```
+
+특정 스킬만 동기화:
+
+```powershell
+.\scripts\sync-skills.ps1 -Skill staging-ops-runner,docs-sync-enforcer
+```
+
+적용 전 확인(드라이런):
+
+```powershell
+.\scripts\sync-skills.ps1 -DryRun
+```
+
+동기화 후 Codex를 재시작한다.

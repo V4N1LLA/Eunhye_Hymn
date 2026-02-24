@@ -2,6 +2,381 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-24
+
+### Review-comment refactor follow-up
+- Script reliability hardening
+  - `scripts/ops-health-cycle.ps1`
+  - `scripts/staging-ops-cycle.ps1`
+  - `scripts/secrets-rotation-cycle.ps1`
+  - Switched nested script invocation to cross-platform PowerShell command resolution (`powershell.exe`/`pwsh`)
+- Failure-category precision update
+  - `scripts/ops-health-cycle.ps1`
+  - Narrowed manual-smoke recency detection to explicit recency failure signals only
+- Safety guard for skill sync
+  - `scripts/sync-skills.ps1`
+  - Added source/destination overlap guard to prevent destructive self-sync path combinations
+- Workflow input correctness
+  - `.github/workflows/secrets-rotation-scheduled.yml`
+  - Preserved explicit `false` for `include_mobile_release_secrets` on manual dispatch
+- Skill reference sync
+  - `skills/secrets-rotation-auditor/references/commands.md`
+  - Added required parameters to the `staging-sync-secrets.ps1` command example
+
+### Ops script compatibility follow-up
+- Cross-platform PowerShell invocation hardening
+  - `scripts/mobile-store-cycle.ps1`
+  - `scripts/staging-rehearsal.ps1`
+  - `scripts/run-mobile-emulator.ps1`
+  - Replaced remaining direct `powershell.exe` script-launch usage with `powershell.exe`/`pwsh` resolution
+- Rehearsal run-detection reliability
+  - `scripts/staging-rehearsal.ps1`
+  - Added baseline run-id tracking and earliest-post-dispatch selection to reduce concurrent workflow run misattribution
+- Workflow dispatch boolean hardening
+  - `.github/workflows/deploy-staging.yml`
+  - `.github/workflows/ops-health-scheduled.yml`
+  - Preserved explicit `false` values for workflow_dispatch boolean inputs (`enable_awslogs`, `include_mobile_release_secrets`, `wait_for_completion`)
+
+### Preflight failure diagnostics hardening
+- `scripts/mobile-store-cycle.ps1`
+  - Added first-useful-line extraction for preflight failures and propagated detail into log notes/exception message
+- `scripts/staging-rehearsal.ps1`
+  - Captured preflight output and surfaced first-useful-line detail in log notes/exception message
+
+### Ops log dedup hardening
+- `scripts/staging-ops-cycle.ps1`
+  - Added log dedup window (`-LogDedupWindowMinutes`, default 30) to skip repeated writes for the same run/gate decision within a short interval
+- `scripts/ops-health-cycle.ps1`
+  - Added log dedup window (`-LogDedupWindowMinutes`, default 30) for repeated consolidated health rows
+  - Passed dedup window through to nested `staging-ops-cycle.ps1` invocation
+
+### Admin test gate baseline (P1)
+- Added minimal unit test runner and first test target
+  - `apps/admin/package.json`
+  - `apps/admin/vitest.config.ts`
+  - `apps/admin/src/auth/tokenStore.test.ts`
+  - Added `npm run test` (Vitest + jsdom), and validated token migration/storage behavior with unit tests
+- Extended Admin CI quality gate
+  - `.github/workflows/admin-ci.yml`
+  - Added test step: `npm ci` -> `npm run test` -> `npx tsc --noEmit` -> `npm run build`
+- Synced command/docs references for Admin checks
+  - `AGENTS.md`
+  - `docs/dev-guide.md`
+  - `docs/LOCAL_SETUP.md`
+  - `CLAUDE.md`
+
+### API complex use case test hardening (P1)
+- Added exception-path coverage for event export job use case
+  - `apps/api/src/test/java/com/eunhyehymn/application/usecases/AdminEventExportJobUseCaseTest.java`
+  - Added tests for:
+    - failed processing path with long error-message truncation (500 chars)
+    - `getDownload` failure mapping (`FAILED` -> `409 export_job_failed`)
+    - `getDownload` corruption guard (`COMPLETED` with missing payload -> `500 export_job_corrupted`)
+- Added validation/error-path coverage for AI recommendation use case
+  - `apps/api/src/test/java/com/eunhyehymn/application/usecases/RecommendHymnsUseCaseTest.java`
+  - Added tests for:
+    - blank situation validation (`400 validation_error`)
+    - external AI exception mapping (`503 ai_unavailable`)
+    - result clamp/sanitization behavior (maxResults clamp, duplicate/unknown recommendation filtering, reason length cap)
+- Verification
+  - `cd apps/api && ./gradlew test --tests "*AdminEventExportJobUseCaseTest*" --tests "*RecommendHymnsUseCaseTest*" --no-daemon --stacktrace`
+
+### PR gate Admin test enforcement follow-up
+- Fixed CI gap where PR gate did not execute Admin unit tests
+  - `.github/workflows/pr-gate.yml`
+  - Updated `admin_build` job flow to: `npm ci` -> `npm run test` -> `npx tsc --noEmit` -> `npm run build`
+
+### Doc sync gate automation
+- Added changed-file-based doc sync checker
+  - `scripts/check-doc-sync.ps1`
+  - Enforces `docs/changelog-dev.md` + `CLAUDE.md` updates when non-doc files are changed
+  - Supports `-ChangedFiles` input and `git diff` mode via `-BaseRef/-HeadRef`
+- Integrated checker into PR gate
+  - `.github/workflows/pr-gate.yml`
+  - Added `doc_sync` job and included its result in the final `gate` decision
+- Workflow lint coverage update
+  - `.github/workflows/workflow-lint.yml`
+  - Added syntax check target for `scripts/check-doc-sync.ps1`
+- Docs sync
+  - `AGENTS.md`
+  - `CLAUDE.md`
+
+### Mobile store failure diagnosis + recovery runbook
+- Added failed-run diagnosis script
+  - `scripts/mobile-store-diagnose.ps1`
+  - Extracts failed job/step from GitHub Actions run and maps to recovery actions
+- Enhanced mobile store cycle/preflight diagnostics
+  - `scripts/mobile-store-cycle.ps1`
+    - Appends failure diagnosis (`failure_key`, `failed_step`, `recovery_hint`) to log notes when run fails
+  - `scripts/mobile-store-preflight.ps1`
+    - Prints check-specific recovery hints for missing/invalid prerequisites
+- CI syntax-check coverage update
+  - `.github/workflows/pr-gate.yml`
+  - `.github/workflows/workflow-lint.yml`
+  - Added `scripts/mobile-store-diagnose.ps1` to PowerShell syntax validation target list
+- Added recovery documentation
+  - `docs/mobile-store-recovery.md`
+  - `docs/mobile/README.md`
+  - `apps/mobile/README.md`
+  - `docs/runbook.md`
+
+### Ops alert noise reduction (HOLD/ERROR)
+- Added alert dedup + re-alert cooldown policy
+  - `scripts/ops-health-issue-alert.ps1`
+  - New options:
+    - `-DedupWindowMinutes` (default 30)
+    - `-HoldReAlertWindowMinutes` (default 480)
+    - `-ErrorReAlertWindowMinutes` (default 120)
+    - `-ForceAlert` (override skip policy)
+  - Existing open issue alerts now skip repeated comments inside dedup/cooldown windows and return explicit skip reason (`dedup_window` / `realert_cooldown`)
+- Added pass-through controls in orchestrator
+  - `scripts/ops-health-cycle.ps1`
+  - New options:
+    - `-AlertDedupWindowMinutes`
+    - `-AlertHoldReAlertWindowMinutes`
+    - `-AlertErrorReAlertWindowMinutes`
+    - `-AlertForce`
+
+### Staging smoke evidence warning automation
+- Added evidence warning detection for manual smoke records
+  - `scripts/staging-ops-cycle.ps1`
+  - New behavior:
+    - emits `EvidenceStatus=OK|WARN` and `EvidenceWarnings` in JSON output
+    - appends `evidence warning:*` note when manual smoke evidence link is missing or not link-like
+    - validates both current manual smoke submission (`-ManualSmokeEvidence`) and latest-record reuse path
+- Updated runbook guidance
+  - `docs/runbook.md`
+  - documented WARN behavior and manual evidence requirement
+
+### Staging exception observability standardization
+- Standardized failure-line extraction and category/detail output
+  - `scripts/staging-ops-cycle.ps1`
+  - Added shared `Get-FirstUsefulLine` extraction for nested script errors
+  - Added `FailureCategory` and `FailureDetail` fields to JSON output for HOLD/error paths
+  - Added category codes:
+    - `run_conclusion`, `deploy_job`, `verify_step`, `deploy_freshness`
+    - `aws_preflight`, `manual_smoke_recency`, `manual_smoke_failed`, `manual_smoke_evidence_warn`
+    - `status_command`, `status_json_parse`
+  - Hardened nested PowerShell invocation to capture stderr/exception text without losing structured failure output
+
+### Parallel work collision guard automation
+- Upgraded worktree bootstrap with ownership validation
+  - `scripts/new-worktree-task.ps1`
+  - Added ownership/collision parameters:
+    - `-Owner`
+    - `-ClaimedPaths`
+    - `-TaskBoardPath`
+    - `-SkipTaskBoardUpdate`
+    - `-AllowClaimedPathConflict`
+  - Added automated checks before worktree creation:
+    - local/remote branch existence collision
+    - worktree path ownership collision (task board)
+    - claimed path overlap collision (task board active rows)
+  - Added automatic task-board upsert (`in_progress`, UTC timestamp) after successful worktree creation
+- Updated parallel-work docs
+  - `docs/parallel-pr-workflow.md`
+  - `docs/parallel-task-board.md`
+
+## 2026-02-23
+
+### Staging manual smoke recency gate + log automation
+- 스크립트 개선
+  - `scripts/staging-ops-cycle.ps1`
+  - 수동 스모크 최신성 게이트 추가 (`-ManualSmokeMaxAgeDays`, 기본 7일)
+  - 최신 수동 스모크(PASS/FAIL) 기록이 없거나 오래된 경우 `Manual Smoke=OVERDUE` + `HOLD` 판정
+  - 수동 스모크 결과 자동 기록 파라미터 추가:
+    - `-ManualSmokeResult PASS|FAIL`
+    - `-ManualSmokeEvidence <URL>`
+    - `-ManualSmokeNotes "<요약>"`
+- 운영 문서 동기화
+  - `docs/runbook.md`
+  - `docs/staging-smoke-checklist.md`
+  - `infra/aws/README.md`
+  - `docs/current-usable-scope.md`
+
+### Secrets rotation cycle log automation
+- 스크립트 추가
+  - `scripts/secrets-rotation-cycle.ps1`
+  - `staging-secret-rotation-audit.ps1` 결과(JSON)를 수집해 `PASS/HOLD` 판정
+  - 결과 요약(`OK/STALE/MISSING/UNKNOWN`)을 Markdown 로그에 자동 누적
+- 로그 문서 추가
+  - `docs/secrets-rotation-log.md`
+- 운영 문서 동기화
+  - `docs/SECRETS_MANAGEMENT.md`
+  - `docs/runbook.md`
+  - `infra/aws/README.md`
+  - `docs/current-usable-scope.md`
+
+### Ops health cycle + exception-aware monitoring hardening
+- 스크립트 추가
+  - `scripts/ops-health-cycle.ps1`
+  - staging 게이트(`staging-ops-cycle`) + 시크릿 점검(`secrets-rotation-cycle`)을 통합 실행
+  - 실패 원인 분류(`FailureCategory`) 및 통합 판정(`PASS/HOLD/ERROR`) 로그 자동 누적
+- 운영 로그 문서 추가
+  - `docs/ops-health-log.md`
+- 예외/디버깅 하드닝
+  - `scripts/staging-ops-cycle.ps1`: `-AsJson` 추가, status 조회 실패/JSON 파싱 실패 시 구조화 에러 출력 지원
+  - `scripts/secrets-rotation-cycle.ps1`: `-AsJson` 추가, 집계 결과/세부 목록 JSON 출력 지원
+- 운영 문서 동기화
+  - `docs/runbook.md`
+  - `docs/SECRETS_MANAGEMENT.md`
+  - `infra/aws/README.md`
+  - `docs/current-usable-scope.md`
+
+### Ops full-cycle follow-up (8 tasks executed)
+- 스크립트 하드닝
+  - 로그 경로 자동 생성 보강:
+    - `scripts/ops-health-cycle.ps1`
+    - `scripts/staging-ops-cycle.ps1`
+    - `scripts/secrets-rotation-cycle.ps1`
+    - `scripts/staging-rehearsal.ps1`
+    - `scripts/mobile-store-cycle.ps1`
+- HOLD/ERROR 알림 연동
+  - `scripts/ops-health-issue-alert.ps1` 추가
+  - `scripts/ops-health-cycle.ps1`에 `-AlertOnFailure`/`-AlertRepo`/`-AlertDryRun` 추가
+- 스케줄 자동화
+  - `.github/workflows/ops-health-scheduled.yml` 추가 (주간)
+  - `.github/workflows/secrets-rotation-scheduled.yml` 추가 (월간)
+- 운영 로그 증빙
+  - `docs/secrets-rotation-log.md`: `MISSING=0`, `PASS` 기록
+  - `docs/staging-smoke-log.md`: `ManualSmoke=PASS` 기록으로 recency 복구
+  - `docs/ops-health-log.md`: 통합 `PASS` 기록
+
+### Mobile store publish-path verification
+- preflight 결과
+  - Android `play_upload`: PASS
+  - iOS `testflight`: PASS
+- 사이클 실행 결과
+  - Android `play_upload`: run `22329008651` 실패 (`Upload Android AAB to Google Play`)
+  - iOS `testflight`: run `22329248773` 실패 (`Import Apple code-sign certificate`)
+- 실행 로그 문서
+  - `docs/mobile-store-release-log.md`
+  - `docs/mobile/README.md`
+  - `apps/mobile/README.md`
+
+### AI recommendation ops metrics baseline
+- 코드 반영
+  - `apps/api/src/main/java/com/eunhyehymn/presentation/controllers/AiController.java`
+    - `ai_recommend_requests_total`
+    - `ai_recommend_latency_seconds`
+    - `ai_recommend_fallback_total`
+    - `ai_recommend_candidate_count`
+    - `ai_recommend_response_items`
+  - `apps/api/src/main/java/com/eunhyehymn/application/usecases/RecommendHymnsUseCase.java`
+    - `Result.fallbackUsed` 추가
+- 테스트 추가
+  - `apps/api/src/test/java/com/eunhyehymn/application/usecases/RecommendHymnsUseCaseTest.java`
+- 문서 동기화
+  - `docs/usecases/ai-hymn-recommendations.md`
+  - `docs/dev-guide.md`
+
+## 2026-02-22
+
+### Staging secret rotation audit automation
+- 스크립트 추가
+  - `scripts/staging-secret-rotation-audit.ps1`
+  - GitHub Actions repo secrets의 `updatedAt` 기준으로 `OK/STALE/MISSING/UNKNOWN` 판정
+  - 기본 스테이징 필수 시크릿 점검 + `-IncludeMobileReleaseSecrets` 옵션으로 모바일 배포 시크릿 확장
+  - `-MaxAgeDays` 임계값 기반으로 초과 시 실패(exit 1) 처리
+- 운영 문서 동기화
+  - `docs/runbook.md`
+  - `docs/SECRETS_MANAGEMENT.md`
+  - `infra/aws/README.md`
+
+## 2026-02-20
+
+### Auth invite-gated login sync + `/me/account` withdraw endpoint
+- API/Auth
+  - `UserPasswordSignupUseCase` 로그인 ID 검증에 이메일 형식(3~100자) 허용
+  - `MeController`에 `DELETE /me/account` 추가 (기존 `POST /auth/withdraw`와 동일 탈퇴 처리)
+  - `AuthController` social login 예외 매핑 정리 (`account_disabled` 유지)
+- Mobile auth UX
+  - 로그인 화면에서 이메일/카카오 진입 분리 (`login_page.dart` + `email_login_page.dart`)
+  - 이메일 회원가입 시 초대코드 확인을 별도 단계(`invite_gate_page.dart`)로 분리
+  - 온보딩 화면에 "회원/교회 정보 1회 입력" 안내 문구 추가
+  - `AuthRepository.withdraw()`가 `/me/account` 호출 후 로컬 토큰 정리
+- 스크립트
+  - `scripts/run-mobile-emulator.ps1`가 `scripts/flutterw.ps1` 래퍼 경유로 실행되도록 변경
+- 검증
+  - `./gradlew.bat test --no-daemon --tests "com.eunhyehymn.presentation.controllers.UserPasswordAuthApiTest" --tests "com.eunhyehymn.presentation.controllers.MeProfileApiTest"`
+  - `..\..\scripts\flutterw.ps1 analyze`
+  - `..\..\scripts\flutterw.ps1 test`
+
+### Documentation full sync (env/API/data-model)
+- 문서 기준선 재정렬
+  - `README.md`, `docs/current-usable-scope.md`, `current_update.md`
+  - `docs/api-contract.md`, `docs/data-model.md`, `docs/requirements.md`
+  - `docs/LOCAL_SETUP.md`, `docs/dev-guide.md`, `docs/SECRETS_MANAGEMENT.md`
+  - `docs/admin/README.md`, `docs/usecases/README.md`
+  - `infra/docker/README.md`, `infra/aws/README.md`, `docs/runbook.md`
+- 반영 내용
+  - 인증 플로우(초대코드/SMS/탈퇴), 개인정보 변경 요청, AI 추천 엔드포인트 문서화
+  - AI Gemini Flash-Lite 저비용 기본값 및 `AI_*` 환경변수 반영
+  - Flyway 마이그레이션(`V1`~`V16`) 기준 데이터 모델 최신화
+
+### Mobile store release cycle automation + Android build-only verification
+- 스크립트 추가
+  - `scripts/mobile-store-preflight.ps1`
+    - target/mode 기준으로 필수 시크릿과 입력값 사전 점검
+  - `scripts/mobile-store-cycle.ps1`
+    - preflight + `mobile-store-release.yml` workflow_dispatch + run watch + 로그 적재 자동화
+- 실행 로그 문서 추가
+  - `docs/mobile-store-release-log.md`
+- 운영 검증
+  - Android build_only 워크플로우 2회 성공
+    - run `22210175274`
+    - run `22210322592`
+  - iOS testflight preflight는 필수 시크릿(`MOBILE_IOS_*`) 미구성으로 실패 확인
+- 문서 동기화
+  - `apps/mobile/README.md`, `docs/mobile/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`
+
+### Staging preflight 자동 복구 + 운영 사이클 게이트 보강
+- 스크립트 개선
+  - `scripts/staging-preflight.ps1`
+    - `-AutoLogin` 옵션 추가
+    - `aws sts get-caller-identity` 실패 시(`session expired`/`credentials missing`) `aws sso login` 자동 재시도 지원
+    - 후속 보강: `sso_start_url` 미설정 환경에서도 `aws login` fallback 재시도 지원
+    - 자동 복구 결과를 체크 테이블(`aws session recovery`)에 기록
+  - `scripts/staging-ops-cycle.ps1`
+    - `-AutoLogin` 옵션 추가(내부 preflight로 전달)
+    - `-WaitForCompletion` 사용 시 진행 중 최신 run 완료 대기 경로를 실제 활성화
+  - `scripts/staging-rehearsal.ps1`
+    - `-AutoLogin` 옵션 추가(내부 preflight로 전달)
+  - `scripts/staging-latest-status.ps1`
+    - `-AsJson/-AsMarkdown + -Wait` 조합에서 `gh run watch` 출력이 JSON/Markdown 파싱을 깨지 않도록 출력 분리
+    - `gh run watch` 실패 시 종료코드 기반 예외 처리 추가
+- 운영 실행 증빙
+  - `scripts/staging-ops-cycle.ps1 -AutoLogin -WaitForCompletion` 실행
+  - run `22206920873` 기준 deploy/verify PASS, preflight FAIL(session recovery unavailable)로 `HOLD` 기록
+  - `aws logout --profile default` 후 `staging-preflight.ps1 -AutoLogin` 재실행으로 `aws login` fallback 자동 복구 PASS 확인
+  - run `22207213127` 기준 preflight/deploy/verify PASS, `CONDITIONAL_GO` 갱신
+  - 반영 문서: `docs/staging-smoke-log.md`, `docs/staging-smoke-checklist.md`
+- 문서 동기화
+  - `docs/runbook.md`, `infra/aws/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`
+  - AutoLogin/WaitForCompletion 표준 명령 및 주간 운영 사이클 규칙 반영
+
+### Mobile IA refresh + profile approval workflow + verification flow hardening
+- Mobile app UX refresh
+  - Replaced bottom tab layout with top-left drawer navigation and removed redundant top section headers.
+  - Added home back-press guard: first back shows a bottom message, second back within the window exits app.
+  - Login CTA updated to Kakao icon + `카카오로 시작하기`; email login entry restored.
+  - Settings copy rewritten to plain language and profile sub-pages split into focused screens.
+- Member profile workflow
+  - Added gender selection in onboarding/profile flow with `UNKNOWN` compatibility state for existing accounts.
+  - Added member-side profile change request flow:
+    - `POST /me/profile-change-requests`
+    - `GET /me/profile-change-requests/latest`
+  - Added admin review flow:
+    - `GET /admin/profile-change-requests`
+    - `PATCH /admin/profile-change-requests/{id}`
+  - Added admin page wiring for profile change request handling.
+- Verification + recommendation extensions
+  - Added invite+SMS verification steps in mobile auth flow (`invite -> phone -> sms`).
+  - Added AI hymn recommendation endpoint/client wiring and admin/mobile UI entry points.
+- Runtime/error fixes
+  - Fixed `SegmentedButton` assertion by ensuring gender selection set is never empty and mapping legacy missing gender to `UNKNOWN`.
+  - Confirmed mobile analyze/test and API/admin build checks pass locally before staging deployment.
+
 ## 2026-02-17
 
 ### Staging 운영 사이클 자동화 + Mobile store readiness

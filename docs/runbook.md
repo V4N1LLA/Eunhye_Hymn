@@ -14,24 +14,34 @@
 - `docs/staging-smoke-checklist.md`
 - `docs/staging-rehearsal-log.md`
 - `docs/staging-smoke-log.md`
+- `docs/ops-health-log.md`
 - `docs/deployment-readiness-audit.md`
 - `docs/staging-admin-login.md`
 - `infra/aws/README.md`
 - `docs/SECRETS_MANAGEMENT.md`
+- `docs/secrets-rotation-log.md`
 
 ## 4. 배포 체크리스트
-- [ ] `develop` 최신 반영
+- [ ] `staging` 최신 반영
 - [ ] DB 마이그레이션 변경 유무 확인
-- [ ] 환경 변수 파일 최신화 (`DB_*`, `JWT_*`, `INVITE_CODE`, `S3_*`)
+- [ ] 환경 변수 파일 최신화 (`DB_*`, `JWT_*`, `INVITE_CODE`, `ADMIN_*`, `SMS_*`, `S3_*`, `AI_*`)
 - [ ] 롤백 기준 버전(이전 이미지 태그) 확인
 - [ ] 사전 점검 스크립트 통과
-  - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile <profile>]`
+  - `.\scripts\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn [-AwsProfile <profile>] [-AutoLogin]`
+  - AWS 세션 만료가 잦은 환경은 `-AutoLogin`을 기본으로 사용 (`aws sso login` 또는 `aws login` 자동 재시도)
 - [ ] 배포 리허설 자동 실행(권장)
-  - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop [-AwsProfile <profile>]`
+  - `.\scripts\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref staging [-AwsProfile <profile>] [-AutoLogin]`
   - 로컬 확인만 필요하면 `-DryRun` 사용
 - [ ] 운영 사이클 자동 점검(권장)
-  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner <담당자>`
-  - preflight + 최신 배포 게이트 + `docs/staging-smoke-log.md` 기록을 일괄 수행
+  - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> [-AutoLogin] [-WaitForCompletion] [-ManualSmokeMaxAgeDays 7]`
+  - preflight + 최신 배포 게이트 + 수동 스모크 최신성(기본 7일) 게이트 + `docs/staging-smoke-log.md` 기록을 일괄 수행
+  - 수동 스모크 완료 후 결과 기록:
+    - `.\scripts\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> -SkipPreflight -ManualSmokeResult PASS -ManualSmokeEvidence <증빙URL> [-ManualSmokeNotes "<요약>"]`
+    - `-ManualSmokeEvidence` 누락/링크 형식 이상이면 `EvidenceStatus=WARN` + `evidence warning:*` 노트가 로그/JSON에 기록됨
+    - 예외/보류 원인은 `FailureCategory` + `FailureDetail`로 JSON에 표준 출력됨
+- [ ] 통합 운영 헬스 사이클 실행(권장)
+  - `.\scripts\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> [-AutoLogin] [-WaitForCompletion]`
+  - staging 게이트 + 시크릿 로테이션 점검을 함께 실행하고 `docs/ops-health-log.md`에 결과를 누적
 - [ ] GitHub Actions 필수 Secrets 등록 확인
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REGISTRY`, `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_ENV_FILE`
 - [ ] GitHub Actions 배포 워크플로 최신 성공 이력 확인
@@ -41,9 +51,9 @@
 - [ ] 스모크 테스트 담당자/기기(Android/iOS/웹) 배정
 
 ## 5. 배포 절차
-1. `develop`에 변경 머지
+1. `develop` 변경을 `staging`에 머지
 2. GitHub Actions 배포 워크플로 실행
-   - 운영 반영: `develop` push 트리거
+   - 운영 반영: `staging` push 트리거
    - 리허설/선검증: `Deploy Staging` workflow_dispatch (`enable_awslogs=false` 권장)
    - 자동화 경로: `.\scripts\staging-rehearsal.ps1` 실행 시 preflight + workflow_dispatch + run 완료 대기 + 로그 기록을 일괄 수행
    - 최신 배포 상태 확인: `.\scripts\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -RequireSuccess -RequireDeploySuccess -RequireVerifySuccess -MaxAgeMinutes 120`
@@ -93,6 +103,40 @@
 
 ## 9. 정기 점검 (권장)
 - 주 1회 스테이징 배포 리허설 + 스모크 체크리스트 1회 수행
-- 주 1회 `staging-ops-cycle.ps1` 실행 결과를 기준으로 Go/Hold 근거를 `docs/staging-smoke-log.md`에 누적
+- 주 1회 `staging-ops-cycle.ps1 -WaitForCompletion -AutoLogin` 실행 결과를 기준으로 Go/Hold 근거를 `docs/staging-smoke-log.md`에 누적
+- 주 1회 통합 운영 헬스 점검
+  - `.\scripts\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <담당자> -AutoLogin -WaitForCompletion`
+  - 결과는 `docs/ops-health-log.md`에 자동 누적되고, 실패 원인은 `FailureCategory`로 분류됨
+  - GitHub Actions 스케줄 실행: `.github/workflows/ops-health-scheduled.yml` (매주 월요일 02:00 UTC)
+  - HOLD/ERROR 시 `scripts/ops-health-issue-alert.ps1`가 이슈를 자동 생성/업데이트
+  - 알림 노이즈 정책 기본값:
+    - dedup window: `30m`
+    - HOLD re-alert cooldown: `480m`
+    - ERROR re-alert cooldown: `120m`
+  - 필요 시 다음 파라미터로 조정:
+    - `-AlertDedupWindowMinutes <int>`
+    - `-AlertHoldReAlertWindowMinutes <int>`
+    - `-AlertErrorReAlertWindowMinutes <int>`
+    - `-AlertForce` (긴급 상황에서 쿨다운 무시)
 - 월 1회 시크릿 교체 상태 점검
+  - `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <담당자> -MaxAgeDays 90`
+  - 모바일 릴리즈 시크릿 포함 점검: `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <담당자> -MaxAgeDays 90 -IncludeMobileReleaseSecrets`
+  - 결과는 `docs/secrets-rotation-log.md`에 자동 누적되며 `Decision=HOLD`이면 즉시 교체/보완 후 `docs/changelog-dev.md`에 기록
+  - GitHub Actions 스케줄 실행: `.github/workflows/secrets-rotation-scheduled.yml` (매월 1일 03:00 UTC)
+- 주 1회 AI 추천 운영 지표 점검
+  - `ai_recommend_requests_total`, `ai_recommend_latency_seconds`, `ai_recommend_fallback_total`
+  - 기준: success rate >= 99%, p95 latency <= 2.0s, fallback ratio <= 5%
 - 월 1회 롤백 시나리오 점검
+
+## 10. Mobile Store Failure Recovery
+- Preflight before dispatch:
+  - `.\scripts\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target android -AndroidDistributionMode play_upload`
+  - `.\scripts\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target ios -IosDistributionMode testflight`
+- Diagnose failed run:
+  - `.\scripts\mobile-store-diagnose.ps1 -Repo V4N1LLA/Eunhye_Hymn -RunId <run_id>`
+- Re-run cycle after credential/input fixes:
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode play_upload -IosDistributionMode build_only`
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target ios -AndroidDistributionMode build_only -IosDistributionMode testflight`
+- Reference docs:
+  - `docs/mobile-store-recovery.md`
+  - `docs/mobile-store-release-log.md`

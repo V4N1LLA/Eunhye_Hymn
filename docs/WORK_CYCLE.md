@@ -44,6 +44,9 @@
 
 8. 리뷰 반영
 - 리뷰 코멘트를 반영하고 재검증 후 푸시한다.
+- 각 리뷰 코멘트 thread에 처리 결과를 반드시 답글로 남긴다. (무엇을 변경했는지, 어떤 검증을 했는지)
+- 코드 변경이 없는 코멘트도 답글로 사유를 남긴다. (질문 응답, 이미 반영됨, 보류/비적용 근거)
+- 답글 작성 후 PR 코멘트 목록에서 누락 thread가 없는지 확인한다.
 
 9. 머지 및 후속 정리
 - PR 머지 후 `develop` 동기화.
@@ -1087,4 +1090,379 @@
 - `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex`
 - `rg -n "staging-ops-cycle|session expired|22119056042|mobile-store-release|key.properties.example" scripts docs README.md CLAUDE.md apps/mobile`
 - `rg -n "^(<<<<<<<|>>>>>>>|=======)$" .github/workflows/mobile-store-release.yml apps/mobile/android/app/build.gradle.kts scripts/staging-preflight.ps1 scripts/staging-latest-status.ps1 scripts/staging-ops-cycle.ps1 docs/staging-smoke-checklist.md docs/staging-feedback-checklist.md docs/runbook.md docs/staging-smoke-log.md docs/mobile/README.md apps/mobile/README.md docs/current-usable-scope.md docs/deployment-readiness-audit.md docs/changelog-dev.md CLAUDE.md docs/WORK_CYCLE.md README.md infra/aws/README.md`
+
+## 38. 이번 사이클 기록 (2026-02-20, review comment thread response policy sync)
+
+### 목표
+- 리뷰 코멘트 반영 내역을 thread 단위로 기록하는 규칙을 작업 사이클 기준에 고정한다.
+
+### 범위
+- 포함: `docs/WORK_CYCLE.md`, `CLAUDE.md` 작업 사이클 규칙 갱신
+- 제외: 애플리케이션 코드/인프라 동작 변경
+
+### 수행 작업
+1. 리뷰 답글 기록 규칙 명문화
+- `docs/WORK_CYCLE.md`의 "8. 리뷰 반영"에 thread별 답글 의무 추가
+- `CLAUDE.md`의 작업 주의사항/사이클 단계에 동일 규칙 반영
+
+2. 원격 동기화 준비
+- 문서 변경 커밋 및 원격 브랜치 푸시
+
+### 검증
+- `rg -n "thread|답글|리뷰 코멘트" docs/WORK_CYCLE.md CLAUDE.md`
+- `rg -n "^(<<<<<<<|>>>>>>>|=======)$" docs/WORK_CYCLE.md CLAUDE.md`
+
+## 39. 이번 사이클 기록 (2026-02-20, staging preflight auto-login + ops cycle gate)
+
+### 목표
+- 스테이징 운영 사이클의 1순위 블로커(preflight 세션 만료)를 자동 복구 가능한 형태로 줄이고, 최신 run 완료 대기 기반 게이트를 고정한다.
+
+### 범위
+- 포함: `scripts/staging-preflight.ps1`, `scripts/staging-ops-cycle.ps1`, `scripts/staging-latest-status.ps1`, `scripts/staging-rehearsal.ps1` 및 운영 문서 동기화
+- 제외: AWS 자격증명 재발급, 실제 모바일 스토어 업로드
+
+### 수행 작업
+1. preflight 자동 복구
+- `scripts/staging-preflight.ps1`에 `-AutoLogin` 옵션 추가
+- `aws sts get-caller-identity` 실패(`session expired`/`credentials missing`) 시 `aws sso login` 자동 재시도 지원
+- 자동 복구 결과를 체크 테이블(`aws session recovery`)로 출력
+
+2. 운영 사이클 게이트 보강
+- `scripts/staging-ops-cycle.ps1`에 `-AutoLogin` 옵션 추가(내부 preflight 전달)
+- `-WaitForCompletion` 시 `-PreferCompleted` 대신 최신 run 완료 대기 경로 사용
+- `scripts/staging-latest-status.ps1`의 `-AsJson/-AsMarkdown + -Wait` 출력 충돌 수정
+
+3. 리허설/문서 동기화
+- `scripts/staging-rehearsal.ps1`에 `-AutoLogin` 옵션 추가
+- 운영 문서 명령 갱신
+  - `docs/runbook.md`
+  - `docs/staging-smoke-checklist.md`
+  - `infra/aws/README.md`
+  - `docs/current-usable-scope.md`
+  - `CLAUDE.md`
+  - `docs/changelog-dev.md`
+- 실행 증빙 반영
+  - `docs/staging-smoke-log.md` (`run 22206920873`, `HOLD`)
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn`
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -AutoLogin`
+- `powershell -NoProfile -File .\\scripts\\staging-rehearsal.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -SkipPreflight -AutoLogin -DryRun`
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -AutoLogin -WaitForCompletion`
+- `rg -n "AutoLogin|WaitForCompletion|aws session recovery|22206920873" scripts docs CLAUDE.md infra/aws/README.md`
+
+## 40. 이번 사이클 기록 (2026-02-20, aws login fallback + preflight pass recovery)
+
+### 목표
+- AutoLogin 경로가 `sso_start_url` 미설정 환경에서도 동작하도록 보강하고, preflight PASS를 실제로 복구한다.
+
+### 범위
+- 포함: `scripts/staging-preflight.ps1` fallback 보강 + 운영 문서/로그 최신화
+- 제외: Admin/Mobile 수동 스모크 실제 수행
+
+### 수행 작업
+1. AutoLogin fallback 보강
+- `scripts/staging-preflight.ps1`
+  - `aws sso login` 실패/비구성 시 `aws login` fallback 재시도 추가
+  - fallback 실패 시 원인(지원 불가/명령 실패)을 체크 결과에 누적 출력
+
+2. 운영 실행 및 증빙 갱신
+- `aws logout --profile default`로 만료 상태를 재현한 뒤 `staging-preflight.ps1 -AutoLogin` 재실행
+- `aws login` fallback 자동 복구로 preflight PASS 확인
+- `staging-ops-cycle.ps1 -AutoLogin -WaitForCompletion` 재실행
+  - `run 22207213127` 기준 preflight/deploy/verify PASS, 판정 `CONDITIONAL_GO`
+- `docs/staging-smoke-log.md`, `docs/staging-smoke-checklist.md`에 실행 결과 반영
+
+3. 기준 문서 동기화
+- `docs/runbook.md`, `infra/aws/README.md`, `docs/current-usable-scope.md`, `CLAUDE.md`, `docs/changelog-dev.md` 갱신
+
+### 검증
+- `aws sts get-caller-identity`
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn`
+- `powershell -NoProfile -File .\\scripts\\staging-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -AutoLogin`
+- `aws logout --profile default`
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -AutoLogin -WaitForCompletion`
+- `rg -n "aws login|22207213127|CONDITIONAL_GO" docs/staging-smoke-log.md docs/staging-smoke-checklist.md docs/changelog-dev.md CLAUDE.md`
+
+## 41. 이번 사이클 기록 (2026-02-20, mobile store release ops cycle automation)
+
+### 목표
+- 모바일 스토어 릴리즈 작업을 반복 가능한 사이클로 고정한다. (preflight → dispatch → run watch → 로그 적재)
+
+### 범위
+- 포함: 모바일 스토어 운영 스크립트 추가, Android build_only 실검증, 문서 동기화
+- 제외: Google Play 실제 업로드(`play_upload`), iOS TestFlight 실제 업로드
+
+### 수행 작업
+1. 모바일 스토어 운영 스크립트 추가
+- `scripts/mobile-store-preflight.ps1`
+  - target/mode 기준 필수 시크릿/입력값 점검
+- `scripts/mobile-store-cycle.ps1`
+  - preflight 실행 후 `mobile-store-release.yml` workflow_dispatch
+  - run ID 감지/완료 대기/결과 로그(`docs/mobile-store-release-log.md`) 자동 적재
+
+2. 실검증
+- Android build_only 실행 성공
+  - run `22210175274`
+  - run `22210322592`
+- iOS testflight preflight 실행 결과: `MOBILE_IOS_*` 시크릿 미구성으로 실패(예상)
+
+3. 문서 동기화
+- `apps/mobile/README.md`, `docs/mobile/README.md`
+- `docs/mobile-store-release-log.md`
+- `docs/changelog-dev.md`, `docs/current-usable-scope.md`, `CLAUDE.md`, `docs/WORK_CYCLE.md`
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target android -AndroidDistributionMode build_only`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target ios -IosDistributionMode testflight`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode build_only -IosDistributionMode build_only`
+- `gh run view 22210175274 --repo V4N1LLA/Eunhye_Hymn --json conclusion,status,url,headSha`
+- `rg -n "mobile-store|22210175274|22210322592|MOBILE_IOS_" scripts docs apps/mobile CLAUDE.md`
+
+## 42. 이번 사이클 기록 (2026-02-20, mobile UX restructure + profile change approval flow)
+
+### 목표
+- 사용자 요청 기준으로 모바일 정보구조/문구를 정리하고, 개인정보 변경 요청을 관리자 승인 플로우로 연결한 뒤 스테이징 배포까지 완료한다.
+
+### 범위
+- 포함: mobile UI/UX 개편, 인증/프로필 확장, admin 승인 화면, API/usecase/migration 추가, 문서화, 스테이징 배포
+- 제외: 결제 실연동(후원/구독), 운영 정책 결정(반려 기준/알림 채널)
+
+### 수행 작업
+1. 모바일 UX/네비게이션 개편
+- 하단 탭 중심 구조를 드로어 메뉴 구조로 변경
+- 상단 중복 헤더(찬양/히스토리/내 정보) 제거
+- 홈 뒤로가기 동작을 "한 번 더 누르면 종료" 패턴으로 통일
+- 로그인 CTA 개선: Kakao 아이콘 + `카카오로 시작하기`, 이메일 로그인 진입 복원
+- 설정 카피를 일반 사용자 관점 문구로 정리하고 화면 단위를 분리
+
+2. 개인정보 변경 요청 승인 플로우
+- 사용자 요청 API 추가
+  - `POST /me/profile-change-requests`
+  - `GET /me/profile-change-requests/latest`
+- 관리자 처리 API 추가
+  - `GET /admin/profile-change-requests`
+  - `PATCH /admin/profile-change-requests/{id}`
+- Admin 웹에 `개인정보 변경 요청` 페이지/네비게이션 추가
+- DB migration 추가
+  - `V15__profile_change_requests.sql`
+  - `V16__add_gender_to_profiles.sql`
+
+3. 인증/프로필 안정화 + AI 추천 확장
+- 가입 이후 인증 흐름을 invite/phone/sms 단계로 분리하고 모바일 플로우 연결
+- 프로필/온보딩 성별 필드 추가 및 기존 계정 호환(`UNKNOWN`) 처리
+- `SegmentedButton` 선택 집합 비어있음 assertion 재발 방지
+- AI 찬송 추천 API/클라이언트/UI 진입점 추가
+
+4. 문서화
+- `docs/changelog-dev.md`에 기능/수정/검증 내역 추가
+- API 계약 문서와 모바일 README 동기화(`docs/api-contract.md`, `docs/mobile/README.md`, `apps/mobile/README.md`)
+
+### 검증
+- `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 analyze`
+- `cd apps/mobile && ..\\..\\scripts\\flutterw.ps1 test`
+- `cd apps/api && .\\gradlew.bat test`
+- `cd apps/admin && npm run build`
+- `powershell -NoProfile -File .\\scripts\\staging-latest-status.ps1 -Repo V4N1LLA/Eunhye_Hymn -AsJson`
+
+## 43. 이번 사이클 기록 (2026-02-22, staging secret rotation audit automation)
+
+### 목표
+- 운영 시크릿 로테이션 점검을 수동 확인에서 자동 기준(`OK/STALE/MISSING`)으로 전환한다.
+
+### 범위
+- 포함: 시크릿 최신성 점검 스크립트 추가, 운영 문서 반영
+- 제외: 실제 시크릿 재발급/교체 작업
+
+### 수행 작업
+1. 시크릿 점검 스크립트 추가
+- `scripts/staging-secret-rotation-audit.ps1`
+- GitHub repo secrets의 `updatedAt`을 조회해 상태 판정
+- 기본 스테이징 필수 시크릿 점검 + `-IncludeMobileReleaseSecrets` 확장 지원
+- `-MaxAgeDays` 초과 시 `STALE` 판정 및 종료코드 1 반환
+
+2. 운영 문서 동기화
+- `docs/runbook.md`: 월간 정기 점검에 자동 점검 명령/조치 기준 추가
+- `docs/SECRETS_MANAGEMENT.md`: 로테이션 자동 점검 명령/상태 해석 추가
+- `infra/aws/README.md`: 운영 점검 루틴에 시크릿 점검 명령 추가
+- `docs/changelog-dev.md`: 변경 이력 기록
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-secret-rotation-audit.ps1 -Repo V4N1LLA/Eunhye_Hymn -MaxAgeDays 90`
+- `powershell -NoProfile -File .\\scripts\\staging-secret-rotation-audit.ps1 -Repo V4N1LLA/Eunhye_Hymn -MaxAgeDays 90 -IncludeMobileReleaseSecrets`
+- `rg -n "staging-secret-rotation-audit|STALE|MISSING" docs/runbook.md docs/SECRETS_MANAGEMENT.md infra/aws/README.md docs/changelog-dev.md docs/WORK_CYCLE.md`
+
+## 44. 이번 사이클 기록 (2026-02-23, manual smoke recency gate + auto recording)
+
+### 목표
+- 스테이징 운영 사이클에서 수동 스모크 기록 누락/지연을 자동 감지하고, 결과 기록을 스크립트로 표준화한다.
+
+### 범위
+- 포함: `staging-ops-cycle.ps1` 게이트/기록 파라미터 확장, 운영 문서 동기화
+- 제외: AWS 인프라 변경, 실제 스테이징 배포/수동 스모크 실행
+
+### 수행 작업
+1. 운영 사이클 스크립트 확장
+- `scripts/staging-ops-cycle.ps1`
+- 추가 옵션:
+  - `-ManualSmokeMaxAgeDays` (기본 7)
+  - `-ManualSmokeResult PASS|FAIL`
+  - `-ManualSmokeEvidence`
+  - `-ManualSmokeNotes`
+  - `-SkipManualSmokeRecencyGate`
+- 최신 수동 스모크 기록(`docs/staging-smoke-log.md`의 PASS/FAIL) 파싱 후 최신성 게이트 적용
+- 기록 누락/지연 시 `Manual Smoke=OVERDUE`, `Decision=HOLD`
+
+2. 운영 문서 동기화
+- `docs/runbook.md`: 운영 체크리스트/수동 결과 기록 명령 반영
+- `docs/staging-smoke-checklist.md`: `OVERDUE` 해석 및 자동 기록 명령 반영
+- `infra/aws/README.md`: 운영 명령/옵션/자동 기록 절차 반영
+- `docs/current-usable-scope.md`: 우선 과제 문구 갱신
+- `docs/changelog-dev.md`: 변경 이력 반영
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -SkipManualSmokeRecencyGate`
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight` (기존 로그 기준 수동 스모크 recency 게이트 동작 확인)
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -ManualSmokeResult PASS -ManualSmokeEvidence https://example.com/smoke`
+- `rg -n "ManualSmokeMaxAgeDays|ManualSmokeResult|OVERDUE|SkipManualSmokeRecencyGate" scripts/staging-ops-cycle.ps1 docs/runbook.md docs/staging-smoke-checklist.md infra/aws/README.md`
+
+## 45. 이번 사이클 기록 (2026-02-23, secrets rotation cycle log automation)
+
+### 목표
+- 시크릿 로테이션 점검 결과를 수동 출력 확인에서 운영 로그 누적 방식으로 전환한다.
+
+### 범위
+- 포함: 시크릿 점검 사이클 스크립트 추가, 로그 문서/운영 문서 동기화
+- 제외: 실제 시크릿 값 교체/등록
+
+### 수행 작업
+1. 시크릿 점검 사이클 스크립트 추가
+- `scripts/secrets-rotation-cycle.ps1`
+- `staging-secret-rotation-audit.ps1 -AsJson` 실행 결과를 수집
+- 상태 집계(`OK/STALE/MISSING/UNKNOWN`) 후 `Decision=PASS/HOLD` 산출
+- `docs/secrets-rotation-log.md`에 감사 결과를 표 형태로 누적 기록
+
+2. 운영 문서 동기화
+- `docs/secrets-rotation-log.md` 신규 생성
+- `docs/SECRETS_MANAGEMENT.md`: 월간 점검 명령을 cycle 스크립트 기준으로 갱신
+- `docs/runbook.md`: 월간 정기 점검 항목을 cycle 스크립트 기준으로 갱신
+- `infra/aws/README.md`: 운영 가이드 명령/로그 경로 갱신
+- `docs/current-usable-scope.md`, `docs/changelog-dev.md` 반영
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner codex -MaxAgeDays 90 -LogFile .tmp\\secrets-rotation-cycle\\staging-only.md`
+- `powershell -NoProfile -File .\\scripts\\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner codex -MaxAgeDays 90 -IncludeMobileReleaseSecrets -LogFile .tmp\\secrets-rotation-cycle\\with-mobile.md` (현재 기준 expected fail)
+- `rg -n "secrets-rotation-cycle|secrets-rotation-log|Decision=HOLD|IncludeMobileReleaseSecrets" scripts/secrets-rotation-cycle.ps1 docs/SECRETS_MANAGEMENT.md docs/runbook.md infra/aws/README.md docs/changelog-dev.md docs/WORK_CYCLE.md docs/current-usable-scope.md`
+
+## 46. 이번 사이클 기록 (2026-02-23, ops health cycle + exception-aware monitoring)
+
+### 목표
+- 운영자가 배포 게이트/시크릿 점검/예외 원인을 한 번에 확인하고, 디버깅 가능한 구조화 출력까지 확보한다.
+
+### 범위
+- 포함: 통합 운영 헬스 사이클 스크립트 추가, JSON 출력 모드 확장, 운영 로그/문서 동기화
+- 제외: AWS 리소스 변경, 실제 시크릿 값 교체
+
+### 수행 작업
+1. 통합 운영 헬스 스크립트 추가
+- `scripts/ops-health-cycle.ps1`
+- `staging-ops-cycle.ps1` + `secrets-rotation-cycle.ps1`를 순차 실행
+- 단계별 결과를 `PASS/HOLD/ERROR`로 정규화하고 `FailureCategory` 분류
+- `docs/ops-health-log.md`에 통합 상태/증빙/노트 누적 기록
+
+2. 예외/디버깅 하드닝
+- `scripts/staging-ops-cycle.ps1`
+  - `-AsJson` 지원
+  - status 조회 실패/JSON 파싱 실패 시 구조화된 에러 payload 출력
+- `scripts/secrets-rotation-cycle.ps1`
+  - `-AsJson` 지원
+  - 집계 결과 + 상세(stale/missing/unknown) 목록 구조화 출력
+
+3. 운영 문서 동기화
+- `docs/ops-health-log.md` 신규 생성
+- `docs/runbook.md`: 통합 운영 헬스 사이클 명령/로그 반영
+- `docs/SECRETS_MANAGEMENT.md`: 통합 모니터링 경로 반영
+- `infra/aws/README.md`: 운영 명령/실패 원인 분류 로그 반영
+- `docs/current-usable-scope.md`, `docs/changelog-dev.md` 갱신
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -SkipManualSmokeRecencyGate -MaxAgeMinutes 10000 -LogFile .tmp\\ops-health-cycle\\staging-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner codex -MaxAgeDays 90 -LogFile .tmp\\ops-health-cycle\\secrets-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -SkipManualSmokeRecencyGate -StagingMaxAgeMinutes 10000 -SecretsMaxAgeDays 90 -OpsHealthLogFile .tmp\\ops-health-cycle\\ops-health-log.md -StagingLogFile .tmp\\ops-health-cycle\\staging-log.md -SecretsLogFile .tmp\\ops-health-cycle\\secrets-log.md`
+- `powershell -NoProfile -File .\\scripts\\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -SkipManualSmokeRecencyGate -StagingMaxAgeMinutes 10000 -SecretsMaxAgeDays 90 -IncludeMobileReleaseSecrets -OpsHealthLogFile .tmp\\ops-health-cycle\\ops-health-log.md -StagingLogFile .tmp\\ops-health-cycle\\staging-log.md -SecretsLogFile .tmp\\ops-health-cycle\\secrets-log.md` (현재 기준 expected fail; secret missing)
+- `rg -n "ops-health-cycle|AsJson|FailureCategory|ops-health-log" scripts docs infra/aws/README.md`
+
+## 47. 이번 사이클 기록 (2026-02-23, ops full cycle 1~8 execution)
+
+### 목표
+- 운영 자동화/알림/문서/모바일 릴리즈 검증/AI 운영 지표까지 8개 후속 과제를 한 사이클로 실행한다.
+
+### 범위
+- 포함: 운영 스크립트 하드닝, 스케줄 워크플로 추가, 알림 스크립트 추가, 실운영 로그 누적, 모바일 스토어 publish 경로 실행, AI 지표 계측 및 문서 동기화
+- 제외: 실제 스토어 운영 자격증명 발급/교체(placeholder는 교체 필요)
+
+### 수행 작업
+1. 운영 스크립트 안정성 보강
+- 로그 파일 상위 디렉터리 자동 생성 추가:
+  - `scripts/ops-health-cycle.ps1`
+  - `scripts/staging-ops-cycle.ps1`
+  - `scripts/secrets-rotation-cycle.ps1`
+  - `scripts/staging-rehearsal.ps1`
+  - `scripts/mobile-store-cycle.ps1`
+
+2. HOLD/ERROR 이슈 알림 장치 추가
+- `scripts/ops-health-issue-alert.ps1` 추가
+  - 동일 타이틀 오픈 이슈가 있으면 댓글 누적
+  - 없으면 신규 이슈 생성
+- `scripts/ops-health-cycle.ps1`에 `-AlertOnFailure` 연동 추가
+
+3. 운영 스케줄 자동화 추가
+- `.github/workflows/ops-health-scheduled.yml` (주간)
+- `.github/workflows/secrets-rotation-scheduled.yml` (월간)
+- 두 워크플로 모두 로그 커밋 자동화 + 실패 시 워크플로 실패 처리
+
+4. 실운영 로그 누적/복구 실행
+- `docs/secrets-rotation-log.md`: 모바일 포함 점검 `MISSING=0`/`PASS` 기록
+- `docs/staging-smoke-log.md`: `ManualSmoke=PASS` 기록으로 recency 복구
+- `docs/ops-health-log.md`: 통합 운영 판정 `PASS` 기록
+
+5. 모바일 스토어 publish 경로 실행
+- Android `play_upload` 실행: run `22329008651` (FAILED at Google Play upload)
+- iOS `testflight` 실행: run `22329248773` (FAILED at Apple certificate import)
+- preflight는 두 경로 모두 PASS
+
+6. AI 추천 운영 지표 계측
+- `apps/api/src/main/java/com/eunhyehymn/presentation/controllers/AiController.java`
+  - `ai_recommend_requests_total`
+  - `ai_recommend_latency_seconds`
+  - `ai_recommend_fallback_total`
+  - `ai_recommend_candidate_count`
+  - `ai_recommend_response_items`
+- `apps/api/src/main/java/com/eunhyehymn/application/usecases/RecommendHymnsUseCase.java`
+  - `Result`에 `fallbackUsed` 추가
+- 테스트 추가: `RecommendHymnsUseCaseTest`
+
+7. 문서 동기화
+- `README.md`
+- `docs/runbook.md`
+- `infra/aws/README.md`
+- `docs/SECRETS_MANAGEMENT.md`
+- `docs/current-usable-scope.md`
+- `docs/usecases/ai-hymn-recommendations.md`
+- `docs/dev-guide.md`
+- `docs/mobile/README.md`
+- `apps/mobile/README.md`
+- `CLAUDE.md`
+- `docs/changelog-dev.md`
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner codex -MaxAgeDays 90 -IncludeMobileReleaseSecrets -LogFile docs/secrets-rotation-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -MaxAgeMinutes 10000 -ManualSmokeResult PASS -ManualSmokeEvidence https://github.com/V4N1LLA/Eunhye_Hymn/actions/runs/22227656381 -ManualSmokeNotes "manual smoke baseline restored" -LogFile docs/staging-smoke-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -StagingMaxAgeMinutes 10000 -ManualSmokeMaxAgeDays 7 -SecretsMaxAgeDays 90 -IncludeMobileReleaseSecrets -OpsHealthLogFile docs/ops-health-log.md -StagingLogFile docs/staging-smoke-log.md -SecretsLogFile docs/secrets-rotation-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\ops-health-issue-alert.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Overall HOLD -FailureCategory secret_missing -Evidence docs/secrets-rotation-log.md -Notes "dry-run alert wiring" -Operator codex -SourceLog docs/ops-health-log.md -DryRun -AsJson`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target android -AndroidDistributionMode play_upload -IosDistributionMode build_only`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target ios -AndroidDistributionMode build_only -IosDistributionMode testflight`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode play_upload -IosDistributionMode build_only -LogFile docs/mobile-store-release-log.md`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target ios -AndroidDistributionMode build_only -IosDistributionMode testflight -LogFile docs/mobile-store-release-log.md`
+- `cd apps/api && .\\gradlew.bat test --tests "com.eunhyehymn.application.usecases.RecommendHymnsUseCaseTest" --no-daemon --stacktrace`
 

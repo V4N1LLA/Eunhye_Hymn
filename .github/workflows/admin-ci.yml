@@ -2,13 +2,25 @@ name: Admin CI
 
 on:
   pull_request:
+    branches:
+      - develop
+      - staging
+      - production
     paths:
       - "apps/admin/**"
+      - ".github/workflows/admin-ci.yml"
   push:
     branches:
       - develop
+      - staging
+      - production
     paths:
       - "apps/admin/**"
+      - ".github/workflows/admin-ci.yml"
+
+concurrency:
+  group: admin-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -17,17 +29,19 @@ jobs:
       run:
         working-directory: apps/admin
     steps:
-      - name: 저장소 체크아웃
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Node.js 20 설정
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: 의존성 설치
+      - name: Install dependencies
         run: npm ci
-      - name: TypeScript 타입 체크
+      - name: Unit tests
+        run: npm run test
+      - name: TypeScript type check
         run: npx tsc --noEmit
-      - name: 빌드
+      - name: Build
         run: npm run build

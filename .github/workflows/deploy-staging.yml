@@ -3,7 +3,12 @@ name: Deploy Staging
 on:
   push:
     branches:
-      - develop
+      - staging
+    paths:
+      - "apps/api/**"
+      - "apps/admin/**"
+      - "infra/aws/**"
+      - ".github/workflows/deploy-staging.yml"
   workflow_dispatch:
     inputs:
       enable_awslogs:
@@ -126,6 +131,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    environment: staging
     timeout-minutes: 30
     concurrency:
       group: staging-ec2-deploy
@@ -168,7 +174,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
-          ENABLE_AWSLOGS: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_awslogs || secrets.ENABLE_AWSLOGS }}
+          ENABLE_AWSLOGS: ${{ github.event_name == 'workflow_dispatch' && (inputs.enable_awslogs && 'true' || 'false') || secrets.ENABLE_AWSLOGS }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ec2-user@${{ secrets.EC2_HOST }} \

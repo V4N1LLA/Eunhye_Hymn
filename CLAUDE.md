@@ -1,7 +1,8 @@
 ﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-17
+> 마지막 업데이트: 2026-02-24
+> 정합성 기준 문서: `docs/api-contract.md`, `docs/data-model.md`, `.env.example`, `apps/api/.env.example`
 
 ---
 
@@ -20,9 +21,9 @@
 ```
 Eunhye_Hymn/
 ├── apps/
-│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle) ← MVP 완료 (29 UseCase)
+│   ├── api/              # Spring Boot 백엔드 (Java 17, Gradle)
 │   │   └── Dockerfile    # Multi-stage (JDK build → JRE run + curl for healthcheck)
-│   ├── admin/            # React + Vite + TypeScript 관리자 웹  ← 8페이지 완료
+│   ├── admin/            # React + Vite + TypeScript 관리자 웹
 │   │   ├── Dockerfile    # Multi-stage (Node build → Nginx serve)
 │   │   └── nginx.conf    # 정적 파일 serve + /api/v1 프록시 + SPA fallback
 │   └── mobile/           # Flutter 모바일 앱 (MVP: 로그인/목록/상세/메모/히스토리)
@@ -48,7 +49,7 @@ Eunhye_Hymn/
 ├── docs/                 # 프로젝트 문서 (요구사항, 아키텍처, API 계약 등)
 ├── .github/workflows/
 │   ├── api-ci.yml        # API 테스트 (PR + develop push)
-│   ├── admin-ci.yml      # Admin 타입체크 + 빌드 (PR + develop push)
+│   ├── admin-ci.yml      # Admin 테스트 + 타입체크 + 빌드 (PR + develop push)
 │   ├── mobile-ci.yml     # Mobile lint/test (PR + develop push)
 │   ├── mobile-release-check.yml # Mobile Android release APK 빌드 검증 + artifact
 │   ├── mobile-store-release.yml # Mobile store release readiness (manual: android/ios)
@@ -102,6 +103,7 @@ cd apps/api
 cd apps/admin
 npm install
 npm run dev    # http://localhost:5173
+npm run test   # Vitest
 npm run build  # dist/ 출력
 ```
 
@@ -161,9 +163,9 @@ com.eunhyehymn/
 │   └── repository/     # Repository 인터페이스
 ├── application/
 │   ├── ports/          # 외부 서비스 인터페이스 (SocialTokenVerifier)
-│   └── usecases/       # 비즈니스 로직 Use Cases (29개)
+│   └── usecases/       # 비즈니스 로직 Use Cases
 ├── presentation/
-│   ├── controllers/    # REST 컨트롤러 (11개)
+│   ├── controllers/    # REST 컨트롤러
 │   └── dto/            # Request/Response DTOs
 ├── infrastructure/
 │   ├── persistence/    # JPA Repository Adapters (10개)
@@ -204,6 +206,8 @@ com.eunhyehymn/
 ---
 
 ## 7. API 엔드포인트 (Base: `/api/v1`)
+
+> 이 섹션은 개요용이다. 최신 상세 계약은 `docs/api-contract.md`를 우선 기준으로 사용한다.
 
 ### 7.1 인증 (`AuthController`, `DevAuthController`)
 
@@ -295,7 +299,7 @@ com.eunhyehymn/
 
 ---
 
-## 8. Use Cases (29개)
+## 8. Use Cases (개요)
 
 | Use Case | 메서드 | 핵심 로직 |
 |----------|--------|-----------|
@@ -515,7 +519,14 @@ com.eunhyehymn/
 - **트리거**: PR 및 develop push (apps/admin/** 변경 시)
 - **환경**: ubuntu-latest, Node.js 20
 - **캐시**: npm
-- **실행**: `npm ci` → `tsc --noEmit` → `npm run build`
+- **실행**: `npm ci` → `npm run test` → `tsc --noEmit` → `npm run build`
+
+### PR Gate (`pr-gate.yml`)
+- **트리거**: PR 이벤트 (`opened`, `synchronize`, `reopened`, `ready_for_review`)
+- **역할**: 변경 영역별 CI 묶음 + 최종 gate 평가
+- **문서 동기화 검사**: `scripts/check-doc-sync.ps1`
+  - non-doc 파일이 변경되면 `docs/changelog-dev.md`, `CLAUDE.md` 동시 변경을 요구
+  - 누락 시 `doc_sync` job 실패로 PR gate 차단
 
 ### Mobile CI (`mobile-ci.yml`)
 - **트리거**: PR 및 develop push (apps/mobile/** 변경 시)
@@ -531,11 +542,21 @@ com.eunhyehymn/
 
 ### Mobile Store Release Readiness (`mobile-store-release.yml`)
 - **트리거**: `workflow_dispatch` (manual)
-- **입력**: `target=android|ios|both`, `api_base_url`
-- **Android 경로**: signed AAB 빌드(`flutter build appbundle --release`)
+- **입력**: `target=android|ios|both`, `android_distribution_mode=build_only|play_upload`, `ios_distribution_mode=build_only|testflight`, `api_base_url`
+- **Android 경로**:
+  - signed AAB 빌드(`flutter build appbundle --release`)
+  - `android_distribution_mode=play_upload` 시 Google Play 업로드
   - required secrets: `MOBILE_ANDROID_KEYSTORE_BASE64`, `MOBILE_ANDROID_KEY_ALIAS`, `MOBILE_ANDROID_KEY_PASSWORD`, `MOBILE_ANDROID_STORE_PASSWORD`
-- **iOS 경로**: release no-codesign 빌드(`flutter build ios --release --no-codesign`)
+- **iOS 경로**:
+  - `ios_distribution_mode=build_only`: release no-codesign 빌드(`flutter build ios --release --no-codesign`)
+  - `ios_distribution_mode=testflight`: signed IPA 빌드 + TestFlight 업로드
 - **목적**: 스토어 업로드 전 빌드/서명 readiness 검증
+- **운영 스크립트**:
+  - `scripts/mobile-store-preflight.ps1`
+  - `scripts/mobile-store-cycle.ps1`
+  - `scripts/mobile-store-diagnose.ps1`
+  - 실행 로그: `docs/mobile-store-release-log.md`
+  - 복구 가이드: `docs/mobile-store-recovery.md`
 
 ### Deploy Staging (`deploy-staging.yml`)
 - **트리거**: develop push + `workflow_dispatch`
@@ -555,7 +576,7 @@ com.eunhyehymn/
 | `ENABLE_AWSLOGS` | CloudWatch 로그 전송 활성화 여부 (`true` 시 활성화, 미설정 시 기본 `false`) |
 
 - **수동 검증 실행**: `workflow_dispatch`로 브랜치 기준 배포 검증 가능 (`enable_awslogs` 입력)
-- **리허설 자동 실행**: `scripts/staging-rehearsal.ps1`로 preflight + workflow_dispatch + run 대기 + 로그 기록 자동화
+- **리허설 자동 실행**: `scripts/staging-rehearsal.ps1`로 preflight + workflow_dispatch + run 대기 + 로그 기록 자동화 (`-AutoLogin` 지원)
 
 ---
 
@@ -677,7 +698,7 @@ develop push → GitHub Actions
 
 ### 완료
 
-**백엔드 API (29 UseCase, 11 Controller)**
+**백엔드 API (주요 영역 구현 완료)**
 - 찬양 CRUD + 삭제 (cascade: 에셋/메모/상태/이벤트)
 - S3 에셋 관리 (presign/confirm/삭제)
 - JWT 인증 + 소셜 로그인 (Kakao) + 토큰 회전
@@ -686,10 +707,11 @@ develop push → GitHub Actions
 - 멤버 기능 (즐겨찾기, 메모, 히스토리, 이벤트 기록)
 - 비동기 export 결과 정리 배치 (완료/실패 작업 기본 7일 보관 후 정리)
 - 비동기 export 운영 지표 API (`/admin/events/export-jobs/metrics`) + cleanup 실행 이력 기록
-- DB 스키마 Flyway 마이그레이션 (V1~V9)
-- 테스트 15개 파일 전체 통과 (SocialLoginApiTest 포함)
+- DB 스키마 Flyway 마이그레이션 (V1~V16)
+- 복잡 유스케이스 예외 경로 테스트 보강 (`AdminEventExportJobUseCaseTest`, `RecommendHymnsUseCaseTest`)
+- 핵심 테스트 스위트 통과 (API/Admin/Mobile)
 
-**Admin 프론트엔드 (8페이지)**
+**Admin 프론트엔드**
 - 찬양 목록/생성/수정/삭제 + 검색/필터 + 활성화 토글
 - 에셋 업로드 3단계 (presign/upload/confirm) + 삭제
 - 사용자 관리 (역할/상태 변경, 검색/필터)
@@ -699,6 +721,7 @@ develop push → GitHub Actions
 - Access Token 자동 갱신 (401 → refresh → 재시도, mutex 패턴)
 - 인증 컨텍스트 (`loginWithSocial`, `setTokensAndUser`), 공통 API 클라이언트, 사이드바 레이아웃
 - Dev Login (개발용, 접이식)
+- Vitest 기반 최소 단위 테스트 게이트 도입 (`npm run test`, `tokenStore` 테스트 + CI 연동)
 
 **Mobile 앱 (Flutter MVP)**
 - 소셜 SDK 직접 로그인 (Kakao 모바일, Kakao 웹은 토큰 입력 fallback) + Dev 로그인
@@ -715,7 +738,7 @@ develop push → GitHub Actions
 - API Dockerfile (multi-stage)
 - Admin Dockerfile (multi-stage: Node build + Nginx serve)
 - Nginx 설정 (Admin 정적 파일 serve + API 리버스 프록시 + SPA fallback)
-- CI/CD (API 테스트 + Admin 빌드/타입체크 + Mobile lint/test + Staging 자동 배포)
+- CI/CD (API 테스트 + Admin 테스트/타입체크/빌드 + Mobile lint/test + Mobile release readiness + Staging 자동 배포)
 
 **AWS 인프라 (Terraform)**
 - VPC + 퍼블릭 서브넷 2개 + IGW + 라우트 테이블
@@ -741,11 +764,43 @@ develop push → GitHub Actions
   - `docs/current-usable-scope.md`
   - `docs/mobile/README.md`
   - `README.md`
-- 최신 기준점 문서 동기화 (2026-02-17)
-  - `docs/current-usable-scope.md` (`ee49a0e` 기준 커밋/근거 PR/실행 run 반영)
+- 최신 기준점 문서 동기화 (2026-02-20)
+  - `docs/current-usable-scope.md` (최신 기준 커밋/근거 반영)
   - `docs/deployment-readiness-audit.md` (최신 Actions 실행 근거/잔여 리스크 갱신)
 - 개발 변경 이력 동기화
   - `docs/changelog-dev.md`
+- 리뷰 코멘트 후속 리팩토링 반영 (2026-02-24)
+  - `scripts/ops-health-cycle.ps1`: 수동 스모크 recency 분류 정밀화 + cross-platform 하위 스크립트 실행
+  - `scripts/staging-ops-cycle.ps1`, `scripts/secrets-rotation-cycle.ps1`: cross-platform PowerShell 실행기 선택
+  - `scripts/sync-skills.ps1`: source/destination 경로 겹침 방지 가드 추가
+  - `.github/workflows/secrets-rotation-scheduled.yml`: workflow_dispatch boolean false 보존
+  - `skills/secrets-rotation-auditor/references/commands.md`: 필수 인자 누락 예시 보강
+- 테스트 게이트/유스케이스 예외경로 보강 (2026-02-24)
+  - `apps/admin`: Vitest+jsdom 도입, `tokenStore` 테스트 추가, `admin-ci` + `pr-gate(admin_build)` 테스트 단계 추가
+  - `apps/api`: `AdminEventExportJobUseCaseTest`, `RecommendHymnsUseCaseTest` 예외/경계 경로 테스트 추가
+- 운영 스크립트 호환성 후속 반영 (2026-02-24)
+  - `scripts/staging-rehearsal.ps1`: preflight 실행기 cross-platform 처리 + 동시 dispatch 환경 run 선택 안정화(earliest/new-run 기준)
+  - `scripts/mobile-store-cycle.ps1`: preflight 호출 실행기 cross-platform 처리
+  - `scripts/run-mobile-emulator.ps1`: flutter wrapper 호출 실행기 cross-platform 처리
+  - `.github/workflows/deploy-staging.yml`, `.github/workflows/ops-health-scheduled.yml`: workflow_dispatch boolean 입력 false 보존식으로 정규화
+  - `scripts/staging-rehearsal.ps1`, `scripts/mobile-store-cycle.ps1`: preflight 실패 시 first-useful-line 추출로 로그/예외 원인 가시성 강화
+  - `scripts/staging-ops-cycle.ps1`, `scripts/ops-health-cycle.ps1`: `-LogDedupWindowMinutes`(기본 30) 기반 중복 로그 쓰기 억제
+- HOLD/ERROR 알림 노이즈 제어 반영 (2026-02-24)
+  - `scripts/ops-health-issue-alert.ps1`: dedup/re-alert cooldown(`30m`/`480m`/`120m`) + `-ForceAlert` 지원
+  - `scripts/ops-health-cycle.ps1`: `-AlertDedupWindowMinutes`, `-AlertHoldReAlertWindowMinutes`, `-AlertErrorReAlertWindowMinutes`, `-AlertForce` 전달
+  - `docs/runbook.md`: 알림 볼륨 조정 파라미터 운영 가이드 추가
+- 스테이징 수동 스모크 증빙 경고 자동화 반영 (2026-02-24)
+  - `scripts/staging-ops-cycle.ps1`: `EvidenceStatus(OK|WARN)`/`EvidenceWarnings` 출력 및 `evidence warning:*` 노트 자동 기록
+  - `-ManualSmokeEvidence` 누락/링크 형식 이상 시 경고, 최신 수동 스모크 재사용 경로에서도 증빙 누락 경고
+  - `docs/runbook.md`: 수동 스모크 증빙 누락 시 WARN 기록 동작 명시
+- 스테이징 예외 관측성 표준화 반영 (2026-02-24)
+  - `scripts/staging-ops-cycle.ps1`: `FailureCategory`/`FailureDetail` 추가, first-useful-line 추출 표준화
+  - status 실패 경로에서 `status_command`/`status_json_parse` 카테고리와 핵심 실패 라인(JSON) 유지
+  - 하위 PowerShell 호출 예외를 흡수해 구조화 결과(JSON) 누락 없이 반환
+- 병렬 작업 충돌 가드 자동화 반영 (2026-02-24)
+  - `scripts/new-worktree-task.ps1`: branch/worktree/claimed-path 소유권 충돌 사전 검증
+  - `docs/parallel-task-board.md` 자동 upsert(소유자/경로/상태/UTC), 충돌 시 생성 차단
+  - `-AllowClaimedPathConflict`로 예외 허용 가능(기본은 차단)
 - 스테이징 실가동 체크리스트/런북 동기화
   - `docs/staging-smoke-checklist.md`
   - `docs/runbook.md`
@@ -778,20 +833,38 @@ develop push → GitHub Actions
 - IAM 정책 샘플:
   - `infra/aws/terraform-deployer-iam-policy.json`
 - 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
+- 최신 점검(2026-02-23): deploy run `22230828133` 기준 수동 스모크 `PASS` 기록 반영, 통합 운영 판정 `PASS`.
 
 **2. 운영 문서/절차 고도화**
 - `docs/runbook.md` + `docs/staging-smoke-checklist.md` + `docs/staging-feedback-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
 - 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`, `docs/staging-smoke-log.md`에 주기적으로 갱신
+- 스케줄 자동화 운영
+  - `.github/workflows/ops-health-scheduled.yml` (주간)
+  - `.github/workflows/secrets-rotation-scheduled.yml` (월간)
+  - HOLD/ERROR 자동 이슈 알림: `scripts/ops-health-issue-alert.ps1`
+  - 기본 알림 정책: dedup `30m`, HOLD 재알림 `480m`, ERROR 재알림 `120m` (필요 시 `ops-health-cycle.ps1` alert 파라미터로 조정)
 
 **3. 기능 백로그**
 - 비동기 export 운영 지표(실패율/처리시간/정리량) 정례화 완료 (2026-02-14)
+- AI 추천 운영 지표 계측 추가 완료(2026-02-23): `ai_recommend_requests_total`, `ai_recommend_latency_seconds`, `ai_recommend_fallback_total`
 - 후속: 지표 임계치 기반 알림/대시보드 연동 설계
 
 **4. 모바일 배포 패키징**
 - 현재 저장소 기준 실행은 `flutter run -d chrome` 중심
 - Android release APK 빌드 검증 워크플로우 추가 완료 (`mobile-release-check.yml`, 2026-02-16)
 - Android signed AAB / iOS no-codesign 수동 readiness 워크플로우 추가 완료 (`mobile-store-release.yml`, 2026-02-17)
-- 남은 과제: 스토어 업로드 자동화(서명/인증서/배포 트랙/릴리즈 노트) 파이프라인 확정
+- 운영 루프 자동화 완료: preflight + dispatch + run watch + 로그 적재(`scripts/mobile-store-*.ps1`)
+- Android build-only 실검증 완료: run `22210175274`, `22210322592` 성공
+- publish 경로 실검증 실행:
+  - Android `play_upload`: run `22329008651` 실패 (Google Play 업로드 단계)
+  - iOS `testflight`: run `22329248773` 실패 (Apple 인증서 import 단계)
+- 실패 run 진단/복구 장치 추가 완료 (2026-02-24)
+  - `scripts/mobile-store-diagnose.ps1`: 실패 step 기반 원인 키 + 복구 액션 출력
+  - `scripts/mobile-store-cycle.ps1`: 실패 시 진단 요약(`failure_key`, `failed_step`, `recovery_hint`)을 로그 노트에 자동 반영
+  - `scripts/mobile-store-preflight.ps1`: 실패 체크별 recovery hint 출력
+- 남은 과제:
+  - placeholder 시크릿을 실제 스토어 자격증명으로 교체
+  - 교체 후 `play_upload`/`testflight` 재실행 및 성공 로그 확보
 
 ---
 
@@ -810,6 +883,7 @@ develop push → GitHub Actions
 - **사이클 기준 문서**: 반복 설명을 줄이기 위해 `docs/WORK_CYCLE.md`를 단일 기준으로 최신 상태 유지한다
 - **기본 완료 기준**: 작업 요청은 기본적으로 `구현 → 검증 → 커밋 → PR 생성`까지 완료한다 (사용자 명시 예외 제외)
 - **PR 본문 작성 규칙**: `gh pr create/edit --body` 인라인 문자열보다 `--body-file` 사용을 기본으로 하고, 반영 후 `gh pr view`로 줄바꿈/포맷을 확인한다
+- **리뷰 답글 기록 (필수)**: 리뷰 코멘트를 처리할 때는 각 코멘트 thread에 처리 내역을 답글로 남긴다. (수정 내용, 검증 결과, 미반영 사유)
 
 ### 18.1 작업 사이클 (한 기능 = 한 사이클)
 
@@ -820,7 +894,7 @@ develop push → GitHub Actions
 3. **CLAUDE.md 업데이트**: 변경된 기능·파일·진행 상태 반영
 4. **커밋 & Push**: 의미 있는 커밋 메시지, `origin`에 push
 5. **PR 생성**: `develop` 대상 PR 생성 (제목 + 요약 + 테스트 계획, 본문은 `--body-file` 사용 후 `gh pr view`로 렌더링 확인)
-6. **코드 리뷰 & 리팩토링**: `/pr-reviewer:review-pr` 실행 → 이슈 발견 시 수정 후 재push
+6. **코드 리뷰 & 리팩토링**: `/pr-reviewer:review-pr` 실행 → 이슈 발견 시 수정/재검증 후 재push, 각 리뷰 코멘트 thread에 처리 내역 답글 작성
 7. **다음 작업 추천**: CLAUDE.md 17장 미완료 목록 기반으로 다음 우선순위 작업을 제안
 
 사용자는 최종 결과만 확인하면 된다. 중간에 판단이 필요한 경우에만 질문한다.

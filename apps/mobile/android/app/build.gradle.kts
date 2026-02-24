@@ -64,8 +64,14 @@ android {
         versionName = flutter.versionName
         val kakaoNativeAppKey = flutterDartDefine("KAKAO_NATIVE_APP_KEY")
             ?.takeIf { it.isNotBlank() }
+        val apiBaseUrl = flutterDartDefine("API_BASE_URL")
+            ?.trim()
+            ?.lowercase()
+        val usesCleartextTraffic = apiBaseUrl == null || apiBaseUrl.startsWith("http://")
         manifestPlaceholders["kakaoScheme"] =
             if (kakaoNativeAppKey == null) "kakao" else "kakao$kakaoNativeAppKey"
+        manifestPlaceholders["usesCleartextTraffic"] =
+            if (usesCleartextTraffic) "true" else "false"
     }
 
     signingConfigs {

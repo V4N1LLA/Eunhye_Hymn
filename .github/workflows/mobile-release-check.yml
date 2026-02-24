@@ -4,12 +4,16 @@ on:
   pull_request:
     branches:
       - develop
+      - staging
+      - production
     paths:
       - "apps/mobile/**"
       - ".github/workflows/mobile-release-check.yml"
   push:
     branches:
       - develop
+      - staging
+      - production
     paths:
       - "apps/mobile/**"
       - ".github/workflows/mobile-release-check.yml"
@@ -19,6 +23,10 @@ on:
         description: "API base URL passed to flutter build"
         required: false
         default: "https://example.com/api/v1"
+
+concurrency:
+  group: mobile-release-check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   android-release-build:
@@ -47,7 +55,8 @@ jobs:
         run: flutter pub get
 
       - name: Build Android release APK
-        run: flutter build apk --release --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+        run: |
+          flutter build apk --release --dart-define=API_BASE_URL="${API_BASE_URL}"
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4

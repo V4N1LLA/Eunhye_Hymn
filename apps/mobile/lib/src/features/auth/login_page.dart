@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/network/api_exception.dart';
 import 'auth_repository.dart';
+import 'email_login_page.dart';
+import 'invite_gate_page.dart';
 import 'social_sdk_service.dart';
 
 class LoginPage extends StatefulWidget {
   final AuthRepository authRepository;
   final SocialSdkService socialSdkService;
   final Future<void> Function(SessionProfile profile) onLoggedIn;
+  final String? initialError;
 
   const LoginPage({
     super.key,
     required this.authRepository,
     required this.socialSdkService,
+    this.initialError,
     required this.onLoggedIn,
   });
 
@@ -23,36 +26,22 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _inviteCodeController = TextEditingController();
-  final _displayNameController = TextEditingController(text: '테스트 사용자');
-
-  UserRole _devRole = UserRole.user;
   bool _loading = false;
-  bool _showDevLogin = false;
   String? _error;
 
-  @override
-  void dispose() {
-    _inviteCodeController.dispose();
-    _displayNameController.dispose();
-    super.dispose();
+  bool get _hasKakaoKey => AppConfig.kakaoNativeAppKey.trim().isNotEmpty;
+
+  bool _requiresInviteCode(ApiException exception) {
+    return (exception.code ?? '').toLowerCase() == 'invalid_invite_code';
   }
 
-  Future<void> _handleKakaoLogin() async {
+  Future<void> _runWithLoading(Future<void> Function() action) async {
     setState(() {
       _loading = true;
       _error = null;
     });
-
     try {
-      final token = await widget.socialSdkService.fetchToken();
-      final profile = await widget.authRepository.loginWithSocial(
-        token: token,
-        inviteCode: _inviteCodeController.text.trim().isEmpty
-            ? null
-            : _inviteCodeController.text.trim(),
-      );
-      await widget.onLoggedIn(profile);
+      await action();
     } on ApiException catch (e) {
       if (!mounted) {
         return;
@@ -65,7 +54,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       setState(() {
-        _error = '카카오 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+        _error = '작업 중 오류가 발생했습니다. 다시 시도해 주세요.';
       });
     } finally {
       if (mounted) {
@@ -76,51 +65,86 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _handleDevLogin() async {
-    if (_displayNameController.text.trim().isEmpty) {
-      setState(() {
-        _error = '이름을 입력해 주세요.';
-      });
+  Future<void> _openEmailLoginPage() async {
+    if (_loading) {
       return;
     }
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    final profile = await Navigator.of(context).push<SessionProfile>(
+      MaterialPageRoute<SessionProfile>(
+        builder: (_) => EmailLoginPage(
+          authRepository: widget.authRepository,
+        ),
+      ),
+    );
 
-    try {
-      final profile = await widget.authRepository.loginWithDev(
-        displayName: _displayNameController.text.trim(),
-        userId: const Uuid().v4(),
-        role: _devRole,
-      );
-      await widget.onLoggedIn(profile);
-    } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = e.message;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = '개발용 로그인에 실패했습니다.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
+    if (!mounted || profile == null) {
+      return;
     }
+
+    await _runWithLoading(() async {
+      await widget.onLoggedIn(profile);
+    });
+  }
+
+  Future<void> _handleKakaoLogin() async {
+    await _runWithLoading(() async {
+      if (!_hasKakaoKey) {
+        throw ApiException(
+          'KAKAO_NATIVE_APP_KEY가 비어 있습니다. 앱 실행 시 '
+          '--dart-define=KAKAO_NATIVE_APP_KEY=... 로 키를 전달해야 합니다.',
+        );
+      }
+
+      final token = await widget.socialSdkService.fetchToken().timeout(
+            const Duration(seconds: 45),
+            onTimeout: () => throw ApiException(
+              '카카오 로그인 응답이 지연되고 있습니다. 다시 시도해 주세요.',
+            ),
+          );
+
+      try {
+        final profile = await widget.authRepository.loginWithSocial(
+          token: token,
+        );
+        await widget.onLoggedIn(profile);
+      } on ApiException catch (e) {
+        if (!_requiresInviteCode(e)) {
+          rethrow;
+        }
+
+        if (!mounted) {
+          return;
+        }
+
+        final profile = await Navigator.of(context).push<SessionProfile>(
+          MaterialPageRoute<SessionProfile>(
+            builder: (_) => InviteGatePage(
+              title: '초대 코드 입력',
+              description: '로그인을 완료하려면 초대 코드를 입력해 주세요.',
+              submitLabel: '코드 확인 후 입장',
+              onSubmit: (inviteCode) {
+                return widget.authRepository.loginWithSocial(
+                  token: token,
+                  inviteCode: inviteCode,
+                );
+              },
+            ),
+          ),
+        );
+
+        if (!mounted || profile == null) {
+          return;
+        }
+
+        await widget.onLoggedIn(profile);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final visibleError = _error ?? widget.initialError;
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7F9),
       body: SafeArea(
@@ -144,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const Text(
-                            '카카오 로그인',
+                            '로그인',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
@@ -152,35 +176,40 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            '한 번만 로그인하면 자동으로 유지됩니다.',
+                            '카카오 또는 이메일 로그인을 선택해 주세요.',
                             style: TextStyle(color: Color(0xFF5B6572)),
                           ),
                           const SizedBox(height: 14),
-                          TextField(
-                            controller: _inviteCodeController,
-                            enabled: !_loading,
-                            decoration: InputDecoration(
-                              labelText: '초대 코드 (최초 1회)',
-                              hintText: '코드가 없다면 비워두세요',
-                              filled: true,
-                              fillColor: const Color(0xFFF9FAFB),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
+                          _ActionButton(
+                            onPressed: _loading ? null : _handleKakaoLogin,
+                            label: _loading ? '처리 중...' : '카카오로 시작하기',
+                            icon: const Icon(Icons.chat_bubble_rounded),
+                            background: const Color(0xFFFEE500),
+                            foreground: Colors.black87,
+                          ),
+                          const SizedBox(height: 10),
+                          _ActionButton(
+                            onPressed: _loading ? null : _openEmailLoginPage,
+                            label: '이메일 로그인',
+                            icon: const Icon(Icons.mail_outline),
+                            background: Colors.white,
+                            foreground: const Color(0xFF111827),
+                            border: const Color(0xFFE5E7EB),
+                          ),
+                          if (!_hasKakaoKey && !_loading)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 10),
+                              child: Text(
+                                '카카오 앱키가 없어서 카카오 로그인은 비활성화됩니다.',
+                                style:
+                                    TextStyle(fontSize: 12, color: Colors.red),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          _SocialLoginButton(
-                            onPressed: _loading ? null : _handleKakaoLogin,
-                            label: _loading ? '로그인 중...' : '카카오로 시작하기',
-                            icon: const Icon(Icons.chat_bubble_rounded),
-                          ),
                         ],
                       ),
                     ),
                   ),
-                  if (_error != null) ...[
+                  if (visibleError != null) ...[
                     const SizedBox(height: 10),
                     Container(
                       decoration: BoxDecoration(
@@ -193,41 +222,13 @@ class _LoginPageState extends State<LoginPage> {
                         vertical: 10,
                       ),
                       child: Text(
-                        _error!,
+                        visibleError,
                         style: const TextStyle(
                           color: Color(0xFFC2291E),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
-                  ],
-                  if (AppConfig.enableDevLogin) ...[
-                    const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      onPressed: _loading
-                          ? null
-                          : () {
-                              setState(() {
-                                _showDevLogin = !_showDevLogin;
-                              });
-                            },
-                      icon: Icon(
-                        _showDevLogin ? Icons.expand_less : Icons.expand_more,
-                      ),
-                      label: const Text('개발용 로그인'),
-                    ),
-                    if (_showDevLogin)
-                      _DevLoginPanel(
-                        loading: _loading,
-                        displayNameController: _displayNameController,
-                        role: _devRole,
-                        onRoleChanged: (nextRole) {
-                          setState(() {
-                            _devRole = nextRole;
-                          });
-                        },
-                        onSubmit: _handleDevLogin,
-                      ),
                   ],
                 ],
               ),
@@ -258,12 +259,12 @@ class _LoginHero extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          '은혜찬송',
+          '은혜찬양',
           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         const Text(
-          '모바일에서 빠르게 찬양 악보를 확인하세요.',
+          '카카오 또는 이메일로 시작하세요.',
           style: TextStyle(color: Color(0xFF5B6572)),
         ),
       ],
@@ -271,15 +272,21 @@ class _LoginHero extends StatelessWidget {
   }
 }
 
-class _SocialLoginButton extends StatelessWidget {
+class _ActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String label;
   final Widget icon;
+  final Color background;
+  final Color foreground;
+  final Color border;
 
-  const _SocialLoginButton({
+  const _ActionButton({
     required this.onPressed,
     required this.label,
     required this.icon,
+    required this.background,
+    required this.foreground,
+    this.border = Colors.transparent,
   });
 
   @override
@@ -294,75 +301,13 @@ class _SocialLoginButton extends StatelessWidget {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFFFEE500),
-          foregroundColor: Colors.black87,
+          backgroundColor: background,
+          foregroundColor: foreground,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DevLoginPanel extends StatelessWidget {
-  final bool loading;
-  final TextEditingController displayNameController;
-  final UserRole role;
-  final ValueChanged<UserRole> onRoleChanged;
-  final Future<void> Function() onSubmit;
-
-  const _DevLoginPanel({
-    required this.loading,
-    required this.displayNameController,
-    required this.role,
-    required this.onRoleChanged,
-    required this.onSubmit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(top: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: displayNameController,
-              enabled: !loading,
-              decoration: const InputDecoration(
-                labelText: '이름',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<UserRole>(
-              initialValue: role,
-              decoration: const InputDecoration(
-                labelText: '권한',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: UserRole.user, child: Text('일반 사용자')),
-                DropdownMenuItem(value: UserRole.admin, child: Text('관리자')),
-              ],
-              onChanged: loading
-                  ? null
-                  : (value) {
-                      if (value != null) {
-                        onRoleChanged(value);
-                      }
-                    },
-            ),
-            const SizedBox(height: 10),
-            FilledButton.tonal(
-              onPressed: loading ? null : () => onSubmit(),
-              child: Text(loading ? '처리 중...' : '개발용 로그인'),
-            ),
-          ],
+          side: border == Colors.transparent ? null : BorderSide(color: border),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
     );

@@ -1,0 +1,123 @@
+name: Ops Health Scheduled
+
+on:
+  schedule:
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Target branch for deploy gate lookup"
+        required: false
+        default: "develop"
+      owner:
+        description: "Operator name recorded in logs"
+        required: false
+        default: "github-actions"
+      staging_max_age_minutes:
+        description: "Max allowed deploy run age (minutes)"
+        required: false
+        default: "240"
+      manual_smoke_max_age_days:
+        description: "Max age for latest manual smoke record (days)"
+        required: false
+        default: "7"
+      secrets_max_age_days:
+        description: "Max age for secrets rotation checks (days)"
+        required: false
+        default: "90"
+      include_mobile_release_secrets:
+        description: "Include mobile release secret scope in the cycle"
+        required: false
+        default: true
+        type: boolean
+      wait_for_completion:
+        description: "Wait for in-progress deploy run completion"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: write
+  issues: write
+
+jobs:
+  ops-health:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ops-health-scheduled-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || 'develop' }}
+      OPERATOR: ${{ github.event_name == 'workflow_dispatch' && inputs.owner || 'github-actions' }}
+      STAGING_MAX_AGE_MINUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.staging_max_age_minutes || '240' }}
+      MANUAL_SMOKE_MAX_AGE_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_smoke_max_age_days || '7' }}
+      SECRETS_MAX_AGE_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.secrets_max_age_days || '90' }}
+      INCLUDE_MOBILE_RELEASE_SECRETS: ${{ github.event_name == 'workflow_dispatch' && (inputs.include_mobile_release_secrets && 'true' || 'false') || 'false' }}
+      WAIT_FOR_COMPLETION: ${{ github.event_name == 'workflow_dispatch' && (inputs.wait_for_completion && 'true' || 'false') || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ops health cycle
+        id: cycle
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path .tmp/ops-health-scheduled -Force | Out-Null
+
+          $cycleArgs = @(
+            "-NoProfile",
+            "-File", "./scripts/ops-health-cycle.ps1",
+            "-Repo", "$env:GITHUB_REPOSITORY",
+            "-Branch", "$env:TARGET_BRANCH",
+            "-Owner", "$env:OPERATOR",
+            "-StagingMaxAgeMinutes", "$env:STAGING_MAX_AGE_MINUTES",
+            "-ManualSmokeMaxAgeDays", "$env:MANUAL_SMOKE_MAX_AGE_DAYS",
+            "-SecretsMaxAgeDays", "$env:SECRETS_MAX_AGE_DAYS",
+            "-SkipPreflight",
+            "-AlertOnFailure",
+            "-AlertRepo", "$env:GITHUB_REPOSITORY",
+            "-AsJson"
+          )
+
+          if ("$env:INCLUDE_MOBILE_RELEASE_SECRETS" -eq "true") {
+            $cycleArgs += "-IncludeMobileReleaseSecrets"
+          }
+          if ("$env:WAIT_FOR_COMPLETION" -eq "true") {
+            $cycleArgs += "-WaitForCompletion"
+          }
+
+          $output = & pwsh @cycleArgs
+          $exitCode = $LASTEXITCODE
+          $rendered = ($output -join "`n")
+          $rendered | Out-File -FilePath .tmp/ops-health-scheduled/ops-health-result.json -Encoding utf8
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "exit_code=$exitCode"
+          Write-Host $rendered
+          exit 0
+
+      - name: Upload cycle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ops-health-cycle-result
+          path: .tmp/ops-health-scheduled/ops-health-result.json
+
+      - name: Commit updated ops logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/ops-health-log.md docs/staging-smoke-log.md docs/secrets-rotation-log.md || true
+          if git diff --cached --quiet; then
+            echo "No log changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(ops): scheduled ops health cycle log update"
+          git push
+
+      - name: Enforce cycle result
+        if: steps.cycle.outputs.exit_code != '0'
+        shell: bash
+        run: |
+          echo "ops-health cycle returned HOLD/ERROR"
+          exit 1
