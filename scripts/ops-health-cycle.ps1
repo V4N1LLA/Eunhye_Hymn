@@ -21,6 +21,9 @@ param(
   [int]$SecretsMaxAgeDays = 90,
   [switch]$IncludeMobileReleaseSecrets,
   [string]$SecretsLogFile = "docs/secrets-rotation-log.md",
+  [switch]$AlertOnFailure,
+  [string]$AlertRepo = "",
+  [switch]$AlertDryRun,
   [switch]$AsJson
 )
 
@@ -36,8 +39,19 @@ function Escape-MarkdownCell {
   return $Value.Replace("|", "\|").Trim()
 }
 
+function Ensure-ParentDirectory {
+  param([string]$Path)
+
+  $directory = Split-Path -Path $Path -Parent
+  if (-not [string]::IsNullOrWhiteSpace($directory) -and -not (Test-Path $directory)) {
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+  }
+}
+
 function Ensure-LogFile {
   param([string]$Path)
+
+  Ensure-ParentDirectory -Path $Path
 
   if (Test-Path $Path) {
     return
@@ -361,6 +375,46 @@ $resultPayload = [PSCustomObject]@{
   Steps = [PSCustomObject]@{
     Staging = $stagingResult
     Secrets = $secretsResult
+  }
+}
+
+if ($AlertOnFailure -and $overall -ne "PASS") {
+  $alertScript = Join-Path $PSScriptRoot "ops-health-issue-alert.ps1"
+  if (-not (Test-Path $alertScript)) {
+    $resultPayload | Add-Member -NotePropertyName "Alert" -NotePropertyValue ([PSCustomObject]@{
+      Status = "skipped"
+      Detail = "alert script not found"
+    })
+  } else {
+    $alertRepoTarget = if ([string]::IsNullOrWhiteSpace($AlertRepo)) { $Repo } else { $AlertRepo }
+    $alertArgs = @(
+      "-Repo", $alertRepoTarget,
+      "-Branch", $Branch,
+      "-Overall", $overall,
+      "-FailureCategory", $failureCategory,
+      "-Evidence", $evidence,
+      "-Notes", ($notes -join "; "),
+      "-Operator", $Owner,
+      "-SourceLog", $OpsHealthLogFile,
+      "-AsJson"
+    )
+    if ($AlertDryRun) {
+      $alertArgs += "-DryRun"
+    }
+
+    $alertInvocation = Invoke-PowerShellFile -ScriptPath $alertScript -Arguments $alertArgs
+    if ($alertInvocation.ExitCode -eq 0 -and $null -ne $alertInvocation.Json) {
+      $resultPayload | Add-Member -NotePropertyName "Alert" -NotePropertyValue $alertInvocation.Json
+    } else {
+      $alertDetail = Get-FirstUsefulLine -Output $alertInvocation.Output
+      if ([string]::IsNullOrWhiteSpace($alertDetail)) {
+        $alertDetail = "issue alert failed"
+      }
+      $resultPayload | Add-Member -NotePropertyName "Alert" -NotePropertyValue ([PSCustomObject]@{
+        Status = "error"
+        Detail = $alertDetail
+      })
+    }
   }
 }
 

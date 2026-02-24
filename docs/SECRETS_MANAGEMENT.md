@@ -47,11 +47,14 @@
 - Run monthly audit (recommended):
   - `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <operator> -MaxAgeDays 90`
   - mobile scope included: `.\scripts\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner <operator> -MaxAgeDays 90 -IncludeMobileReleaseSecrets`
+  - scheduled workflow: `.github/workflows/secrets-rotation-scheduled.yml`
   - `STALE` means the secret age exceeded threshold and should be rotated.
   - `MISSING` means workflow-required secret setup is incomplete.
   - audit evidence is appended to `docs/secrets-rotation-log.md`.
+  - placeholder/bootstrap values must be replaced with real credentials before production publish.
 - For integrated operations monitoring:
   - `.\scripts\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch staging -Owner <operator>`
+  - scheduled workflow: `.github/workflows/ops-health-scheduled.yml`
   - consolidated health evidence is appended to `docs/ops-health-log.md`.
 - Leak response steps:
   1. Revoke/rotate leaked secret.

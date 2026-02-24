@@ -49,6 +49,7 @@ docs/       프로젝트 문서
 - 개발 가이드: [docs/dev-guide.md](./docs/dev-guide.md)
 - 시크릿 관리: [docs/SECRETS_MANAGEMENT.md](./docs/SECRETS_MANAGEMENT.md)
 - 운영 헬스 로그: [docs/ops-health-log.md](./docs/ops-health-log.md)
+- 운영 자동화 워크플로: `.github/workflows/ops-health-scheduled.yml`, `.github/workflows/secrets-rotation-scheduled.yml`
 - 릴리즈 관리(SemVer): [docs/release-management.md](./docs/release-management.md)
 - 모노레포 CI/CD 운영: [docs/monorepo-cicd.md](./docs/monorepo-cicd.md)
 - 병렬 터미널 PR 운영: [docs/parallel-pr-workflow.md](./docs/parallel-pr-workflow.md)

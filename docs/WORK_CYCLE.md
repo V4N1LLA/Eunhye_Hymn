@@ -1392,3 +1392,77 @@
 - `powershell -NoProfile -File .\\scripts\\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -SkipManualSmokeRecencyGate -StagingMaxAgeMinutes 10000 -SecretsMaxAgeDays 90 -IncludeMobileReleaseSecrets -OpsHealthLogFile .tmp\\ops-health-cycle\\ops-health-log.md -StagingLogFile .tmp\\ops-health-cycle\\staging-log.md -SecretsLogFile .tmp\\ops-health-cycle\\secrets-log.md` (현재 기준 expected fail; secret missing)
 - `rg -n "ops-health-cycle|AsJson|FailureCategory|ops-health-log" scripts docs infra/aws/README.md`
 
+## 47. 이번 사이클 기록 (2026-02-23, ops full cycle 1~8 execution)
+
+### 목표
+- 운영 자동화/알림/문서/모바일 릴리즈 검증/AI 운영 지표까지 8개 후속 과제를 한 사이클로 실행한다.
+
+### 범위
+- 포함: 운영 스크립트 하드닝, 스케줄 워크플로 추가, 알림 스크립트 추가, 실운영 로그 누적, 모바일 스토어 publish 경로 실행, AI 지표 계측 및 문서 동기화
+- 제외: 실제 스토어 운영 자격증명 발급/교체(placeholder는 교체 필요)
+
+### 수행 작업
+1. 운영 스크립트 안정성 보강
+- 로그 파일 상위 디렉터리 자동 생성 추가:
+  - `scripts/ops-health-cycle.ps1`
+  - `scripts/staging-ops-cycle.ps1`
+  - `scripts/secrets-rotation-cycle.ps1`
+  - `scripts/staging-rehearsal.ps1`
+  - `scripts/mobile-store-cycle.ps1`
+
+2. HOLD/ERROR 이슈 알림 장치 추가
+- `scripts/ops-health-issue-alert.ps1` 추가
+  - 동일 타이틀 오픈 이슈가 있으면 댓글 누적
+  - 없으면 신규 이슈 생성
+- `scripts/ops-health-cycle.ps1`에 `-AlertOnFailure` 연동 추가
+
+3. 운영 스케줄 자동화 추가
+- `.github/workflows/ops-health-scheduled.yml` (주간)
+- `.github/workflows/secrets-rotation-scheduled.yml` (월간)
+- 두 워크플로 모두 로그 커밋 자동화 + 실패 시 워크플로 실패 처리
+
+4. 실운영 로그 누적/복구 실행
+- `docs/secrets-rotation-log.md`: 모바일 포함 점검 `MISSING=0`/`PASS` 기록
+- `docs/staging-smoke-log.md`: `ManualSmoke=PASS` 기록으로 recency 복구
+- `docs/ops-health-log.md`: 통합 운영 판정 `PASS` 기록
+
+5. 모바일 스토어 publish 경로 실행
+- Android `play_upload` 실행: run `22329008651` (FAILED at Google Play upload)
+- iOS `testflight` 실행: run `22329248773` (FAILED at Apple certificate import)
+- preflight는 두 경로 모두 PASS
+
+6. AI 추천 운영 지표 계측
+- `apps/api/src/main/java/com/eunhyehymn/presentation/controllers/AiController.java`
+  - `ai_recommend_requests_total`
+  - `ai_recommend_latency_seconds`
+  - `ai_recommend_fallback_total`
+  - `ai_recommend_candidate_count`
+  - `ai_recommend_response_items`
+- `apps/api/src/main/java/com/eunhyehymn/application/usecases/RecommendHymnsUseCase.java`
+  - `Result`에 `fallbackUsed` 추가
+- 테스트 추가: `RecommendHymnsUseCaseTest`
+
+7. 문서 동기화
+- `README.md`
+- `docs/runbook.md`
+- `infra/aws/README.md`
+- `docs/SECRETS_MANAGEMENT.md`
+- `docs/current-usable-scope.md`
+- `docs/usecases/ai-hymn-recommendations.md`
+- `docs/dev-guide.md`
+- `docs/mobile/README.md`
+- `apps/mobile/README.md`
+- `CLAUDE.md`
+- `docs/changelog-dev.md`
+
+### 검증
+- `powershell -NoProfile -File .\\scripts\\secrets-rotation-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Owner codex -MaxAgeDays 90 -IncludeMobileReleaseSecrets -LogFile docs/secrets-rotation-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\staging-ops-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -MaxAgeMinutes 10000 -ManualSmokeResult PASS -ManualSmokeEvidence https://github.com/V4N1LLA/Eunhye_Hymn/actions/runs/22227656381 -ManualSmokeNotes "manual smoke baseline restored" -LogFile docs/staging-smoke-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\ops-health-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Owner codex -SkipPreflight -StagingMaxAgeMinutes 10000 -ManualSmokeMaxAgeDays 7 -SecretsMaxAgeDays 90 -IncludeMobileReleaseSecrets -OpsHealthLogFile docs/ops-health-log.md -StagingLogFile docs/staging-smoke-log.md -SecretsLogFile docs/secrets-rotation-log.md -AsJson`
+- `powershell -NoProfile -File .\\scripts\\ops-health-issue-alert.ps1 -Repo V4N1LLA/Eunhye_Hymn -Branch develop -Overall HOLD -FailureCategory secret_missing -Evidence docs/secrets-rotation-log.md -Notes "dry-run alert wiring" -Operator codex -SourceLog docs/ops-health-log.md -DryRun -AsJson`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target android -AndroidDistributionMode play_upload -IosDistributionMode build_only`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target ios -AndroidDistributionMode build_only -IosDistributionMode testflight`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode play_upload -IosDistributionMode build_only -LogFile docs/mobile-store-release-log.md`
+- `powershell -NoProfile -File .\\scripts\\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target ios -AndroidDistributionMode build_only -IosDistributionMode testflight -LogFile docs/mobile-store-release-log.md`
+- `cd apps/api && .\\gradlew.bat test --tests "com.eunhyehymn.application.usecases.RecommendHymnsUseCaseTest" --no-daemon --stacktrace`
+

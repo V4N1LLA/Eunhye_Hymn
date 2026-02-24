@@ -48,6 +48,53 @@
   - `infra/aws/README.md`
   - `docs/current-usable-scope.md`
 
+### Ops full-cycle follow-up (8 tasks executed)
+- 스크립트 하드닝
+  - 로그 경로 자동 생성 보강:
+    - `scripts/ops-health-cycle.ps1`
+    - `scripts/staging-ops-cycle.ps1`
+    - `scripts/secrets-rotation-cycle.ps1`
+    - `scripts/staging-rehearsal.ps1`
+    - `scripts/mobile-store-cycle.ps1`
+- HOLD/ERROR 알림 연동
+  - `scripts/ops-health-issue-alert.ps1` 추가
+  - `scripts/ops-health-cycle.ps1`에 `-AlertOnFailure`/`-AlertRepo`/`-AlertDryRun` 추가
+- 스케줄 자동화
+  - `.github/workflows/ops-health-scheduled.yml` 추가 (주간)
+  - `.github/workflows/secrets-rotation-scheduled.yml` 추가 (월간)
+- 운영 로그 증빙
+  - `docs/secrets-rotation-log.md`: `MISSING=0`, `PASS` 기록
+  - `docs/staging-smoke-log.md`: `ManualSmoke=PASS` 기록으로 recency 복구
+  - `docs/ops-health-log.md`: 통합 `PASS` 기록
+
+### Mobile store publish-path verification
+- preflight 결과
+  - Android `play_upload`: PASS
+  - iOS `testflight`: PASS
+- 사이클 실행 결과
+  - Android `play_upload`: run `22329008651` 실패 (`Upload Android AAB to Google Play`)
+  - iOS `testflight`: run `22329248773` 실패 (`Import Apple code-sign certificate`)
+- 실행 로그 문서
+  - `docs/mobile-store-release-log.md`
+  - `docs/mobile/README.md`
+  - `apps/mobile/README.md`
+
+### AI recommendation ops metrics baseline
+- 코드 반영
+  - `apps/api/src/main/java/com/eunhyehymn/presentation/controllers/AiController.java`
+    - `ai_recommend_requests_total`
+    - `ai_recommend_latency_seconds`
+    - `ai_recommend_fallback_total`
+    - `ai_recommend_candidate_count`
+    - `ai_recommend_response_items`
+  - `apps/api/src/main/java/com/eunhyehymn/application/usecases/RecommendHymnsUseCase.java`
+    - `Result.fallbackUsed` 추가
+- 테스트 추가
+  - `apps/api/src/test/java/com/eunhyehymn/application/usecases/RecommendHymnsUseCaseTest.java`
+- 문서 동기화
+  - `docs/usecases/ai-hymn-recommendations.md`
+  - `docs/dev-guide.md`
+
 ## 2026-02-22
 
 ### Staging secret rotation audit automation

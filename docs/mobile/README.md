@@ -194,8 +194,14 @@ Android Kakao 콜백 스킴은 `kakao<KAKAO_NATIVE_APP_KEY>`이므로,
   - `.\scripts\mobile-store-preflight.ps1 -Repo V4N1LLA/Eunhye_Hymn -Target ios -IosDistributionMode testflight`
 - 사이클 실행(권장):
   - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode build_only -IosDistributionMode build_only`
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target android -AndroidDistributionMode play_upload -IosDistributionMode build_only`
+  - `.\scripts\mobile-store-cycle.ps1 -Repo V4N1LLA/Eunhye_Hymn -Ref develop -Target ios -AndroidDistributionMode build_only -IosDistributionMode testflight`
 - 실행 로그:
   - `docs/mobile-store-release-log.md`
+- 최근 검증(2026-02-23):
+  - Android `play_upload`: run `22329008651` 실패 (`Upload Android AAB to Google Play`)
+  - iOS `testflight`: run `22329248773` 실패 (`Import Apple code-sign certificate`)
+  - 두 경로 모두 preflight는 PASS이며, 실제 배포용 자격증명 교체 후 재검증이 필요함
 
 ## 7. 운영 연계 체크포인트
 

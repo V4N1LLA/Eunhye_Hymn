@@ -1,7 +1,7 @@
 ﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-20
+> 마지막 업데이트: 2026-02-23
 > 정합성 기준 문서: `docs/api-contract.md`, `docs/data-model.md`, `.env.example`, `apps/api/.env.example`
 
 ---
@@ -789,14 +789,19 @@ develop push → GitHub Actions
 - IAM 정책 샘플:
   - `infra/aws/terraform-deployer-iam-policy.json`
 - 진행 상태는 preflight 결과(`scripts/staging-preflight.ps1`)와 `gh secret list` 기준으로 최신화한다.
-- 최신 점검(2026-02-20): deploy run `22207213127` 기준 preflight/deploy/verify 모두 PASS, 운영 판정 `CONDITIONAL_GO`.
+- 최신 점검(2026-02-23): deploy run `22230828133` 기준 수동 스모크 `PASS` 기록 반영, 통합 운영 판정 `PASS`.
 
 **2. 운영 문서/절차 고도화**
 - `docs/runbook.md` + `docs/staging-smoke-checklist.md` + `docs/staging-feedback-checklist.md` 기준으로 롤백/장애 대응 리허설 수행 후 결과 반영
 - 배포 후 스모크 테스트 항목과 점검 결과를 `docs/staging-rehearsal-log.md`, `docs/staging-smoke-log.md`에 주기적으로 갱신
+- 스케줄 자동화 운영
+  - `.github/workflows/ops-health-scheduled.yml` (주간)
+  - `.github/workflows/secrets-rotation-scheduled.yml` (월간)
+  - HOLD/ERROR 자동 이슈 알림: `scripts/ops-health-issue-alert.ps1`
 
 **3. 기능 백로그**
 - 비동기 export 운영 지표(실패율/처리시간/정리량) 정례화 완료 (2026-02-14)
+- AI 추천 운영 지표 계측 추가 완료(2026-02-23): `ai_recommend_requests_total`, `ai_recommend_latency_seconds`, `ai_recommend_fallback_total`
 - 후속: 지표 임계치 기반 알림/대시보드 연동 설계
 
 **4. 모바일 배포 패키징**
@@ -805,9 +810,12 @@ develop push → GitHub Actions
 - Android signed AAB / iOS no-codesign 수동 readiness 워크플로우 추가 완료 (`mobile-store-release.yml`, 2026-02-17)
 - 운영 루프 자동화 완료: preflight + dispatch + run watch + 로그 적재(`scripts/mobile-store-*.ps1`)
 - Android build-only 실검증 완료: run `22210175274`, `22210322592` 성공
+- publish 경로 실검증 실행:
+  - Android `play_upload`: run `22329008651` 실패 (Google Play 업로드 단계)
+  - iOS `testflight`: run `22329248773` 실패 (Apple 인증서 import 단계)
 - 남은 과제:
-  - Google Play 실제 업로드 모드(`play_upload`) 실행 승인/검증
-  - iOS TestFlight 업로드용 시크릿(`MOBILE_IOS_*`) 프로비저닝 후 실검증
+  - placeholder 시크릿을 실제 스토어 자격증명으로 교체
+  - 교체 후 `play_upload`/`testflight` 재실행 및 성공 로그 확보
 
 ---
 

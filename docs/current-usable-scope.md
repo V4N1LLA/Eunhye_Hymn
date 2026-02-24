@@ -1,8 +1,8 @@
 # 현재 사용 가능 범위 정리
 
-- 작성일: 2026-02-20
+- 작성일: 2026-02-23
 - 기준 브랜치: `develop`
-- 기준 커밋: `6a00b68`
+- 기준 커밋: `561d680`
 - 기준 문서: `README.md`, `docs/api-contract.md`, `docs/data-model.md`, `docs/changelog-dev.md`
 
 ## 1. 요약
@@ -74,10 +74,10 @@
 
 ## 4. 현재 우선 과제
 
-- 스테이징 수동 스모크 자동 누적/지연 게이트 운영 정착 (`staging-ops-cycle.ps1`)
-- 운영 시크릿 로테이션 점검 로그 누적/`MISSING` 항목 해소 (`secrets-rotation-cycle.ps1`)
-- 통합 운영 헬스 로그 정례화 및 실패 원인 분류 기반 대응 (`ops-health-cycle.ps1`)
-- AI 추천 운영 지표(성공률/지연/비용) 관측 지표 확정
+- 운영 스케줄 자동화 가동 확인 (`ops-health-scheduled.yml`, `secrets-rotation-scheduled.yml`) 및 주간/월간 로그 커밋 성공 여부 추적
+- HOLD/ERROR 알림 이슈 triage 루틴 정착 (`ops-health-issue-alert.ps1`, `FailureCategory` 기준 대응)
+- 모바일 스토어 실배포 자격증명 실값 교체 후 재검증 (현재 `play_upload`/`testflight` 경로는 placeholder 자격증명으로 실패 확인)
+- AI 추천 운영 지표 대시보드/수집 파이프라인 연동 (현재 API meter 지표는 추가 완료, 시각화/알림 후속)
 
 ## 5. 빠른 실행 체크리스트
 

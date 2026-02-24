@@ -44,7 +44,7 @@ public class RecommendHymnsUseCase {
             .toList();
 
         if (candidates.isEmpty()) {
-            return new Result(List.of(), maxResults, 0);
+            return new Result(List.of(), maxResults, 0, false);
         }
 
         Map<UUID, Hymn> hymnById = candidates.stream().collect(Collectors.toMap(Hymn::id, hymn -> hymn));
@@ -70,10 +70,12 @@ public class RecommendHymnsUseCase {
         }
 
         List<RecommendedHymn> items = toRecommendedHymns(aiRecommendations, hymnById, maxResults);
+        boolean fallbackUsed = false;
         if (items.isEmpty()) {
             items = fallbackRecommendations(candidates, maxResults);
+            fallbackUsed = true;
         }
-        return new Result(items, maxResults, candidates.size());
+        return new Result(items, maxResults, candidates.size(), fallbackUsed);
     }
 
     private String normalizeSituation(String rawSituation) {
@@ -165,7 +167,8 @@ public class RecommendHymnsUseCase {
     public record Result(
         List<RecommendedHymn> items,
         int requestedMaxResults,
-        int candidateCount
+        int candidateCount,
+        boolean fallbackUsed
     ) {
     }
 }

@@ -93,6 +93,7 @@ cd apps/mobile
 - `AI_GEMINI_CONNECT_TIMEOUT_SECONDS`, `AI_GEMINI_READ_TIMEOUT_SECONDS`
 - `AI_GEMINI_TEMPERATURE`, `AI_GEMINI_MAX_OUTPUT_TOKENS`
 - `AI_RECOMMEND_MAX_CANDIDATE_HYMNS`, `AI_RECOMMEND_MAX_RESULTS`, `AI_RECOMMEND_MAX_SITUATION_CHARS`
+- 운영 관측 지표(Micrometer): `ai_recommend_requests_total`, `ai_recommend_latency_seconds`, `ai_recommend_fallback_total`, `ai_recommend_candidate_count`, `ai_recommend_response_items`
 
 ## 6. Flyway/테스트 DB
 - `V1__baseline.sql`은 베이스라인용 빈 파일이다.
