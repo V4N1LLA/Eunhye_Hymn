@@ -179,9 +179,6 @@ if ($DryRun) {
   exit 0
 }
 
-$triggeredAfter = (Get-Date).ToUniversalTime()
-# Use a small skew buffer for fallback in case local and GitHub API clocks differ slightly.
-$dispatchWindowStart = $triggeredAfter.AddMinutes(-2)
 $baselineRuns = gh run list --repo $Repo --workflow $Workflow --branch $Ref --event workflow_dispatch --limit 30 --json databaseId 2>$null
 $knownRunIds = @{}
 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($baselineRuns)) {
@@ -197,6 +194,10 @@ if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($baselineRuns)) {
     # Best-effort baseline only.
   }
 }
+
+$triggeredAfter = (Get-Date).ToUniversalTime()
+# Use a small skew buffer for fallback in case local and GitHub API clocks differ slightly.
+$dispatchWindowStart = $triggeredAfter.AddMinutes(-2)
 
 $workflowArgs = @(
   "workflow", "run", $Workflow,

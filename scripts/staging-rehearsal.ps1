@@ -113,6 +113,7 @@ if (-not $SkipPreflight) {
   }
 
   $preflightArgs = @(
+    "-NoProfile",
     "-File", $preflightScript,
     "-Repo", $Repo
   )
@@ -135,8 +136,6 @@ if (-not $SkipPreflight) {
   $preflightStatus = "PASS"
 }
 
-$triggeredAfter = (Get-Date).ToUniversalTime()
-$dispatchWindowStart = $triggeredAfter.AddMinutes(-2)
 $enableValue = if ($EnableAwsLogs) { "true" } else { "false" }
 
 if (Test-CommitShaRef -Value $Ref) {
@@ -168,6 +167,9 @@ if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($baselineRuns)) {
     # Best-effort baseline only.
   }
 }
+
+$triggeredAfter = (Get-Date).ToUniversalTime()
+$dispatchWindowStart = $triggeredAfter.AddMinutes(-2)
 
 Invoke-CommandStrict -Name "gh workflow run" -Command {
   gh workflow run $Workflow --repo $Repo --ref $Ref -f "enable_awslogs=$enableValue"
