@@ -240,6 +240,20 @@ Base URL: `/api/v1`
   - `POST /admin/users`
   - `PATCH /admin/users/{id}`
   - `DELETE /admin/users/{id}` (soft delete)
+  - Extended admin-user contract:
+    - `GET /admin/users` supports optional query: `churchName`
+    - `GET /admin/users` response includes:
+      - `primaryEmail`
+      - `profile` (`churchName`, `name`, `group`, `gender`, `updatedAt`)
+      - `verification` (`phoneNumber`, `phoneVerifiedAt`, `phoneVerified`, `updatedAt`)
+      - `identities[]` with plain `email` (plus masked fields)
+    - `PATCH /admin/users/{id}` accepts:
+      - `displayName`
+      - `churchName`
+      - `name`
+      - `group`
+      - `gender`
+      - `phoneNumber`
 - 초대코드:
   - `GET /admin/invite-codes`
   - `POST /admin/invite-codes`

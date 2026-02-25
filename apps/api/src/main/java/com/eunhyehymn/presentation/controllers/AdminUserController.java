@@ -9,8 +9,12 @@ import com.eunhyehymn.common.response.ApiResponse;
 import com.eunhyehymn.domain.model.AuthIdentity;
 import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.User;
+import com.eunhyehymn.domain.model.UserProfile;
 import com.eunhyehymn.domain.model.UserStatus;
+import com.eunhyehymn.domain.model.UserVerification;
 import com.eunhyehymn.domain.repository.AuthIdentityRepository;
+import com.eunhyehymn.domain.repository.UserProfileRepository;
+import com.eunhyehymn.domain.repository.UserVerificationRepository;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.Comparator;
@@ -29,6 +33,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -40,27 +45,51 @@ public class AdminUserController {
     private final AdminListUsersUseCase adminListUsersUseCase;
     private final AdminUpdateUserUseCase adminUpdateUserUseCase;
     private final AuthIdentityRepository authIdentityRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final UserVerificationRepository userVerificationRepository;
 
     public AdminUserController(
         AdminCreateUserUseCase adminCreateUserUseCase,
         AdminDeleteUserUseCase adminDeleteUserUseCase,
         AdminListUsersUseCase adminListUsersUseCase,
         AdminUpdateUserUseCase adminUpdateUserUseCase,
-        AuthIdentityRepository authIdentityRepository
+        AuthIdentityRepository authIdentityRepository,
+        UserProfileRepository userProfileRepository,
+        UserVerificationRepository userVerificationRepository
     ) {
         this.adminCreateUserUseCase = adminCreateUserUseCase;
         this.adminDeleteUserUseCase = adminDeleteUserUseCase;
         this.adminListUsersUseCase = adminListUsersUseCase;
         this.adminUpdateUserUseCase = adminUpdateUserUseCase;
         this.authIdentityRepository = authIdentityRepository;
+        this.userProfileRepository = userProfileRepository;
+        this.userVerificationRepository = userVerificationRepository;
     }
 
     @GetMapping
-    public ApiResponse<List<UserResponse>> list() {
+    public ApiResponse<List<UserResponse>> list(@RequestParam(required = false) String churchName) {
+        String churchFilter = normalizeNullable(churchName);
+
         List<User> users = adminListUsersUseCase.listAll();
-        Map<UUID, List<AuthIdentity>> identitiesByUserId = loadIdentitiesByUserId(users.stream().map(User::id).toList());
+        List<UUID> userIds = users.stream().map(User::id).toList();
+
+        Map<UUID, List<AuthIdentity>> identitiesByUserId = loadIdentitiesByUserId(userIds);
+        Map<UUID, UserProfile> profilesByUserId = loadProfilesByUserId(userIds);
+        Map<UUID, UserVerification> verificationsByUserId = loadVerificationsByUserId(userIds);
+
+        if (churchFilter != null) {
+            users = users.stream()
+                .filter(user -> isChurchMatched(profilesByUserId.get(user.id()), churchFilter))
+                .toList();
+        }
+
         List<UserResponse> items = users.stream()
-            .map(user -> toUserResponse(user, identitiesByUserId.getOrDefault(user.id(), List.of())))
+            .map(user -> toUserResponse(
+                user,
+                identitiesByUserId.getOrDefault(user.id(), List.of()),
+                profilesByUserId.get(user.id()),
+                verificationsByUserId.get(user.id())
+            ))
             .toList();
         return ApiResponse.success(items);
     }
@@ -70,7 +99,7 @@ public class AdminUserController {
         Role role = parseEnum(Role.class, request.role(), "role");
         UserStatus status = parseEnum(UserStatus.class, request.status(), "status");
         User user = adminCreateUserUseCase.create(request.displayName(), role, status);
-        return ApiResponse.success(toUserResponse(user, listIdentities(user.id())));
+        return ApiResponse.success(loadUserResponse(user));
     }
 
     @PatchMapping("/{id}")
@@ -82,15 +111,33 @@ public class AdminUserController {
         UUID requesterId = parseRequesterId(authentication);
         Role role = parseEnum(Role.class, request.role(), "role");
         UserStatus status = parseEnum(UserStatus.class, request.status(), "status");
-        User user = adminUpdateUserUseCase.update(requesterId, id, role, status);
-        return ApiResponse.success(toUserResponse(user, listIdentities(user.id())));
+        User user = adminUpdateUserUseCase.update(
+            requesterId,
+            id,
+            role,
+            status,
+            request.displayName(),
+            request.churchName(),
+            request.name(),
+            request.group(),
+            request.gender(),
+            request.phoneNumber()
+        );
+        return ApiResponse.success(loadUserResponse(user));
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<UserResponse> delete(@PathVariable UUID id, Authentication authentication) {
         UUID requesterId = parseRequesterId(authentication);
         User user = adminDeleteUserUseCase.delete(requesterId, id);
-        return ApiResponse.success(toUserResponse(user, listIdentities(user.id())));
+        return ApiResponse.success(loadUserResponse(user));
+    }
+
+    private UserResponse loadUserResponse(User user) {
+        List<AuthIdentity> identities = loadIdentitiesByUserId(List.of(user.id())).getOrDefault(user.id(), List.of());
+        UserProfile profile = userProfileRepository.findByUserId(user.id()).orElse(null);
+        UserVerification verification = userVerificationRepository.findByUserId(user.id()).orElse(null);
+        return toUserResponse(user, identities, profile, verification);
     }
 
     private Map<UUID, List<AuthIdentity>> loadIdentitiesByUserId(List<UUID> userIds) {
@@ -101,20 +148,75 @@ public class AdminUserController {
             .collect(Collectors.groupingBy(AuthIdentity::userId));
     }
 
-    private List<AuthIdentity> listIdentities(UUID userId) {
-        return loadIdentitiesByUserId(List.of(userId)).getOrDefault(userId, List.of());
+    private Map<UUID, UserProfile> loadProfilesByUserId(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userProfileRepository.findByUserIdIn(userIds).stream()
+            .collect(Collectors.toMap(
+                UserProfile::userId,
+                profile -> profile,
+                (left, right) -> right
+            ));
     }
 
-    private UserResponse toUserResponse(User user, List<AuthIdentity> identities) {
-        List<AuthIdentitySummaryResponse> identityResponses = identities.stream()
+    private Map<UUID, UserVerification> loadVerificationsByUserId(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userVerificationRepository.findByUserIdIn(userIds).stream()
+            .collect(Collectors.toMap(
+                UserVerification::userId,
+                verification -> verification,
+                (left, right) -> right
+            ));
+    }
+
+    private UserResponse toUserResponse(
+        User user,
+        List<AuthIdentity> identities,
+        UserProfile profile,
+        UserVerification verification
+    ) {
+        List<AuthIdentity> sortedIdentities = identities.stream()
             .sorted(Comparator.comparing(AuthIdentity::createdAt).reversed())
+            .toList();
+
+        List<AuthIdentitySummaryResponse> identityResponses = sortedIdentities.stream()
             .map(identity -> new AuthIdentitySummaryResponse(
                 identity.provider(),
                 maskProviderSubject(identity.providerSubject()),
+                normalizeNullable(identity.email()),
                 maskEmail(identity.email()),
                 identity.createdAt()
             ))
             .toList();
+
+        String primaryEmail = sortedIdentities.stream()
+            .map(AuthIdentity::email)
+            .map(this::normalizeNullable)
+            .filter(email -> email != null && !email.isBlank())
+            .findFirst()
+            .orElse(null);
+
+        UserProfileResponse profileResponse = profile == null
+            ? null
+            : new UserProfileResponse(
+                profile.churchName(),
+                profile.name(),
+                profile.groupName(),
+                profile.gender() == null ? null : profile.gender().name(),
+                profile.updatedAt()
+            );
+
+        UserVerificationResponse verificationResponse = verification == null
+            ? null
+            : new UserVerificationResponse(
+                verification.phoneNumber(),
+                verification.phoneVerifiedAt(),
+                verification.isPhoneVerified(),
+                verification.updatedAt()
+            );
 
         return new UserResponse(
             user.id(),
@@ -123,8 +225,27 @@ public class AdminUserController {
             user.status().name(),
             user.createdAt(),
             user.lastLoginAt(),
+            primaryEmail,
+            profileResponse,
+            verificationResponse,
             identityResponses
         );
+    }
+
+    private String normalizeNullable(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private boolean isChurchMatched(UserProfile profile, String filter) {
+        if (profile == null || profile.churchName() == null) {
+            return false;
+        }
+        String church = profile.churchName().trim();
+        return !church.isEmpty() && church.equalsIgnoreCase(filter);
     }
 
     private String maskProviderSubject(String providerSubject) {
@@ -209,13 +330,34 @@ public class AdminUserController {
         String status,
         Instant createdAt,
         Instant lastLoginAt,
+        String primaryEmail,
+        UserProfileResponse profile,
+        UserVerificationResponse verification,
         List<AuthIdentitySummaryResponse> identities
+    ) {
+    }
+
+    public record UserProfileResponse(
+        String churchName,
+        String name,
+        String group,
+        String gender,
+        Instant updatedAt
+    ) {
+    }
+
+    public record UserVerificationResponse(
+        String phoneNumber,
+        Instant phoneVerifiedAt,
+        boolean phoneVerified,
+        Instant updatedAt
     ) {
     }
 
     public record AuthIdentitySummaryResponse(
         String provider,
         String providerSubjectMasked,
+        String email,
         String emailMasked,
         Instant createdAt
     ) {
@@ -226,7 +368,13 @@ public class AdminUserController {
 
     public record UpdateUserRequest(
         String role,
-        String status
+        String status,
+        String displayName,
+        String churchName,
+        String name,
+        String group,
+        String gender,
+        String phoneNumber
     ) {
     }
 }
