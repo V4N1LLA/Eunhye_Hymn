@@ -22,6 +22,23 @@
   - `cd apps/admin && npx tsc --noEmit`
   - `cd apps/admin && npm run build`
 
+### Admin Soybean visual fidelity pass (template alignment)
+- `apps/admin/src/components/Layout.tsx`
+  - Soybean 기본 레이아웃 톤에 맞춰 다크 네이비 사이드바 + 화이트 헤더 구조로 재정렬
+  - 기존 요구사항(사이드바 완전 숨김/복원, 알림 벨 패널 동작)은 유지
+- `apps/admin/src/pages/LoginPage.tsx`
+  - 템플릿 기준에 맞춰 웨이브 배경 위 중앙 인증 카드 중심으로 로그인 화면 재구성
+  - 기존 인증 플로우(ID/PW, 세션 초기화, 도움말, localhost 개발 로그인) 유지
+- `apps/admin/src/pages/DashboardPage.tsx`
+  - Soybean 대시보드 톤과 유사한 상단 인사/요약 영역 + KPI 카드 밀도 재정리
+- `apps/admin/src/index.css`
+  - 공통 토큰(컬러/그림자/반경) 재튜닝으로 전체 화면 톤 정합성 강화
+- 문서 동기화
+  - `docs/admin/README.md`
+- 검증
+  - `cd apps/admin && npx tsc --noEmit`
+  - `cd apps/admin && npm run build`
+
 ### Korean terminology standardization (user-facing)
 - Replaced user-facing wording across app/docs with standardized terms (`말씀`, `찬양대`).
 - Updated files:

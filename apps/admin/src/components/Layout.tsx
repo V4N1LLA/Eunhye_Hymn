@@ -12,13 +12,13 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "대시보드", desc: "운영 현황과 핵심 지표" },
   { to: "/hymns", label: "찬양 관리", desc: "카탈로그와 노출 상태", matchPrefix: "/hymns" },
-  { to: "/assets/upload", label: "에셋 업로드", desc: "악보/미디어 등록", matchPrefix: "/assets" },
+  { to: "/assets/upload", label: "에셋 업로드", desc: "악보/미디 파일 등록", matchPrefix: "/assets" },
   { to: "/invite-codes", label: "초대 코드", desc: "코드 발급 및 비활성화", matchPrefix: "/invite-codes" },
   { to: "/users", label: "사용자 관리", desc: "교회/역할/프로필 관리", matchPrefix: "/users" },
   { to: "/profile-change-requests", label: "프로필 요청", desc: "변경 요청 승인/반려", matchPrefix: "/profile-change-requests" },
-  { to: "/events", label: "감사 이벤트", desc: "사용 로그 조회/내보내기", matchPrefix: "/events" },
+  { to: "/events", label: "감사 이벤트", desc: "사용 로그 조회 및 내보내기", matchPrefix: "/events" },
   { to: "/ai/recommendations", label: "AI 추천", desc: "상황 기반 찬양 추천", matchPrefix: "/ai" },
-  { to: "/help", label: "도움말", desc: "권한 및 로그인 가이드", matchPrefix: "/help" },
+  { to: "/help", label: "도움말", desc: "권한/로그인 문제 해결", matchPrefix: "/help" },
 ];
 
 type NotificationItem = {
@@ -32,7 +32,7 @@ const NOTIFICATION_ITEMS: NotificationItem[] = [
   {
     id: "staging-check",
     title: "스테이징 점검 체크리스트",
-    desc: "배포 후 API 헬스와 핵심 화면 점검을 진행하세요.",
+    desc: "배포 후 API 상태와 운영 화면 동작을 빠르게 확인하세요.",
     to: "/help",
   },
   {
@@ -44,16 +44,26 @@ const NOTIFICATION_ITEMS: NotificationItem[] = [
 ];
 
 function resolveCurrentSection(pathname: string): NavItem {
-  if (pathname === "/") return NAV_ITEMS[0];
+  if (pathname === "/") {
+    return NAV_ITEMS[0];
+  }
   return NAV_ITEMS.find((item) => item.matchPrefix && pathname.startsWith(item.matchPrefix)) ?? NAV_ITEMS[0];
 }
 
-function sidebarLinkClass(isActive: boolean): string {
-  const base = "group flex items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition-all duration-150";
-  if (isActive) {
-    return `${base} border-indigo-200 bg-indigo-50 text-indigo-900 shadow-sm`;
+function isNavItemActive(item: NavItem, pathname: string): boolean {
+  if (item.to === "/") {
+    return pathname === "/";
   }
-  return `${base} border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900`;
+  const matchBase = item.matchPrefix ?? item.to;
+  return pathname.startsWith(matchBase);
+}
+
+function sidebarLinkClass(isActive: boolean): string {
+  const base = "group flex items-start gap-3 rounded-md px-3 py-2.5 text-sm transition-colors";
+  if (isActive) {
+    return `${base} bg-indigo-500/20 text-indigo-100`;
+  }
+  return `${base} text-slate-300 hover:bg-white/10 hover:text-white`;
 }
 
 function roleLabel(role: string | null | undefined): string {
@@ -126,184 +136,172 @@ export default function Layout() {
 
   return (
     <div className="soy-layout-bg min-h-screen text-slate-900">
-      <div className="min-h-screen lg:flex lg:gap-3 lg:p-3">
-        <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[240px] overflow-hidden border-r border-slate-200 bg-white/95 shadow-[var(--sb-sider-shadow)] backdrop-blur-xl transition-[width,transform,opacity,border-color] duration-200 lg:static lg:rounded-2xl lg:border lg:border-slate-200/90 ${
-            siderCollapsed ? "lg:w-0 lg:opacity-0 lg:pointer-events-none lg:border-transparent" : "lg:w-[240px]"
-          } ${
-            mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-          } ${
-            siderCollapsed ? "lg:-translate-x-full" : "lg:translate-x-0"
-          }`}
-        >
-          <div className="flex h-14 items-center justify-between border-b border-slate-200 px-3">
-            <NavLink to="/" className="flex min-w-0 items-center gap-2 overflow-hidden">
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-md shadow-indigo-600/30">
-                EH
-              </span>
-              <span className="truncate text-sm font-semibold text-slate-900">은혜찬양 관리자</span>
-            </NavLink>
-            <button
-              type="button"
-              onClick={() => setSiderCollapsed((prev) => !prev)}
-              className="hidden h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 lg:inline-flex"
-              aria-label="사이드바 너비 전환"
-              title={siderCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
-            >
-              {siderCollapsed ? ">" : "<"}
-            </button>
-          </div>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[228px] border-r border-[#223454] bg-[#001529] shadow-xl transition-transform duration-200 ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } ${
+          siderCollapsed ? "lg:-translate-x-full lg:pointer-events-none" : "lg:translate-x-0 lg:pointer-events-auto"
+        }`}
+      >
+        <div className="flex h-14 items-center border-b border-[#223454] px-4">
+          <NavLink to="/" className="flex min-w-0 items-center gap-2 text-white">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500 text-sm font-bold">
+              EH
+            </span>
+            <span className="truncate text-sm font-semibold">은혜찬양 관리자</span>
+          </NavLink>
+        </div>
 
-          <div className="soy-subtle-scrollbar h-[calc(100%-56px)] overflow-y-auto px-2 py-2">
-            <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              메뉴
-            </div>
-            <nav className="space-y-1">
-              {NAV_ITEMS.map((item) => (
+        <div className="soy-subtle-scrollbar flex h-[calc(100%-56px)] flex-col overflow-y-auto px-2 py-2">
+          <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">메뉴</div>
+          <nav className="mt-2 space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const active = isNavItemActive(item, location.pathname);
+              return (
                 <NavLink key={item.to} to={item.to} end={item.to === "/"}>
-                  {({ isActive }) => (
-                    <div className={sidebarLinkClass(isActive)}>
-                      <span
-                        className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold ${
-                          isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {item.label.slice(0, 1)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold">{item.label}</div>
-                        <div className="mt-0.5 truncate text-xs text-slate-500">{item.desc}</div>
-                      </div>
+                  <div className={sidebarLinkClass(active)}>
+                    <span
+                      className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold ${
+                        active ? "bg-indigo-400/30 text-indigo-100" : "bg-white/10 text-slate-300"
+                      }`}
+                    >
+                      {item.label.slice(0, 1)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold">{item.label}</div>
+                      <div className="truncate text-xs text-slate-400">{item.desc}</div>
                     </div>
-                  )}
+                  </div>
                 </NavLink>
-              ))}
-            </nav>
+              );
+            })}
+          </nav>
 
-            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              접속 호스트: <span className="font-mono text-slate-700">{host}</span>
+          <div className="mt-auto px-2 pb-2 pt-3">
+            <div className="rounded-md border border-[#2a3f61] bg-[#0b213f] px-3 py-2 text-xs text-slate-300">
+              접속 호스트 <span className="font-mono text-slate-100">{host}</span>
             </div>
           </div>
-        </aside>
+        </div>
+      </aside>
 
-        <div className="min-h-screen min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-[var(--sb-header-shadow)] backdrop-blur lg:rounded-2xl lg:border lg:border-slate-200/90">
-            <div className="flex h-14 items-center justify-between gap-3 px-3 md:px-5">
-              <div className="flex min-w-0 items-center gap-2">
+      <div className={`min-h-screen transition-[padding-left] duration-200 ${siderCollapsed ? "lg:pl-0" : "lg:pl-[228px]"}`}>
+        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="flex h-14 items-center justify-between gap-3 px-4 md:px-5">
+            <div className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen((prev) => !prev)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 lg:hidden"
+                aria-label="메뉴 열기/닫기"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+                  <path
+                    d="M4 7h16M4 12h16M4 17h16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSiderCollapsed((prev) => !prev)}
+                className="hidden h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 lg:inline-flex"
+                aria-label="사이드바 접기/펼치기"
+                title={siderCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
+              >
+                {siderCollapsed ? ">" : "<"}
+              </button>
+              <div className="min-w-0">
+                <h1 className="truncate text-sm font-semibold text-slate-900 md:text-base">{currentSection.label}</h1>
+                <p className="truncate text-xs text-slate-500">{currentSection.desc}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative" ref={notificationRef}>
                 <button
                   type="button"
-                  onClick={() => setMobileMenuOpen((prev) => !prev)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 lg:hidden"
-                  aria-label="메뉴 열기/닫기"
+                  onClick={() => setNotificationOpen((prev) => !prev)}
+                  className="relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  aria-label="알림"
+                  title="알림"
+                  aria-haspopup="dialog"
+                  aria-expanded={notificationOpen}
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
                     <path
-                      d="M4 7h16M4 12h16M4 17h16"
+                      d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0a3 3 0 0 1-6 0"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.8"
                       strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                   </svg>
-                </button>
-                <div className="min-w-0">
-                  <h1 className="truncate text-sm font-semibold text-slate-900 md:text-base">{currentSection.label}</h1>
-                  <p className="truncate text-xs text-slate-500">{currentSection.desc}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSiderCollapsed((prev) => !prev)}
-                  className="hidden h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 lg:inline-flex"
-                  aria-label="사이드바 표시 전환"
-                  title={siderCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
-                >
-                  {siderCollapsed ? ">" : "<"}
-                </button>
-                <div className="relative" ref={notificationRef}>
-                  <button
-                    type="button"
-                    onClick={() => setNotificationOpen((prev) => !prev)}
-                    className="relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50"
-                    aria-label="알림"
-                    title="알림"
-                    aria-haspopup="dialog"
-                    aria-expanded={notificationOpen}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
-                      <path
-                        d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0a3 3 0 0 1-6 0"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    {notificationCount > 0 && (
-                      <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
-                        {notificationCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {notificationOpen && (
-                    <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                      <div className="border-b border-slate-200 px-3 py-2">
-                        <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">알림</div>
-                        <div className="mt-0.5 text-xs text-slate-400">운영 점검 항목 바로가기</div>
-                      </div>
-                      <div className="max-h-80 overflow-y-auto">
-                        {NOTIFICATION_ITEMS.length === 0 ? (
-                          <div className="px-3 py-6 text-center text-xs text-slate-500">새 알림이 없습니다.</div>
-                        ) : (
-                          NOTIFICATION_ITEMS.map((item) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => handleNotificationNavigate(item.to)}
-                              className="block w-full border-b border-slate-100 px-3 py-3 text-left transition hover:bg-slate-50"
-                            >
-                              <div className="text-sm font-semibold text-slate-800">{item.title}</div>
-                              <div className="mt-1 text-xs text-slate-500">{item.desc}</div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
+                  {notificationCount > 0 && (
+                    <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+                      {notificationCount}
+                    </span>
                   )}
-                </div>
-                <span
-                  className={`hidden rounded-full px-2 py-1 text-[11px] font-semibold md:inline-flex ${
-                    isAdmin ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
-                  }`}
-                >
-                  {roleLabel(user?.role)}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                >
-                  로그아웃
                 </button>
-              </div>
-            </div>
-          </header>
 
-          <main className="p-3 md:p-5">
-            <Outlet />
-          </main>
-        </div>
+                {notificationOpen && (
+                  <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <div className="border-b border-slate-200 px-3 py-2">
+                      <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">알림</div>
+                      <div className="mt-0.5 text-xs text-slate-400">운영 바로가기 항목</div>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {NOTIFICATION_ITEMS.length === 0 ? (
+                        <div className="px-3 py-6 text-center text-xs text-slate-500">새 알림이 없습니다.</div>
+                      ) : (
+                        NOTIFICATION_ITEMS.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleNotificationNavigate(item.to)}
+                            className="block w-full border-b border-slate-100 px-3 py-3 text-left transition hover:bg-slate-50"
+                          >
+                            <div className="text-sm font-semibold text-slate-800">{item.title}</div>
+                            <div className="mt-1 text-xs text-slate-500">{item.desc}</div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <span
+                className={`hidden rounded-full px-2 py-1 text-[11px] font-semibold md:inline-flex ${
+                  isAdmin ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+                }`}
+              >
+                {roleLabel(user?.role)}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+              >
+                로그아웃
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="p-4 md:p-5">
+          <Outlet />
+        </main>
       </div>
 
       {mobileMenuOpen && (
         <button
           type="button"
           onClick={() => setMobileMenuOpen(false)}
-          className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/45 lg:hidden"
           aria-label="메뉴 닫기 배경"
         />
       )}

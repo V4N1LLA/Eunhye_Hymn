@@ -9,7 +9,7 @@ function isLocalDevHost(hostname: string): boolean {
 function LoginWaveBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute -right-[320px] -top-[920px] sm:-right-[180px]">
+      <div className="absolute -right-[300px] -top-[900px] sm:-right-[160px] sm:-top-[860px]">
         <svg width="1337" height="1337" viewBox="0 0 1337 1337" aria-hidden="true">
           <defs>
             <path
@@ -24,7 +24,7 @@ function LoginWaveBackground() {
           <use xlinkHref="#login-wave-path-1" fill="url(#login-wave-gradient-1)" />
         </svg>
       </div>
-      <div className="absolute -bottom-[430px] -left-[220px] sm:-bottom-[520px]">
+      <div className="absolute -bottom-[420px] -left-[220px] sm:-bottom-[510px] sm:-left-[170px]">
         <svg width="968" height="896" viewBox="0 0 968 896" aria-hidden="true">
           <defs>
             <path
@@ -32,7 +32,7 @@ function LoginWaveBackground() {
               d="M896 448C1142.63 465.575 695.258 896 448 896C200.742 896 0 695.258 0 448C0 200.742 200.742 0 448 0C695.258 0 475 418 896 448Z"
             />
             <linearGradient id="login-wave-gradient-2" x1="0.5" y1="0" x2="0.5" y2="1">
-              <stop offset="0" stopColor="#4f46e5" />
+              <stop offset="0" stopColor="#6366f1" />
               <stop offset="1" stopColor="#c7d2fe" />
             </linearGradient>
           </defs>
@@ -116,158 +116,124 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#eef2ff] px-4 py-8 md:py-12">
+    <div className="relative min-h-screen overflow-hidden bg-[#ecebff]">
       <LoginWaveBackground />
-      <div className="relative z-10 mx-auto w-full max-w-6xl">
-        <div className="grid items-start gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="rounded-[24px] border border-white/45 bg-white/65 p-6 shadow-[0_16px_50px_rgb(15_23_42/14%)] backdrop-blur-xl md:p-8">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-lg font-bold text-white shadow-lg shadow-indigo-600/35">
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10">
+        <section className="w-full max-w-[420px] rounded-2xl border border-white/80 bg-white/92 p-6 shadow-[0_16px_40px_rgb(15_23_42/14%)] backdrop-blur md:p-7">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-base font-bold text-white shadow-md shadow-indigo-500/30">
                 EH
               </span>
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-indigo-700">Eunhye Hymn Admin</div>
-                <div className="mt-0.5 text-sm font-semibold text-slate-900">운영 콘솔 로그인</div>
+                <div className="text-sm font-semibold text-indigo-600">은혜찬양 관리자</div>
+                <div className="mt-0.5 text-xs text-slate-500">비밀번호 로그인</div>
               </div>
             </div>
-
-            <h1 className="mt-5 text-3xl font-semibold leading-tight text-slate-900">관리자 로그인</h1>
-            <p className="mt-2 max-w-xl text-sm text-slate-600">
-              단일 관리자 콘솔입니다. 관리자 ID/비밀번호로 로그인해 주세요.
-            </p>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Auth</div>
-                <div className="mt-1 text-sm font-semibold text-slate-900">관리자 계정 로그인</div>
-                <div className="mt-1 text-xs text-slate-500">ID/비밀번호 기반 인증</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Ops</div>
-                <div className="mt-1 text-sm font-semibold text-slate-900">운영 메뉴 즉시 접근</div>
-                <div className="mt-1 text-xs text-slate-500">로그인 후 화면 바로 이동</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Recover</div>
-                <div className="mt-1 text-sm font-semibold text-slate-900">세션 초기화 지원</div>
-                <div className="mt-1 text-xs text-slate-500">권한 오류 시 즉시 복구</div>
-              </div>
+            <div className="inline-flex items-center gap-1 text-slate-400">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-xs">☼</span>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-xs">A</span>
             </div>
+          </div>
 
-            <div className="mt-5 rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm text-slate-700">
-              <div className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">연결 정보</div>
-              <div className="mt-1 font-mono text-xs text-slate-600">{host}</div>
-              <div className="mt-3 space-y-1 text-xs text-slate-500">
-                <div>1. 관리자 계정 정보 입력</div>
-                <div>2. 로그인 후 좌측 메뉴에서 운영 화면 이동</div>
-                <div>3. 권한 문제가 있으면 세션 초기화 후 재로그인</div>
-              </div>
-            </div>
-          </section>
+          <h1 className="mt-5 text-lg font-semibold text-slate-900">관리자 로그인</h1>
+          <p className="mt-1 text-sm text-slate-500">관리자 ID/비밀번호로 로그인해 주세요.</p>
 
-          <section className="rounded-[24px] border border-white/45 bg-white/80 p-6 shadow-[0_18px_60px_rgb(15_23_42/18%)] backdrop-blur-xl md:p-8">
-            <div className="flex items-start justify-between gap-3">
+          {notice && <div className="soy-alert soy-alert-success mt-4">{notice}</div>}
+          {error && <div className="soy-alert soy-alert-error mt-4">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+            <label className="block">
+              <span className="soy-label">로그인 ID</span>
+              <input
+                value={loginId}
+                onChange={(event) => setLoginId(event.target.value)}
+                autoComplete="username"
+                className="soy-input"
+                placeholder="admin-id"
+              />
+            </label>
+            <label className="block">
+              <span className="soy-label">비밀번호</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                className="soy-input"
+                placeholder="********"
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="soy-btn soy-btn-primary !mt-1 !w-full !justify-center !rounded-lg !py-2.5"
+            >
+              {loading ? "로그인 중..." : "로그인"}
+            </button>
+          </form>
+
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleResetSession}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+            >
+              세션 초기화
+            </button>
+            <Link to="/login/help" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+              로그인 도움말
+            </Link>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+            접속 호스트: <span className="font-mono">{host}</span>
+          </div>
+        </section>
+      </div>
+
+      {showDevLogin && (
+        <div className="relative z-10 -mt-4 pb-10">
+          <section className="mx-auto w-full max-w-[420px] rounded-2xl border border-amber-200 bg-amber-50/95 p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">관리자 인증</h2>
-                <p className="mt-1 text-sm text-slate-500">ID/비밀번호 로그인 전용</p>
+                <h3 className="text-sm font-semibold text-amber-900">로컬 개발용 로그인</h3>
+                <p className="mt-0.5 text-xs text-amber-800">localhost 환경에서만 표시됩니다.</p>
               </div>
-              <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                운영 접속
-              </span>
-            </div>
-
-            {notice && <div className="soy-alert soy-alert-success mt-4">{notice}</div>}
-            {error && <div className="soy-alert soy-alert-error mt-4">{error}</div>}
-
-            <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-              <label className="block">
-                <span className="soy-label">로그인 ID</span>
-                <input
-                  value={loginId}
-                  onChange={(event) => setLoginId(event.target.value)}
-                  autoComplete="username"
-                  className="soy-input !rounded-xl !border-slate-200 !bg-white/90"
-                  placeholder="admin-id"
-                />
-              </label>
-              <label className="block">
-                <span className="soy-label">비밀번호</span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="current-password"
-                  className="soy-input !rounded-xl !border-slate-200 !bg-white/90"
-                  placeholder="********"
-                />
-              </label>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="soy-btn soy-btn-primary !w-full justify-center !rounded-xl !py-3 !text-sm !font-semibold"
-              >
-                {loading ? "로그인 중..." : "로그인"}
-              </button>
-            </form>
-
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
-                disabled={loading}
-                onClick={handleResetSession}
-                className="soy-btn soy-btn-secondary !w-full justify-center !rounded-xl"
+                onClick={() => setShowDevForm((prev) => !prev)}
+                className="rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100"
               >
-                세션 초기화
+                {showDevForm ? "닫기" : "열기"}
               </button>
-              <Link
-                to="/login/help"
-                className="soy-btn soy-btn-ghost !w-full justify-center !rounded-xl !border !border-slate-200 !text-slate-600"
-              >
-                로그인 도움말 열기
-              </Link>
             </div>
-          </section>
 
-          {showDevLogin && (
-            <section className="rounded-[20px] border border-amber-200/80 bg-amber-50/95 p-6 shadow-sm lg:col-span-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-amber-900">로컬 개발용 로그인</h3>
-                  <p className="mt-1 text-xs text-amber-800">localhost 환경에서만 표시됩니다.</p>
-                </div>
+            {showDevForm && (
+              <form onSubmit={handleDevLogin} className="mt-3 flex items-end gap-2">
+                <label className="min-w-0 flex-1">
+                  <span className="mb-1 block text-xs font-semibold text-amber-900">표시 이름</span>
+                  <input
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    className="w-full rounded-md border border-amber-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                </label>
                 <button
-                  type="button"
-                  onClick={() => setShowDevForm((prev) => !prev)}
-                  className="soy-btn !rounded-lg !border !border-amber-300 !bg-white !px-3 !py-1.5 !text-xs !font-semibold !text-amber-800 hover:!bg-amber-100"
+                  type="submit"
+                  disabled={loading}
+                  className="rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
                 >
-                  {showDevForm ? "개발 폼 닫기" : "개발 폼 열기"}
+                  {loading ? "처리 중..." : "개발 로그인"}
                 </button>
-              </div>
-
-              {showDevForm && (
-                <form onSubmit={handleDevLogin} className="mt-3 flex flex-wrap items-end gap-2">
-                  <label className="min-w-[220px] flex-1">
-                    <span className="mb-1 block text-xs font-semibold text-amber-900">표시 이름</span>
-                    <input
-                      value={displayName}
-                      onChange={(event) => setDisplayName(event.target.value)}
-                      className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
-                  >
-                    {loading ? "처리 중..." : "개발 로그인"}
-                  </button>
-                </form>
-              )}
-            </section>
-          )}
+              </form>
+            )}
+          </section>
         </div>
-      </div>
+      )}
     </div>
   );
 }
