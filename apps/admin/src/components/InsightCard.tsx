@@ -1,4 +1,4 @@
-type InsightTone = "indigo" | "emerald" | "amber" | "sky" | "violet" | "rose" | "slate";
+﻿type InsightTone = "indigo" | "emerald" | "amber" | "sky" | "violet" | "rose" | "slate";
 
 type InsightCardProps = {
   title: string;
@@ -105,7 +105,7 @@ export default function InsightCard({
       {ratioPercent != null && !loading && (
         <div className="relative mt-3">
           <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-            <span>비율</span>
+            <span>Ratio</span>
             <span>{ratioPercent}%</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-white/80">

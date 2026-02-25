@@ -2,6 +2,15 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-25
+
+### Korean terminology standardization (user-facing)
+- Replaced user-facing wording across app/docs with standardized terms (`말씀`, `찬양대`).
+- Updated files:
+  - `apps/admin/src/pages/AiRecommendationPage.tsx`
+  - `apps/mobile/lib/src/features/hymn/hymn_recommendation_page.dart`
+  - `docs/api-contract.md`
+
 ## 2026-02-24
 
 ### Review-comment refactor follow-up

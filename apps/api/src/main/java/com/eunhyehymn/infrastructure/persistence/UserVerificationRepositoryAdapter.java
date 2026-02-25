@@ -2,6 +2,7 @@ package com.eunhyehymn.infrastructure.persistence;
 
 import com.eunhyehymn.domain.model.UserVerification;
 import com.eunhyehymn.domain.repository.UserVerificationRepository;
+import java.util.List;
 import com.eunhyehymn.infrastructure.persistence.mapper.UserVerificationMapper;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +19,16 @@ public class UserVerificationRepositoryAdapter implements UserVerificationReposi
     @Override
     public Optional<UserVerification> findByUserId(UUID userId) {
         return userVerificationJpaRepository.findById(userId).map(UserVerificationMapper::toDomain);
+    }
+
+    @Override
+    public List<UserVerification> findByUserIdIn(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        return userVerificationJpaRepository.findByUserIdIn(userIds).stream()
+            .map(UserVerificationMapper::toDomain)
+            .toList();
     }
 
     @Override

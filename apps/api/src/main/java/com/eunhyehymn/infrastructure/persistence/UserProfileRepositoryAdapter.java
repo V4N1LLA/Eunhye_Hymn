@@ -2,6 +2,7 @@ package com.eunhyehymn.infrastructure.persistence;
 
 import com.eunhyehymn.domain.model.UserProfile;
 import com.eunhyehymn.domain.repository.UserProfileRepository;
+import java.util.List;
 import com.eunhyehymn.infrastructure.persistence.mapper.UserProfileMapper;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,5 +25,15 @@ public class UserProfileRepositoryAdapter implements UserProfileRepository {
     @Override
     public Optional<UserProfile> findByUserId(UUID userId) {
         return userProfileJpaRepository.findById(userId).map(UserProfileMapper::toDomain);
+    }
+
+    @Override
+    public List<UserProfile> findByUserIdIn(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        return userProfileJpaRepository.findByUserIdIn(userIds).stream()
+            .map(UserProfileMapper::toDomain)
+            .toList();
     }
 }

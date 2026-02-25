@@ -38,6 +38,7 @@ import com.eunhyehymn.domain.repository.ProfileChangeRequestRepository;
 import com.eunhyehymn.domain.repository.UserHymnStateRepository;
 import com.eunhyehymn.domain.repository.UserProfileRepository;
 import com.eunhyehymn.domain.repository.UserRepository;
+import com.eunhyehymn.domain.repository.UserVerificationRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -198,8 +199,12 @@ public class UseCaseConfig {
     }
 
     @Bean
-    AdminUpdateUserUseCase adminUpdateUserUseCase(UserRepository userRepository) {
-        return new AdminUpdateUserUseCase(userRepository);
+    AdminUpdateUserUseCase adminUpdateUserUseCase(
+        UserRepository userRepository,
+        UserProfileRepository userProfileRepository,
+        UserVerificationRepository userVerificationRepository
+    ) {
+        return new AdminUpdateUserUseCase(userRepository, userProfileRepository, userVerificationRepository);
     }
 
     @Bean

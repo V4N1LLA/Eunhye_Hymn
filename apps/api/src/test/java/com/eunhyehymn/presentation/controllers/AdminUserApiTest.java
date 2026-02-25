@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.eunhyehymn.domain.model.Gender;
 import com.eunhyehymn.domain.model.Role;
 import com.eunhyehymn.domain.model.UserStatus;
 import com.eunhyehymn.infrastructure.persistence.AssetJpaRepository;
@@ -21,6 +22,10 @@ import com.eunhyehymn.infrastructure.persistence.RefreshTokenJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserEntity;
 import com.eunhyehymn.infrastructure.persistence.UserHymnStateJpaRepository;
 import com.eunhyehymn.infrastructure.persistence.UserJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.UserProfileEntity;
+import com.eunhyehymn.infrastructure.persistence.UserProfileJpaRepository;
+import com.eunhyehymn.infrastructure.persistence.UserVerificationEntity;
+import com.eunhyehymn.infrastructure.persistence.UserVerificationJpaRepository;
 import com.eunhyehymn.infrastructure.security.JwtService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,6 +57,8 @@ class AdminUserApiTest {
     @Autowired private AuthIdentityJpaRepository authIdentityJpaRepository;
     @Autowired private RefreshTokenJpaRepository refreshTokenJpaRepository;
     @Autowired private InviteCodeJpaRepository inviteCodeJpaRepository;
+    @Autowired private UserProfileJpaRepository userProfileJpaRepository;
+    @Autowired private UserVerificationJpaRepository userVerificationJpaRepository;
 
     private UUID adminId;
     private String adminToken;
@@ -66,6 +73,8 @@ class AdminUserApiTest {
         hymnNoteJpaRepository.deleteAll();
         assetJpaRepository.deleteAll();
         authIdentityJpaRepository.deleteAll();
+        userVerificationJpaRepository.deleteAll();
+        userProfileJpaRepository.deleteAll();
         refreshTokenJpaRepository.deleteAll();
         hymnJpaRepository.deleteAll();
         userJpaRepository.deleteAll();
@@ -80,6 +89,22 @@ class AdminUserApiTest {
             "KAKAO",
             "1234567890123",
             "member@example.com",
+            Instant.now()
+        ));
+        userProfileJpaRepository.save(new UserProfileEntity(
+            userId,
+            "Grace Church",
+            "Kim Member",
+            "Youth A",
+            Gender.UNKNOWN,
+            Instant.now()
+        ));
+        userVerificationJpaRepository.save(new UserVerificationEntity(
+            userId,
+            null,
+            null,
+            "01012345678",
+            Instant.now(),
             Instant.now()
         ));
 
@@ -123,12 +148,26 @@ class AdminUserApiTest {
                 JsonNode firstIdentity = identities.get(0);
                 matched = "KAKAO".equals(firstIdentity.path("provider").asText())
                     && firstIdentity.path("providerSubjectMasked").asText().contains("...")
-                    && firstIdentity.path("emailMasked").asText().contains("@");
+                    && firstIdentity.path("emailMasked").asText().contains("@")
+                    && "member@example.com".equals(firstIdentity.path("email").asText())
+                    && "member@example.com".equals(userNode.path("primaryEmail").asText())
+                    && "Grace Church".equals(userNode.path("profile").path("churchName").asText())
+                    && "01012345678".equals(userNode.path("verification").path("phoneNumber").asText());
             }
             break;
         }
 
         assertTrue(matched, "Expected masked identity summary for member user");
+    }
+
+    @Test
+    void adminCanFilterUsersByChurchName() throws Exception {
+        mockMvc.perform(get("/admin/users")
+                .queryParam("churchName", "Grace Church")
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].id").value(userId.toString()));
     }
 
     @Test
@@ -154,6 +193,31 @@ class AdminUserApiTest {
                 .content(payload))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.status").value("DISABLED"));
+    }
+
+    @Test
+    void adminCanUpdateUserProfileAndPhone() throws Exception {
+        String payload = objectMapper.writeValueAsString(Map.of(
+            "displayName", "member-updated",
+            "churchName", "Hope Church",
+            "name", "Lee Member",
+            "group", "Youth B",
+            "gender", "female",
+            "phoneNumber", "010-2222-3333"
+        ));
+
+        mockMvc.perform(patch("/admin/users/" + userId)
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.displayName").value("member-updated"))
+            .andExpect(jsonPath("$.data.profile.churchName").value("Hope Church"))
+            .andExpect(jsonPath("$.data.profile.name").value("Lee Member"))
+            .andExpect(jsonPath("$.data.profile.group").value("Youth B"))
+            .andExpect(jsonPath("$.data.profile.gender").value("FEMALE"))
+            .andExpect(jsonPath("$.data.verification.phoneNumber").value("01022223333"))
+            .andExpect(jsonPath("$.data.verification.phoneVerified").value(true));
     }
 
     @Test
