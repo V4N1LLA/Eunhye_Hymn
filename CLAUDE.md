@@ -1,12 +1,19 @@
 ﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-24
+> 마지막 업데이트: 2026-02-25
 > 정합성 기준 문서: `docs/api-contract.md`, `docs/data-model.md`, `.env.example`, `apps/api/.env.example`
 
 ---
 
-## 최근 운영 상태 (2026-02-24)
+## 최근 운영 상태 (2026-02-25)
+
+- Admin UI/UX 개선 (Soybean 스타일 보강)
+  - 사이드바 토글: 너비 축소가 아닌 완전 숨김/복원으로 변경해 콘텐츠 겹침 이슈 해소
+  - 헤더 알림 벨: 클릭 시 운영 점검 알림 패널 노출, 외부 클릭/Esc로 닫힘
+  - 로그인 페이지: 운영 안내/인증 영역 분리 및 시각 계층 강화(기존 인증 문구/플로우 유지)
+- 문서 동기화
+  - `docs/admin/README.md`, `docs/changelog-dev.md`, `CLAUDE.md` 최신화
 
 - 릴리즈 준비 브랜치 정렬
   - `staging` <- `develop` 머지 반영 완료 (`e83ecbf`, logs `6459e95`)

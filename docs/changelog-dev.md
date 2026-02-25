@@ -4,6 +4,19 @@
 
 ## 2026-02-25
 
+### Admin Soybean UX completion (sidebar/notification/login)
+- `apps/admin/src/components/Layout.tsx`
+  - 사이드바 토글 동작을 폭 축소 방식에서 "완전 숨김/복원" 방식으로 변경해 콘텐츠 겹침 이슈를 해소
+  - 헤더 벨 아이콘 클릭 시 운영 점검 알림 패널이 열리도록 구현(외부 클릭/Esc 닫기 포함)
+- `apps/admin/src/pages/LoginPage.tsx`
+  - 기존 인증 로직/문구는 유지하면서 Soybean 스타일 기반으로 로그인 레이아웃을 전면 재구성
+  - 운영 안내 카드, 인증 카드, 세션 초기화/도움말 액션, 로컬 개발 로그인 영역의 시각적 계층 정리
+- `docs/admin/README.md`
+  - 공통 레이아웃 UX(사이드바 토글/알림 패널/로그인 화면 구성) 운영 기준 문서화
+- 검증
+  - `cd apps/admin && npx tsc --noEmit`
+  - `cd apps/admin && npm run build`
+
 ### Korean terminology standardization (user-facing)
 - Replaced user-facing wording across app/docs with standardized terms (`말씀`, `찬양대`).
 - Updated files:
