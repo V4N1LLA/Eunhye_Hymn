@@ -104,7 +104,7 @@ class _HymnRecommendationPageState extends State<HymnRecommendationPage> {
                     minLines: 3,
                     maxLines: 5,
                     decoration: const InputDecoration(
-                      hintText: '예: 새벽 예배, 차분하고 묵상 분위기',
+                      hintText: '예: 새벽 말씀, 차분하고 묵상 분위기',
                     ),
                   ),
                   const SizedBox(height: 10),
