@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --sb-primary-rgb: 100 108 255;
-  --sb-layout-rgb: 247 250 252;
+  --sb-primary-rgb: 79 70 229;
+  --sb-layout-rgb: 241 245 249;
   --sb-container-rgb: 255 255 255;
   --sb-text-rgb: 31 31 31;
   --sb-muted-rgb: 100 116 139;
   --sb-border-rgb: 226 232 240;
-  --sb-header-shadow: 0 1px 2px rgb(0 21 41 / 8%);
-  --sb-sider-shadow: 2px 0 8px rgb(29 35 41 / 5%);
-  --sb-card-shadow: 0 6px 14px rgb(15 23 42 / 5%);
-  --sb-radius: 8px;
+  --sb-header-shadow: 0 10px 26px rgb(15 23 42 / 8%);
+  --sb-sider-shadow: 0 16px 36px rgb(15 23 42 / 10%);
+  --sb-card-shadow: 0 12px 32px rgb(15 23 42 / 10%);
+  --sb-radius: 12px;
 }
 
 *,

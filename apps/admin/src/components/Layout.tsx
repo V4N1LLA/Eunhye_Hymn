@@ -49,9 +49,9 @@ function resolveCurrentSection(pathname: string): NavItem {
 }
 
 function sidebarLinkClass(isActive: boolean): string {
-  const base = "group flex items-start justify-between rounded-lg border px-3 py-2.5 text-sm transition";
+  const base = "group flex items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition-all duration-150";
   if (isActive) {
-    return `${base} border-indigo-200 bg-indigo-50 text-indigo-900`;
+    return `${base} border-indigo-200 bg-indigo-50 text-indigo-900 shadow-sm`;
   }
   return `${base} border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900`;
 }
@@ -126,10 +126,10 @@ export default function Layout() {
 
   return (
     <div className="soy-layout-bg min-h-screen text-slate-900">
-      <div className="min-h-screen lg:flex">
+      <div className="min-h-screen lg:flex lg:gap-3 lg:p-3">
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[220px] overflow-hidden border-r border-slate-200 bg-white shadow-[var(--sb-sider-shadow)] transition-[width,transform,opacity,border-color] duration-200 lg:static ${
-            siderCollapsed ? "lg:w-0 lg:opacity-0 lg:pointer-events-none lg:border-r-transparent" : "lg:w-[220px]"
+          className={`fixed inset-y-0 left-0 z-40 w-[240px] overflow-hidden border-r border-slate-200 bg-white/95 shadow-[var(--sb-sider-shadow)] backdrop-blur-xl transition-[width,transform,opacity,border-color] duration-200 lg:static lg:rounded-2xl lg:border lg:border-slate-200/90 ${
+            siderCollapsed ? "lg:w-0 lg:opacity-0 lg:pointer-events-none lg:border-transparent" : "lg:w-[240px]"
           } ${
             mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           } ${
@@ -138,7 +138,7 @@ export default function Layout() {
         >
           <div className="flex h-14 items-center justify-between border-b border-slate-200 px-3">
             <NavLink to="/" className="flex min-w-0 items-center gap-2 overflow-hidden">
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-100 text-sm font-bold text-indigo-700">
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-md shadow-indigo-600/30">
                 EH
               </span>
               <span className="truncate text-sm font-semibold text-slate-900">은혜찬양 관리자</span>
@@ -163,7 +163,14 @@ export default function Layout() {
                 <NavLink key={item.to} to={item.to} end={item.to === "/"}>
                   {({ isActive }) => (
                     <div className={sidebarLinkClass(isActive)}>
-                      <div className="min-w-0">
+                      <span
+                        className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold ${
+                          isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {item.label.slice(0, 1)}
+                      </span>
+                      <div className="min-w-0 flex-1">
                         <div className="truncate font-semibold">{item.label}</div>
                         <div className="mt-0.5 truncate text-xs text-slate-500">{item.desc}</div>
                       </div>
@@ -173,14 +180,14 @@ export default function Layout() {
               ))}
             </nav>
 
-            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
               접속 호스트: <span className="font-mono text-slate-700">{host}</span>
             </div>
           </div>
         </aside>
 
         <div className="min-h-screen min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-[var(--sb-header-shadow)] backdrop-blur">
+          <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-[var(--sb-header-shadow)] backdrop-blur lg:rounded-2xl lg:border lg:border-slate-200/90">
             <div className="flex h-14 items-center justify-between gap-3 px-3 md:px-5">
               <div className="flex min-w-0 items-center gap-2">
                 <button
@@ -243,7 +250,7 @@ export default function Layout() {
                   </button>
 
                   {notificationOpen && (
-                    <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                    <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                       <div className="border-b border-slate-200 px-3 py-2">
                         <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">알림</div>
                         <div className="mt-0.5 text-xs text-slate-400">운영 점검 항목 바로가기</div>
@@ -257,7 +264,7 @@ export default function Layout() {
                               key={item.id}
                               type="button"
                               onClick={() => handleNotificationNavigate(item.to)}
-                              className="block w-full border-b border-slate-100 px-3 py-3 text-left hover:bg-slate-50"
+                              className="block w-full border-b border-slate-100 px-3 py-3 text-left transition hover:bg-slate-50"
                             >
                               <div className="text-sm font-semibold text-slate-800">{item.title}</div>
                               <div className="mt-1 text-xs text-slate-500">{item.desc}</div>
