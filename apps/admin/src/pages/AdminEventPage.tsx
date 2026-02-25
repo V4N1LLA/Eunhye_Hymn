@@ -1,13 +1,13 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+﻿import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   createAdminEventExportJob,
   downloadAdminEventExportJobCsv,
   exportAdminEventsCsv,
-  getAdminEventExportOpsMetrics,
   getAdminEventExportJob,
+  getAdminEventExportOpsMetrics,
+  listAdminEvents,
   type AdminEventExportJob,
   type AdminEventExportOpsMetrics,
-  listAdminEvents,
   type AdminEventItem,
   type AdminEventSummary,
   type EventType,
@@ -15,11 +15,11 @@ import {
 import { listUsers } from "../api/adminUsers";
 
 const EVENT_TYPE_OPTIONS: Array<{ label: string; value: "all" | EventType }> = [
-  { label: "전체", value: "all" },
-  { label: "열람", value: "HYMN_OPENED" },
-  { label: "파트 재생", value: "PART_PLAYED" },
-  { label: "메모 저장", value: "NOTE_SAVED" },
-  { label: "즐겨찾기", value: "FAVORITE_TOGGLED" },
+  { label: "All", value: "all" },
+  { label: "Hymn Opened", value: "HYMN_OPENED" },
+  { label: "Part Played", value: "PART_PLAYED" },
+  { label: "Note Saved", value: "NOTE_SAVED" },
+  { label: "Favorite Toggled", value: "FAVORITE_TOGGLED" },
 ];
 
 const DAY_PRESETS = [1, 7, 30, 60, 90];
@@ -71,15 +71,21 @@ function formatSeconds(value: number): string {
 
 function formatAsyncJobStatus(status: AdminEventExportJob["status"]): string {
   if (status === "QUEUED") {
-    return "대기 중";
+    return "Queued";
   }
   if (status === "RUNNING") {
-    return "처리 중";
+    return "Running";
   }
   if (status === "COMPLETED") {
-    return "완료";
+    return "Completed";
   }
-  return "실패";
+  return "Failed";
+}
+
+function asyncStatusPillClass(status: AdminEventExportJob["status"]): string {
+  if (status === "COMPLETED") return "bg-emerald-100 text-emerald-700";
+  if (status === "FAILED") return "bg-red-100 text-red-700";
+  return "bg-amber-100 text-amber-700";
 }
 
 export default function AdminEventPage() {
@@ -139,7 +145,7 @@ export default function AdminEventPage() {
       setSummary(data.summary);
       setPagination(data.pagination);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "감사 로그를 불러오지 못했습니다.");
+      setError(err instanceof Error ? err.message : "Failed to load audit events.");
     } finally {
       setLoading(false);
     }
@@ -151,7 +157,7 @@ export default function AdminEventPage() {
       const data = await getAdminEventExportOpsMetrics(days);
       setOpsMetrics(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "운영 지표를 불러오지 못했습니다.");
+      setError(err instanceof Error ? err.message : "Failed to load export ops metrics.");
     } finally {
       setOpsMetricsLoading(false);
     }
@@ -166,7 +172,7 @@ export default function AdminEventPage() {
       }
       setUserNamesById(nextMap);
     } catch {
-      // Ignore user-name map failures; events table should still work with raw UUIDs.
+      // Ignore failures. Table still works with raw UUID.
     }
   };
 
@@ -201,7 +207,7 @@ export default function AdminEventPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "비동기 내보내기 상태를 확인하지 못했습니다.");
+          setError(err instanceof Error ? err.message : "Failed to check async export status.");
         }
       }
     };
@@ -217,8 +223,8 @@ export default function AdminEventPage() {
     };
   }, [asyncJob?.id, asyncJob?.status]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setPage(1);
     void fetchEvents(1);
   };
@@ -237,7 +243,7 @@ export default function AdminEventPage() {
       });
       triggerDownload(result.blob, result.filename);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "CSV 내보내기에 실패했습니다.");
+      setError(err instanceof Error ? err.message : "Failed to export CSV.");
     } finally {
       setExporting(false);
     }
@@ -257,7 +263,7 @@ export default function AdminEventPage() {
       });
       setAsyncJob(job);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "비동기 내보내기 요청에 실패했습니다.");
+      setError(err instanceof Error ? err.message : "Failed to create async export job.");
     } finally {
       setCreatingAsyncJob(false);
     }
@@ -276,31 +282,30 @@ export default function AdminEventPage() {
       const refreshed = await getAdminEventExportJob(asyncJob.id);
       setAsyncJob(refreshed);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "비동기 CSV 다운로드에 실패했습니다.");
+      setError(err instanceof Error ? err.message : "Failed to download async CSV.");
     } finally {
       setDownloadingAsyncJob(false);
     }
   };
 
   const resolveUserName = (targetUserId: string): string => {
-    return userNamesById[targetUserId] ?? "미등록 사용자";
+    return userNamesById[targetUserId] ?? "Unknown user";
   };
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900">감사 로그/분석</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          사용자 이벤트 조회, 기간 집계, CSV 내보내기(동기/비동기)까지 한 화면에서 처리합니다.
-        </p>
+      <section className="soy-panel">
+        <p className="soy-kicker">Audit</p>
+        <h1 className="soy-title">Audit Events and Export</h1>
+        <p className="soy-description">Filter events, inspect summary windows, and export CSV (sync/async).</p>
       </section>
 
-      <div className="bg-white rounded-2xl border border-indigo-100 p-4 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <section className="soy-panel">
+        <div className="soy-panel-header">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">비동기 내보내기 운영 지표</h2>
+            <h2 className="soy-title">Async Export Ops Metrics</h2>
             {opsMetrics && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="soy-description">
                 {formatDateTime(opsMetrics.fromInclusive)} ~ {formatDateTime(opsMetrics.toExclusive)}
               </p>
             )}
@@ -311,11 +316,7 @@ export default function AdminEventPage() {
                 key={days}
                 type="button"
                 onClick={() => setOpsMetricsDays(days)}
-                className={`px-2 py-1 text-xs rounded border ${
-                  opsMetricsDays === days
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
+                className={`soy-btn ${opsMetricsDays === days ? "soy-btn-primary" : "soy-btn-secondary"}`}
               >
                 {`${days}d`}
               </button>
@@ -323,51 +324,46 @@ export default function AdminEventPage() {
           </div>
         </div>
 
-        {opsMetricsLoading && <p className="text-sm text-gray-500 mt-3">지표 로딩 중...</p>}
+        {opsMetricsLoading && <p className="mt-3 text-sm text-slate-500">Loading metrics...</p>}
 
         {!opsMetricsLoading && opsMetrics && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
-            <div className="rounded border border-gray-200 px-3 py-2">
-              <p className="text-xs text-gray-500">총 작업 수</p>
-              <p className="text-xl font-semibold text-gray-900">{opsMetrics.jobs.total.toLocaleString("ko-KR")}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                completed {opsMetrics.jobs.completed.toLocaleString("ko-KR")} / failed{" "}
-                {opsMetrics.jobs.failed.toLocaleString("ko-KR")}
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="soy-stat-card">
+              <p className="soy-stat-label">Total Jobs</p>
+              <p className="soy-stat-value">{opsMetrics.jobs.total.toLocaleString("ko-KR")}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                completed {opsMetrics.jobs.completed.toLocaleString("ko-KR")} / failed {opsMetrics.jobs.failed.toLocaleString("ko-KR")}
               </p>
             </div>
-            <div className="rounded border border-gray-200 px-3 py-2">
-              <p className="text-xs text-gray-500">실패율</p>
-              <p className="text-xl font-semibold text-rose-600">{opsMetrics.jobs.failureRatePercent.toFixed(2)}%</p>
-              <p className="text-xs text-gray-500 mt-1">
-                queued {opsMetrics.jobs.queued.toLocaleString("ko-KR")} / running{" "}
-                {opsMetrics.jobs.running.toLocaleString("ko-KR")}
+            <div className="soy-stat-card">
+              <p className="soy-stat-label">Failure Rate</p>
+              <p className="soy-stat-value text-rose-600">{opsMetrics.jobs.failureRatePercent.toFixed(2)}%</p>
+              <p className="mt-1 text-xs text-slate-500">
+                queued {opsMetrics.jobs.queued.toLocaleString("ko-KR")} / running {opsMetrics.jobs.running.toLocaleString("ko-KR")}
               </p>
             </div>
-            <div className="rounded border border-gray-200 px-3 py-2">
-              <p className="text-xs text-gray-500">처리 시간</p>
-              <p className="text-xl font-semibold text-gray-900">{formatSeconds(opsMetrics.processing.averageSeconds)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                p95 {formatSeconds(opsMetrics.processing.p95Seconds)} / sample{" "}
-                {opsMetrics.processing.measuredJobs.toLocaleString("ko-KR")}
+            <div className="soy-stat-card">
+              <p className="soy-stat-label">Processing Time</p>
+              <p className="soy-stat-value">{formatSeconds(opsMetrics.processing.averageSeconds)}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                p95 {formatSeconds(opsMetrics.processing.p95Seconds)} / sample {opsMetrics.processing.measuredJobs.toLocaleString("ko-KR")}
               </p>
             </div>
-            <div className="rounded border border-gray-200 px-3 py-2">
-              <p className="text-xs text-gray-500">정리 건수</p>
-              <p className="text-xl font-semibold text-emerald-700">
-                {opsMetrics.cleanup.deletedJobs.toLocaleString("ko-KR")}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">runs {opsMetrics.cleanup.runCount.toLocaleString("ko-KR")}</p>
+            <div className="soy-stat-card">
+              <p className="soy-stat-label">Cleanup Deleted</p>
+              <p className="soy-stat-value text-emerald-700">{opsMetrics.cleanup.deletedJobs.toLocaleString("ko-KR")}</p>
+              <p className="mt-1 text-xs text-slate-500">runs {opsMetrics.cleanup.runCount.toLocaleString("ko-KR")}</p>
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <form onSubmit={handleSubmit} className="soy-panel">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <select
             value={eventType}
-            onChange={(e) => setEventType(e.target.value as "all" | EventType)}
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={(event) => setEventType(event.target.value as "all" | EventType)}
+            className="soy-select"
           >
             {EVENT_TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -375,41 +371,36 @@ export default function AdminEventPage() {
               </option>
             ))}
           </select>
+
           <input
             type="text"
             value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            placeholder="userId(UUID)"
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={(event) => setUserId(event.target.value)}
+            placeholder="userId (UUID)"
+            className="soy-input"
           />
+
           <input
             type="text"
             value={hymnId}
-            onChange={(e) => setHymnId(e.target.value)}
-            placeholder="hymnId(UUID)"
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={(event) => setHymnId(event.target.value)}
+            placeholder="hymnId (UUID)"
+            className="soy-input"
           />
-          <input
-            type="datetime-local"
-            value={fromLocal}
-            onChange={(e) => setFromLocal(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <input
-            type="datetime-local"
-            value={toLocal}
-            onChange={(e) => setToLocal(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+
+          <input type="datetime-local" value={fromLocal} onChange={(event) => setFromLocal(event.target.value)} className="soy-input" />
+
+          <input type="datetime-local" value={toLocal} onChange={(event) => setToLocal(event.target.value)} className="soy-input" />
+
           <div className="grid grid-cols-2 gap-3">
             <select
               value={size}
-              onChange={(e) => setSize(Number(e.target.value))}
-              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              title="페이지 크기"
+              onChange={(event) => setSize(Number(event.target.value))}
+              className="soy-select"
+              title="Page size"
             >
               {SIZE_OPTIONS.map((option) => (
-                <option key={option} value={option}>{`${option}건`}</option>
+                <option key={option} value={option}>{`${option} rows`}</option>
               ))}
             </select>
             <input
@@ -417,8 +408,8 @@ export default function AdminEventPage() {
               min={MIN_SUMMARY_DAYS}
               max={MAX_SUMMARY_DAYS}
               value={summaryDays}
-              onChange={(e) => {
-                const parsed = Number.parseInt(e.target.value, 10);
+              onChange={(event) => {
+                const parsed = Number.parseInt(event.target.value, 10);
                 if (Number.isNaN(parsed)) {
                   setSummaryDays(MIN_SUMMARY_DAYS);
                   return;
@@ -426,192 +417,182 @@ export default function AdminEventPage() {
                 setSummaryDays(clampSummaryDays(parsed));
               }}
               onBlur={() => setSummaryDays((prev) => clampSummaryDays(prev))}
-              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              title="집계 기간(일)"
-              placeholder="집계 기간(일)"
+              className="soy-input"
+              title="Summary days"
+              placeholder="Summary days"
             />
           </div>
         </div>
+
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-gray-500">집계 기간 프리셋</span>
+          <span className="text-xs text-slate-500">Summary presets:</span>
           {DAY_PRESETS.map((days) => (
             <button
               key={days}
               type="button"
               onClick={() => setSummaryDays(days)}
-              className={`px-2 py-1 text-xs rounded border ${
-                summaryDays === days
-                  ? "bg-indigo-600 text-white border-indigo-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-              }`}
+              className={`soy-btn ${summaryDays === days ? "soy-btn-primary" : "soy-btn-secondary"}`}
             >
-              {`${days}일`}
+              {`${days}d`}
             </button>
           ))}
-          <span className="text-xs text-gray-500">허용 범위: 1~90일</span>
+          <span className="text-xs text-slate-500">Range: 1~90 days</span>
         </div>
-        <div className="mt-3 flex justify-end gap-2">
+
+        <div className="mt-3 flex flex-wrap justify-end gap-2">
           <button
             type="button"
-            onClick={handleCreateAsyncExportJob}
-            className="border border-emerald-600 text-emerald-700 px-4 py-2 rounded hover:bg-emerald-50 disabled:opacity-60"
+            onClick={() => void handleCreateAsyncExportJob()}
+            className="soy-btn border-emerald-600 text-emerald-700 hover:bg-emerald-50"
             disabled={loading || creatingAsyncJob}
-            title={`필터 조건 기준 최대 ${ASYNC_EXPORT_LIMIT.toLocaleString("ko-KR")}건 비동기 내보내기`}
+            title={`Create async export up to ${ASYNC_EXPORT_LIMIT.toLocaleString("ko-KR")} rows`}
           >
-            {creatingAsyncJob ? "요청 중..." : "비동기 CSV 요청"}
+            {creatingAsyncJob ? "Requesting..." : "Async CSV Request"}
           </button>
           <button
             type="button"
-            onClick={handleExportCsv}
-            className="border border-indigo-600 text-indigo-700 px-4 py-2 rounded hover:bg-indigo-50 disabled:opacity-60"
+            onClick={() => void handleExportCsv()}
+            className="soy-btn border-indigo-600 text-indigo-700 hover:bg-indigo-50"
             disabled={loading || exporting}
           >
-            {exporting ? "내보내는 중..." : "CSV 내보내기"}
+            {exporting ? "Exporting..." : "CSV Export"}
           </button>
-          <button
-            type="submit"
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-60"
-            disabled={loading}
-          >
-            {loading ? "조회 중..." : "조회"}
+          <button type="submit" className="soy-btn soy-btn-primary" disabled={loading}>
+            {loading ? "Loading..." : "Search"}
           </button>
         </div>
       </form>
 
-      {error && <p className="text-red-600 mb-4">{error}</p>}
+      {error && <div className="soy-alert soy-alert-error">{error}</div>}
 
       {asyncJob && (
-        <div className="bg-white rounded-lg shadow p-4 mb-4 border border-emerald-100">
+        <section className="soy-panel border-emerald-100">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm text-gray-500">비동기 내보내기 작업</p>
-              <p className="text-xs text-gray-500 break-all">jobId: {asyncJob.id}</p>
+              <p className="text-sm text-slate-500">Async export job</p>
+              <p className="break-all text-xs text-slate-500">jobId: {asyncJob.id}</p>
             </div>
-            <span
-              className={`px-2 py-1 text-xs rounded-full font-medium ${
-                asyncJob.status === "COMPLETED"
-                  ? "bg-emerald-100 text-emerald-700"
-                  : asyncJob.status === "FAILED"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {formatAsyncJobStatus(asyncJob.status)}
-            </span>
+            <span className={`soy-pill ${asyncStatusPillClass(asyncJob.status)}`}>{formatAsyncJobStatus(asyncJob.status)}</span>
           </div>
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-            <div>요청 상한: {asyncJob.exportLimit.toLocaleString("ko-KR")}건</div>
-            <div>완료 건수: {(asyncJob.rowCount ?? 0).toLocaleString("ko-KR")}건</div>
-            <div>요청 시각: {formatDateTime(asyncJob.createdAt)}</div>
-            <div>완료 시각: {asyncJob.completedAt ? formatDateTime(asyncJob.completedAt) : "-"}</div>
+
+          <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-600 md:grid-cols-2">
+            <div>Export limit: {asyncJob.exportLimit.toLocaleString("ko-KR")}</div>
+            <div>Rows: {(asyncJob.rowCount ?? 0).toLocaleString("ko-KR")}</div>
+            <div>Created: {formatDateTime(asyncJob.createdAt)}</div>
+            <div>Completed: {asyncJob.completedAt ? formatDateTime(asyncJob.completedAt) : "-"}</div>
           </div>
+
           {asyncJob.errorMessage && <p className="mt-2 text-sm text-red-600">{asyncJob.errorMessage}</p>}
+
           <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
             {(asyncJob.status === "QUEUED" || asyncJob.status === "RUNNING") && (
-              <span className="text-xs text-gray-500">2초 간격으로 상태를 자동 갱신합니다.</span>
+              <span className="text-xs text-slate-500">Auto-refresh every 2 seconds.</span>
             )}
             <button
               type="button"
-              onClick={handleDownloadAsyncExport}
+              onClick={() => void handleDownloadAsyncExport()}
               disabled={!asyncJob.downloadable || downloadingAsyncJob}
-              className="border border-emerald-600 text-emerald-700 px-3 py-1.5 rounded hover:bg-emerald-50 disabled:opacity-50"
+              className="soy-btn border-emerald-600 text-emerald-700 hover:bg-emerald-50"
             >
-              {downloadingAsyncJob ? "다운로드 중..." : "비동기 CSV 다운로드"}
+              {downloadingAsyncJob ? "Downloading..." : "Download Async CSV"}
             </button>
           </div>
-        </div>
+        </section>
       )}
 
       {summary && (
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h2 className="text-lg font-semibold">
-              {isSummaryWindowFromDateFilter ? "지정 기간 이벤트 집계" : `최근 ${summaryDays}일 이벤트 집계`}
+        <section className="soy-panel">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-slate-900">
+              {isSummaryWindowFromDateFilter ? "Selected Window Summary" : `Last ${summaryDays}d Summary`}
             </h2>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-slate-500">
               {formatDateTime(summary.fromInclusive)} ~ {formatDateTime(summary.toExclusive)}
             </div>
           </div>
-          <p className="text-sm text-gray-600 mb-3">총 이벤트: {summary.total.toLocaleString("ko-KR")}건</p>
+
+          <p className="mb-3 text-sm text-slate-600">Total events: {summary.total.toLocaleString("ko-KR")}</p>
           <div className="space-y-2">
             {summary.byType.map((row) => {
               const width = `${(row.count / maxSummaryCount) * 100}%`;
               return (
                 <div key={row.eventType}>
-                  <div className="flex justify-between text-sm mb-1">
+                  <div className="mb-1 flex justify-between text-sm">
                     <span className="font-medium">{row.eventType}</span>
-                    <span className="text-gray-600">{row.count.toLocaleString("ko-KR")}</span>
+                    <span className="text-slate-600">{row.count.toLocaleString("ko-KR")}</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded">
-                    <div className="h-2 bg-indigo-500 rounded" style={{ width }} />
+                  <div className="h-2 rounded bg-slate-100">
+                    <div className="h-2 rounded bg-indigo-500" style={{ width }} />
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-4 py-3 text-sm font-semibold text-gray-600">시각</th>
-              <th className="px-4 py-3 text-sm font-semibold text-gray-600">이벤트</th>
-              <th className="px-4 py-3 text-sm font-semibold text-gray-600">사용자</th>
-              <th className="px-4 py-3 text-sm font-semibold text-gray-600">hymnId</th>
-              <th className="px-4 py-3 text-sm font-semibold text-gray-600">part</th>
-              <th className="px-4 py-3 text-sm font-semibold text-gray-600">metadata</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && items.length === 0 && (
+      <section className="soy-panel p-0">
+        <div className="soy-table-wrap">
+          <table className="soy-table min-w-[980px]">
+            <thead>
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                  조회된 이벤트가 없습니다.
-                </td>
+                <th>Time</th>
+                <th>Event</th>
+                <th>User</th>
+                <th>hymnId</th>
+                <th>Part</th>
+                <th>Metadata</th>
               </tr>
-            )}
-            {items.map((item) => (
-              <tr key={item.id} className="border-b last:border-b-0 hover:bg-gray-50 align-top">
-                <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDateTime(item.createdAt)}</td>
-                <td className="px-4 py-3 text-sm font-medium">{item.eventType}</td>
-                <td className="px-4 py-3 text-xs text-gray-600">
-                  <div className="font-semibold text-slate-800">{resolveUserName(item.userId)}</div>
-                  <div className="mt-1 font-mono text-[11px] text-slate-500" title={item.userId}>
-                    {shortUuid(item.userId)}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-600 break-all">{item.hymnId ?? "-"}</td>
-                <td className="px-4 py-3 text-sm">{item.part ?? "-"}</td>
-                <td className="px-4 py-3 text-xs text-gray-600 break-all">{item.metadataJson ?? "-"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {!loading && items.length === 0 && (
+                <tr>
+                  <td colSpan={6}>
+                    <div className="soy-empty m-3">No events matched your query.</div>
+                  </td>
+                </tr>
+              )}
 
-      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td className="whitespace-nowrap">{formatDateTime(item.createdAt)}</td>
+                  <td className="font-medium">{item.eventType}</td>
+                  <td className="text-xs text-slate-600">
+                    <div className="font-semibold text-slate-800">{resolveUserName(item.userId)}</div>
+                    <div className="mt-1 font-mono text-[11px] text-slate-500" title={item.userId}>
+                      {shortUuid(item.userId)}
+                    </div>
+                  </td>
+                  <td className="break-all text-xs text-slate-600">{item.hymnId ?? "-"}</td>
+                  <td>{item.part ?? "-"}</td>
+                  <td className="break-all text-xs text-slate-600">{item.metadataJson ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-between text-sm text-slate-600">
         <span>
-          페이지 {pagination.totalPages === 0 ? 0 : pagination.page} / {pagination.totalPages}, 전체 {" "}
-          {pagination.total.toLocaleString("ko-KR")}건
+          Page {pagination.totalPages === 0 ? 0 : pagination.page} / {pagination.totalPages}, total {pagination.total.toLocaleString("ko-KR")} rows
         </span>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
             disabled={loading || !pagination.hasPrevious}
-            className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+            className="soy-btn soy-btn-secondary"
           >
-            이전
+            Previous
           </button>
           <button
             type="button"
             onClick={() => setPage((prev) => prev + 1)}
             disabled={loading || !pagination.hasNext}
-            className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+            className="soy-btn soy-btn-secondary"
           >
-            다음
+            Next
           </button>
         </div>
       </div>

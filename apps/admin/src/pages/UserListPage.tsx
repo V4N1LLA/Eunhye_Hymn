@@ -1,46 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  createUser,
-  deleteUser,
-  listUsers,
-  updateUser,
-  type UserIdentitySummary,
-  type UserResponse,
-} from "../api/adminUsers";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { createUser, deleteUser, listUsers, updateUser, type UpdateUserRequest, type UserResponse } from "../api/adminUsers";
 import { useAuth } from "../auth/AuthContext";
-import InsightCard from "../components/InsightCard";
 
 type RoleFilter = "all" | "ADMIN" | "USER";
 type StatusFilter = "all" | "ACTIVE" | "DISABLED";
 type EditableRole = "ADMIN" | "USER";
 type EditableStatus = "ACTIVE" | "DISABLED";
+type EditableGender = "MALE" | "FEMALE" | "UNKNOWN";
 
-const DISPLAY_NAME_MAX_LENGTH = 64;
-const COPY_FEEDBACK_TIMEOUT_MS = 1500;
+type UserDraft = {
+  displayName: string;
+  role: EditableRole;
+  status: EditableStatus;
+  churchName: string;
+  name: string;
+  group: string;
+  gender: EditableGender;
+  phoneNumber: string;
+};
 
-function roleLabel(role: string): string {
-  return role === "ADMIN" ? "관리자" : "일반";
+function normalizeText(value: string): string {
+  return value.trim();
 }
 
-function statusLabel(status: string): string {
-  return status === "ACTIVE" ? "활성" : "비활성";
-}
-
-function identityProviderLabel(provider: string | null): string {
-  return provider ? provider.toUpperCase() : "UNKNOWN";
-}
-
-function identityPrimaryValue(identity: UserIdentitySummary): string {
-  return identity.emailMasked ?? identity.providerSubjectMasked ?? "식별 정보 없음";
-}
-
-function shortUuid(value: string): string {
-  if (value.length <= 14) return value;
-  return `${value.slice(0, 8)}...${value.slice(-4)}`;
-}
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString("ko-KR");
+function normalizePhone(value: string | null | undefined): string {
+  return (value ?? "").replace(/\D/g, "");
 }
 
 function formatDateTime(value: string | null): string {
@@ -48,64 +32,111 @@ function formatDateTime(value: string | null): string {
   return new Date(value).toLocaleString("ko-KR", { hour12: false });
 }
 
-async function copyTextToClipboard(text: string): Promise<void> {
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text);
-    return;
+function formatPhone(value: string | null | undefined): string {
+  const digits = normalizePhone(value);
+  if (!digits) return "-";
+  if (digits.length === 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  if (digits.length === 11) return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  return digits;
+}
+
+function toDraft(user: UserResponse): UserDraft {
+  return {
+    displayName: user.displayName,
+    role: user.role === "ADMIN" ? "ADMIN" : "USER",
+    status: user.status === "DISABLED" ? "DISABLED" : "ACTIVE",
+    churchName: user.profile?.churchName ?? "",
+    name: user.profile?.name ?? "",
+    group: user.profile?.group ?? "",
+    gender: user.profile?.gender === "MALE" || user.profile?.gender === "FEMALE" ? user.profile.gender : "UNKNOWN",
+    phoneNumber: normalizePhone(user.verification?.phoneNumber),
+  };
+}
+
+function buildPayload(user: UserResponse, draft: UserDraft): { payload: UpdateUserRequest | null; error: string | null } {
+  const payload: UpdateUserRequest = {};
+
+  const displayName = normalizeText(draft.displayName);
+  if (!displayName) return { payload: null, error: "Display name is required." };
+  if (displayName.length > 64) return { payload: null, error: "Display name is too long." };
+  if (displayName !== user.displayName) {
+    payload.displayName = displayName;
   }
 
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "absolute";
-  textarea.style.left = "-9999px";
-  document.body.appendChild(textarea);
-  textarea.select();
-  const copied = document.execCommand("copy");
-  document.body.removeChild(textarea);
+  if (draft.role !== user.role) payload.role = draft.role;
+  if (draft.status !== user.status) payload.status = draft.status;
 
-  if (!copied) {
-    throw new Error("copy_failed");
+  const nextChurch = normalizeText(draft.churchName);
+  const nextName = normalizeText(draft.name);
+  const nextGroup = normalizeText(draft.group);
+  const nextGender = draft.gender;
+  const currentChurch = user.profile?.churchName ?? "";
+  const currentName = user.profile?.name ?? "";
+  const currentGroup = user.profile?.group ?? "";
+  const currentGender = user.profile?.gender ?? "UNKNOWN";
+  const profileChanged =
+    nextChurch !== currentChurch ||
+    nextName !== currentName ||
+    nextGroup !== currentGroup ||
+    nextGender !== currentGender;
+  if (profileChanged) {
+    if (!nextChurch || !nextName || !nextGroup) {
+      return { payload: null, error: "Church, name, and group are required when updating profile." };
+    }
+    payload.churchName = nextChurch;
+    payload.name = nextName;
+    payload.group = nextGroup;
+    payload.gender = nextGender;
   }
+
+  const nextPhone = normalizePhone(draft.phoneNumber);
+  const currentPhone = normalizePhone(user.verification?.phoneNumber);
+  if (nextPhone !== currentPhone) {
+    if (nextPhone && (nextPhone.length < 10 || nextPhone.length > 11)) {
+      return { payload: null, error: "Phone number must be 10-11 digits." };
+    }
+    payload.phoneNumber = nextPhone;
+  }
+
+  if (Object.keys(payload).length === 0) return { payload: null, error: null };
+  return { payload, error: null };
+}
+
+function primaryContact(user: UserResponse): string {
+  const phone = normalizePhone(user.verification?.phoneNumber);
+  if (phone) return formatPhone(phone);
+  if (user.primaryEmail) return user.primaryEmail;
+  return "-";
 }
 
 export default function UserListPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [mutationError, setMutationError] = useState<string | null>(null);
-  const [mutationSuccess, setMutationSuccess] = useState<string | null>(null);
-
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [churchFilter, setChurchFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-
-  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
-  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
-
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<UserDraft | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState("");
   const [newRole, setNewRole] = useState<EditableRole>("USER");
   const [newStatus, setNewStatus] = useState<EditableStatus>("ACTIVE");
-  const [creating, setCreating] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
-    setLoadError(null);
+    setError(null);
     try {
       const data = await listUsers();
       setUsers(data);
-      setSelectedUserId((prev) => {
-        if (prev && data.some((item) => item.id === prev)) {
-          return prev;
-        }
-        return data.length > 0 ? data[0].id : null;
-      });
+      setSelectedUserId((prev) => (prev && data.some((item) => item.id === prev) ? prev : data[0]?.id ?? null));
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "사용자 목록을 불러올 수 없습니다.");
+      setError(err instanceof Error ? err.message : "Failed to load users.");
     } finally {
       setLoading(false);
     }
@@ -115,225 +146,156 @@ export default function UserListPage() {
     void loadUsers();
   }, [loadUsers]);
 
-  const clearMutationFeedback = () => {
-    setMutationError(null);
-    setMutationSuccess(null);
-  };
+  const churchOptions = useMemo(() => {
+    const items = users
+      .map((user) => (user.profile?.churchName ?? "").trim())
+      .filter((value) => value.length > 0);
+    return Array.from(new Set(items)).sort((a, b) => a.localeCompare(b, "ko-KR"));
+  }, [users]);
 
   const filteredUsers = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return users.filter((u) => {
-      if (roleFilter !== "all" && u.role !== roleFilter) return false;
-      if (statusFilter !== "all" && u.status !== statusFilter) return false;
-
-      if (!query) return true;
-      if (u.displayName.toLowerCase().includes(query)) return true;
-      if (u.id.toLowerCase().includes(query)) return true;
-
-      const identities = u.identities ?? [];
-      return identities.some((identity) =>
-        `${identity.provider ?? ""} ${identity.emailMasked ?? ""} ${identity.providerSubjectMasked ?? ""}`
-          .toLowerCase()
-          .includes(query),
-      );
+    const keyword = search.trim().toLowerCase();
+    return users.filter((user) => {
+      if (churchFilter !== "all" && (user.profile?.churchName ?? "") !== churchFilter) return false;
+      if (roleFilter !== "all" && user.role !== roleFilter) return false;
+      if (statusFilter !== "all" && user.status !== statusFilter) return false;
+      if (!keyword) return true;
+      return [
+        user.displayName,
+        user.id,
+        user.primaryEmail ?? "",
+        user.verification?.phoneNumber ?? "",
+        user.profile?.churchName ?? "",
+        user.profile?.name ?? "",
+        user.profile?.group ?? "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(keyword);
     });
-  }, [users, search, roleFilter, statusFilter]);
+  }, [users, search, churchFilter, roleFilter, statusFilter]);
 
-  const selectedUser = useMemo(() => {
-    if (!selectedUserId) return null;
-    return users.find((u) => u.id === selectedUserId) ?? null;
-  }, [users, selectedUserId]);
+  const selectedUser = useMemo(
+    () => (selectedUserId ? users.find((user) => user.id === selectedUserId) ?? null : null),
+    [users, selectedUserId],
+  );
 
-  const totalUsers = users.length;
-  const activeUsers = useMemo(() => users.filter((u) => u.status === "ACTIVE").length, [users]);
-  const disabledUsers = totalUsers - activeUsers;
+  useEffect(() => {
+    if (!selectedUser) {
+      setDraft(null);
+      return;
+    }
+    setDraft(toDraft(selectedUser));
+  }, [selectedUser]);
+
   const activeAdminCount = useMemo(
-    () => users.filter((u) => u.role === "ADMIN" && u.status === "ACTIVE").length,
-    [users],
-  );
-  const linkedIdentityUsers = useMemo(
-    () => users.filter((u) => (u.identities ?? []).length > 0).length,
+    () => users.filter((item) => item.role === "ADMIN" && item.status === "ACTIVE").length,
     [users],
   );
 
-  const hasActiveFilter = search.trim().length > 0 || roleFilter !== "all" || statusFilter !== "all";
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedUser || !draft) return;
+    setError(null);
+    setMessage(null);
 
-  const isCurrentOperator = (targetUser: UserResponse): boolean => currentUser?.userId === targetUser.id;
-
-  const isLastActiveAdmin = (targetUser: UserResponse): boolean =>
-    targetUser.role === "ADMIN" && targetUser.status === "ACTIVE" && activeAdminCount <= 1;
-
-  const getRoleLockReason = (targetUser: UserResponse): string | null => {
-    if (isCurrentOperator(targetUser)) {
-      return "현재 로그인한 운영자 계정은 역할 변경이 잠겨 있습니다.";
+    if (currentUser?.userId === selectedUser.id && draft.role !== selectedUser.role) {
+      setError("You cannot change your own role.");
+      return;
     }
-    if (isLastActiveAdmin(targetUser)) {
-      return "마지막 활성 관리자 계정은 일반 사용자로 변경할 수 없습니다.";
+    if (currentUser?.userId === selectedUser.id && draft.status !== selectedUser.status) {
+      setError("You cannot change your own status.");
+      return;
     }
-    return null;
+    const wouldLoseAdmin =
+      selectedUser.role === "ADMIN" &&
+      selectedUser.status === "ACTIVE" &&
+      (draft.role !== "ADMIN" || draft.status !== "ACTIVE");
+    if (wouldLoseAdmin && activeAdminCount <= 1) {
+      setError("You cannot demote/disable the last active admin.");
+      return;
+    }
+
+    const { payload, error: payloadError } = buildPayload(selectedUser, draft);
+    if (payloadError) {
+      setError(payloadError);
+      return;
+    }
+    if (!payload) {
+      setMessage("No changes to save.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updated = await updateUser(selectedUser.id, payload);
+      setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setDraft(toDraft(updated));
+      setMessage("User updated.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update user.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const getStatusLockReason = (targetUser: UserResponse): string | null => {
-    if (isCurrentOperator(targetUser)) {
-      return "현재 로그인한 운영자 계정은 상태 변경이 잠겨 있습니다.";
+  const handleDisable = async (targetUser: UserResponse) => {
+    if (currentUser?.userId === targetUser.id) {
+      setError("You cannot disable your own account.");
+      return;
     }
-    if (isLastActiveAdmin(targetUser)) {
-      return "마지막 활성 관리자 계정은 비활성화할 수 없습니다.";
-    }
-    return null;
-  };
-
-  const getDeleteLockReason = (targetUser: UserResponse): string | null => {
-    if (isCurrentOperator(targetUser)) {
-      return "현재 로그인한 운영자 계정은 삭제할 수 없습니다.";
-    }
-    if (isLastActiveAdmin(targetUser)) {
-      return "마지막 활성 관리자 계정은 삭제할 수 없습니다.";
+    if (targetUser.role === "ADMIN" && targetUser.status === "ACTIVE" && activeAdminCount <= 1) {
+      setError("You cannot disable the last active admin.");
+      return;
     }
     if (targetUser.status === "DISABLED") {
-      return "이미 삭제(비활성) 처리된 계정입니다.";
-    }
-    return null;
-  };
-
-  const clearFilters = () => {
-    setSearch("");
-    setRoleFilter("all");
-    setStatusFilter("all");
-  };
-
-  const handleCopyUserId = async (userId: string) => {
-    clearMutationFeedback();
-    try {
-      await copyTextToClipboard(userId);
-      setCopiedUserId(userId);
-      setMutationSuccess("사용자 UUID를 클립보드에 복사했습니다.");
-      window.setTimeout(() => {
-        setCopiedUserId((prev) => (prev === userId ? null : prev));
-      }, COPY_FEEDBACK_TIMEOUT_MS);
-    } catch {
-      setMutationError("UUID 복사에 실패했습니다. 수동으로 복사해 주세요.");
-    }
-  };
-
-  const handleRoleChange = async (targetUser: UserResponse, newRoleValue: string) => {
-    if (newRoleValue === targetUser.role) {
+      setError("This user is already disabled.");
       return;
     }
 
-    const lockReason = getRoleLockReason(targetUser);
-    if (lockReason) {
-      setMutationError(lockReason);
-      setMutationSuccess(null);
-      return;
-    }
-
-    clearMutationFeedback();
-    setUpdatingIds((prev) => new Set(prev).add(targetUser.id));
-    try {
-      const updated = await updateUser(targetUser.id, { role: newRoleValue });
-      setUsers((prev) => prev.map((u) => (u.id === targetUser.id ? updated : u)));
-      setMutationSuccess(`"${updated.displayName}" 사용자의 역할을 ${roleLabel(updated.role)}로 변경했습니다.`);
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : "역할 변경에 실패했습니다.");
-    } finally {
-      setUpdatingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(targetUser.id);
-        return next;
-      });
-    }
-  };
-
-  const handleStatusToggle = async (targetUser: UserResponse) => {
-    const lockReason = getStatusLockReason(targetUser);
-    if (lockReason) {
-      setMutationError(lockReason);
-      setMutationSuccess(null);
-      return;
-    }
-
-    const newStatusValue = targetUser.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
-    clearMutationFeedback();
-    setUpdatingIds((prev) => new Set(prev).add(targetUser.id));
-    try {
-      const updated = await updateUser(targetUser.id, { status: newStatusValue });
-      setUsers((prev) => prev.map((u) => (u.id === targetUser.id ? updated : u)));
-      setMutationSuccess(`"${updated.displayName}" 사용자를 ${statusLabel(updated.status)} 상태로 변경했습니다.`);
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : "상태 변경에 실패했습니다.");
-    } finally {
-      setUpdatingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(targetUser.id);
-        return next;
-      });
-    }
-  };
-
-  const handleDeleteUser = async (targetUser: UserResponse) => {
-    const lockReason = getDeleteLockReason(targetUser);
-    if (lockReason) {
-      setMutationError(lockReason);
-      setMutationSuccess(null);
-      return;
-    }
-
-    const confirmed = window.confirm(`"${targetUser.displayName}" 사용자를 삭제(비활성) 처리하시겠습니까?`);
-    if (!confirmed) return;
-
-    clearMutationFeedback();
-    setDeletingIds((prev) => new Set(prev).add(targetUser.id));
+    setDeletingId(targetUser.id);
+    setError(null);
+    setMessage(null);
     try {
       const deleted = await deleteUser(targetUser.id);
-      setUsers((prev) => prev.map((u) => (u.id === targetUser.id ? deleted : u)));
-      setMutationSuccess(`"${deleted.displayName}" 사용자를 비활성 처리했습니다.`);
+      setUsers((prev) => prev.map((item) => (item.id === deleted.id ? deleted : item)));
+      setMessage(`Disabled ${deleted.displayName}.`);
     } catch (err) {
-      setMutationError(err instanceof Error ? err.message : "삭제에 실패했습니다.");
+      setError(err instanceof Error ? err.message : "Failed to disable user.");
     } finally {
-      setDeletingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(targetUser.id);
-        return next;
-      });
+      setDeletingId(null);
     }
   };
 
-  const resetCreateForm = () => {
-    setNewDisplayName("");
-    setNewRole("USER");
-    setNewStatus("ACTIVE");
-  };
-
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const normalizedDisplayName = newDisplayName.trim();
-    if (!normalizedDisplayName) {
-      setMutationError("이름을 입력해 주세요.");
-      setMutationSuccess(null);
+  const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const displayName = normalizeText(newDisplayName);
+    if (!displayName) {
+      setError("Display name is required.");
       return;
     }
-    if (normalizedDisplayName.length > DISPLAY_NAME_MAX_LENGTH) {
-      setMutationError(`이름은 최대 ${DISPLAY_NAME_MAX_LENGTH}자까지 입력할 수 있습니다.`);
-      setMutationSuccess(null);
+    if (displayName.length > 64) {
+      setError("Display name is too long.");
       return;
     }
 
-    clearMutationFeedback();
     setCreating(true);
+    setError(null);
+    setMessage(null);
     try {
       const created = await createUser({
-        displayName: normalizedDisplayName,
+        displayName,
         role: newRole,
         status: newStatus,
       });
       setUsers((prev) => [created, ...prev]);
       setSelectedUserId(created.id);
-      setMutationSuccess(`"${created.displayName}" 사용자를 생성했습니다.`);
-      resetCreateForm();
-      setShowCreateForm(false);
+      setNewDisplayName("");
+      setNewRole("USER");
+      setNewStatus("ACTIVE");
+      setMessage(`Created ${created.displayName}.`);
     } catch (err) {
-      setMutationError(err instanceof Error ? err.message : "사용자 생성에 실패했습니다.");
+      setError(err instanceof Error ? err.message : "Failed to create user.");
     } finally {
       setCreating(false);
     }
@@ -341,423 +303,260 @@ export default function UserListPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="soy-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">사용자 관리</h2>
-            <p className="mt-1 text-sm text-slate-600">이름/UUID/연동 식별정보로 사용자를 찾고 권한/상태를 관리합니다.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">User Console</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-900">User Management</h2>
+            <p className="mt-1 text-sm text-slate-500">Filter by church and identify users with phone/email quickly.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void loadUsers()}
-              disabled={loading}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-            >
-              {loading ? "새로고침 중..." : "목록 새로고침"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (showCreateForm) {
-                  resetCreateForm();
-                }
-                setShowCreateForm((prev) => !prev);
-              }}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-            >
-              {showCreateForm ? "생성 취소" : "새 사용자 생성"}
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          현재 로그인한 운영자 계정과 마지막 활성 관리자 계정은 실수 방지를 위해 수정/삭제가 잠깁니다. 삭제는 soft-delete로
-          `DISABLED` 처리됩니다.
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <InsightCard title="전체 사용자" value={totalUsers} tone="slate" badge="USR" description="가입된 계정" loading={loading} />
-          <InsightCard
-            title="활성 사용자"
-            value={activeUsers}
-            tone="emerald"
-            badge="ON"
-            description="접근 가능한 상태"
-            ratio={totalUsers > 0 ? activeUsers / totalUsers : 0}
-            loading={loading}
-          />
-          <InsightCard
-            title="비활성 사용자"
-            value={disabledUsers}
-            tone="amber"
-            badge="OFF"
-            description="차단 또는 soft-delete"
-            ratio={totalUsers > 0 ? disabledUsers / totalUsers : 0}
-            loading={loading}
-          />
-          <InsightCard
-            title="활성 관리자"
-            value={activeAdminCount}
-            tone="indigo"
-            badge="ADM"
-            description="ADMIN + ACTIVE"
-            ratio={totalUsers > 0 ? activeAdminCount / totalUsers : 0}
-            loading={loading}
-          />
-          <InsightCard
-            title="연동 계정"
-            value={linkedIdentityUsers}
-            tone="sky"
-            badge="ID"
-            description="소셜 로그인 연결"
-            ratio={totalUsers > 0 ? linkedIdentityUsers / totalUsers : 0}
-            loading={loading}
-          />
-        </div>
-
-        <div className="mt-4 flex flex-col gap-3 md:flex-row">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="이름/UUID/연동정보 검색..."
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="all">전체 역할</option>
-            <option value="ADMIN">관리자</option>
-            <option value="USER">일반</option>
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="all">전체 상태</option>
-            <option value="ACTIVE">활성</option>
-            <option value="DISABLED">비활성</option>
-          </select>
-          {hasActiveFilter && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
-            >
-              필터 초기화
-            </button>
-          )}
-        </div>
-
-        {showCreateForm && (
-          <form onSubmit={handleCreateUser} className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-4">
-            <div className="md:col-span-2">
-              <input
-                type="text"
-                value={newDisplayName}
-                onChange={(e) => setNewDisplayName(e.target.value)}
-                placeholder="사용자 이름"
-                maxLength={DISPLAY_NAME_MAX_LENGTH}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                required
-              />
-              <div className="mt-1 text-right text-xs text-slate-500">
-                {newDisplayName.trim().length}/{DISPLAY_NAME_MAX_LENGTH}
-              </div>
-            </div>
-            <select
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value as EditableRole)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="USER">일반</option>
-              <option value="ADMIN">관리자</option>
-            </select>
-            <select
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value as EditableStatus)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="ACTIVE">활성</option>
-              <option value="DISABLED">비활성</option>
-            </select>
-            <div className="flex items-center gap-2 md:col-span-4">
-              <button
-                type="submit"
-                disabled={creating || !newDisplayName.trim()}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {creating ? "생성 중..." : "사용자 생성"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  resetCreateForm();
-                  setShowCreateForm(false);
-                }}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                취소
-              </button>
-            </div>
-          </form>
-        )}
-      </section>
-
-      {loading && <p className="text-sm text-gray-500">로딩 중...</p>}
-      {loadError && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          <span>{loadError}</span>
           <button
             type="button"
             onClick={() => void loadUsers()}
-            className="rounded border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
+            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            다시 시도
+            Reload
           </button>
         </div>
-      )}
-      {mutationSuccess && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{mutationSuccess}</div>
-      )}
-      {mutationError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{mutationError}</div>
-      )}
 
-      {!loading && !loadError && (
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="text-xs text-slate-500">Total Users</div>
+            <div className="mt-1 text-lg font-semibold text-slate-900">{users.length.toLocaleString("ko-KR")}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="text-xs text-slate-500">Active Users</div>
+            <div className="mt-1 text-lg font-semibold text-slate-900">
+              {users.filter((item) => item.status === "ACTIVE").length.toLocaleString("ko-KR")}
+            </div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="text-xs text-slate-500">Active Admins</div>
+            <div className="mt-1 text-lg font-semibold text-slate-900">{activeAdminCount.toLocaleString("ko-KR")}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="text-xs text-slate-500">Phone Verified</div>
+            <div className="mt-1 text-lg font-semibold text-slate-900">
+              {users.filter((item) => normalizePhone(item.verification?.phoneNumber).length > 0).length.toLocaleString("ko-KR")}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search name/email/phone/UUID"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 md:col-span-2"
+          />
+          <select
+            value={churchFilter}
+            onChange={(event) => setChurchFilter(event.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="all">All churches</option>
+            {churchOptions.map((churchName) => (
+              <option key={churchName} value={churchName}>
+                {churchName}
+              </option>
+            ))}
+          </select>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+            Filtered: {filteredUsers.length.toLocaleString("ko-KR")}
+          </div>
+        </div>
+        <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <select
+            value={roleFilter}
+            onChange={(event) => setRoleFilter(event.target.value as RoleFilter)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="all">All roles</option>
+            <option value="ADMIN">ADMIN</option>
+            <option value="USER">USER</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="all">All status</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="DISABLED">DISABLED</option>
+          </select>
+        </div>
+
+        <form onSubmit={handleCreate} className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+          <input
+            value={newDisplayName}
+            onChange={(event) => setNewDisplayName(event.target.value)}
+            placeholder="New user display name"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 md:col-span-2"
+          />
+          <select
+            value={newRole}
+            onChange={(event) => setNewRole(event.target.value as EditableRole)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="USER">USER</option>
+            <option value="ADMIN">ADMIN</option>
+          </select>
+          <div className="flex gap-2">
+            <select
+              value={newStatus}
+              onChange={(event) => setNewStatus(event.target.value as EditableStatus)}
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="DISABLED">DISABLED</option>
+            </select>
+            <button
+              type="submit"
+              disabled={creating}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {creating ? "Creating..." : "Create"}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {loading && <p className="text-sm text-gray-500">Loading...</p>}
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+      {message && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</div>}
+
+      {!loading && (
+        <section className="soy-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-[1080px] w-full text-left">
+            <table className="min-w-[980px] w-full text-left">
               <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">사용자</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">연동 식별정보</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">역할</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">상태</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">최근 로그인</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">작업</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">User</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Church</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Contact</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Role</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Status</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.length === 0 && (
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className={`border-b border-slate-100 last:border-b-0 ${selectedUserId === user.id ? "bg-indigo-50/40" : ""}`}>
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{user.displayName}</div>
+                      <div className="font-mono text-xs text-slate-500">{user.id}</div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">{user.profile?.churchName ?? "-"}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <div>{primaryContact(user)}</div>
+                      <div className="text-xs text-slate-500">{user.primaryEmail ?? "-"}</div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">{user.role}</td>
+                    <td className="px-4 py-3 text-sm">{user.status}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedUserId(user.id)}
+                        className="mr-3 font-semibold text-indigo-700 hover:text-indigo-900"
+                      >
+                        Details
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDisable(user)}
+                        disabled={deletingId === user.id}
+                        className="font-semibold text-red-600 hover:text-red-800 disabled:opacity-40"
+                      >
+                        {deletingId === user.id ? "Disabling..." : "Disable"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!filteredUsers.length && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
-                      {hasActiveFilter ? (
-                        "검색 결과가 없습니다."
-                      ) : (
-                        <div className="space-y-2">
-                          <div>등록된 사용자가 없습니다.</div>
-                          <button
-                            type="button"
-                            onClick={() => setShowCreateForm(true)}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                          >
-                            첫 사용자 생성하기
-                          </button>
-                        </div>
-                      )}
+                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
+                      No users found.
                     </td>
                   </tr>
                 )}
-                {filteredUsers.map((user) => {
-                  const roleLockReason = getRoleLockReason(user);
-                  const statusLockReason = getStatusLockReason(user);
-                  const deleteLockReason = getDeleteLockReason(user);
-                  const lockHints = [...new Set([roleLockReason, statusLockReason, deleteLockReason].filter(Boolean))] as string[];
-                  const inProgress = updatingIds.has(user.id) || deletingIds.has(user.id);
-                  const identities = user.identities ?? [];
-                  const isSelected = selectedUserId === user.id;
-
-                  return (
-                    <tr key={user.id} className={`border-b border-slate-100 last:border-b-0 ${isSelected ? "bg-indigo-50/40" : "hover:bg-slate-50"}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-2 font-medium">
-                          <span>{user.displayName}</span>
-                          {isCurrentOperator(user) && (
-                            <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
-                              현재 운영자
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                          <span className="font-mono" title={user.id}>
-                            {shortUuid(user.id)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => void handleCopyUserId(user.id)}
-                            className="rounded border border-slate-300 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
-                          >
-                            {copiedUserId === user.id ? "복사됨" : "UUID 복사"}
-                          </button>
-                          <span>가입: {formatDate(user.createdAt)}</span>
-                        </div>
-                        {lockHints.length > 0 && (
-                          <div className="mt-1 text-xs text-amber-700">{lockHints.join(" · ")}</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {identities.length === 0 ? (
-                          <span className="text-xs text-slate-400">연동 정보 없음</span>
-                        ) : (
-                          <div className="space-y-1">
-                            {identities.slice(0, 2).map((identity, index) => (
-                              <div
-                                key={`${user.id}-${identity.createdAt}-${index}`}
-                                className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1"
-                              >
-                                <div className="text-[11px] font-semibold text-slate-600">{identityProviderLabel(identity.provider)}</div>
-                                <div className="mt-0.5 font-mono text-[11px] text-slate-700">{identityPrimaryValue(identity)}</div>
-                              </div>
-                            ))}
-                            {identities.length > 2 && (
-                              <div className="text-[11px] text-slate-500">+{identities.length - 2}개 더 있음 (상세에서 확인)</div>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={user.role}
-                          onChange={(e) => void handleRoleChange(user, e.target.value)}
-                          disabled={inProgress || roleLockReason !== null}
-                          title={roleLockReason ?? ""}
-                          className="rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-                        >
-                          <option value="USER">일반</option>
-                          <option value="ADMIN">관리자</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => void handleStatusToggle(user)}
-                          disabled={inProgress || statusLockReason !== null}
-                          title={statusLockReason ?? ""}
-                          className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                            user.status === "ACTIVE"
-                              ? "bg-green-100 text-green-700 hover:bg-green-200"
-                              : "bg-red-100 text-red-700 hover:bg-red-200"
-                          }`}
-                        >
-                          {inProgress ? "..." : statusLabel(user.status)}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{formatDateTime(user.lastLoginAt)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedUserId(user.id)}
-                            className={`text-sm font-semibold ${isSelected ? "text-indigo-700" : "text-indigo-600 hover:text-indigo-800"}`}
-                          >
-                            상세
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleDeleteUser(user)}
-                            disabled={inProgress || deleteLockReason !== null}
-                            title={deleteLockReason ?? ""}
-                            className="text-sm font-semibold text-red-600 hover:text-red-800 disabled:opacity-40"
-                          >
-                            {deletingIds.has(user.id) ? "삭제 중..." : "삭제"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
               </tbody>
             </table>
           </div>
         </section>
       )}
 
-      {!loading && !loadError && selectedUser && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">사용자 상세</h3>
-              <p className="mt-1 text-sm text-slate-600">선택한 사용자의 식별 정보와 로그인 연동 상태를 확인합니다.</p>
+      {selectedUser && draft && (
+        <section className="soy-card p-4">
+          <h3 className="text-lg font-semibold text-slate-900">User Details</h3>
+          <p className="mt-1 text-sm text-slate-600">Update profile, account status, and phone info.</p>
+          <form onSubmit={handleSave} className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <input
+              value={draft.displayName}
+              onChange={(event) => setDraft((prev) => (prev ? { ...prev, displayName: event.target.value } : prev))}
+              placeholder="Display name"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input
+              value={draft.phoneNumber}
+              onChange={(event) => setDraft((prev) => (prev ? { ...prev, phoneNumber: event.target.value } : prev))}
+              placeholder="Phone number"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input
+              value={draft.churchName}
+              onChange={(event) => setDraft((prev) => (prev ? { ...prev, churchName: event.target.value } : prev))}
+              placeholder="Church"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input
+              value={draft.name}
+              onChange={(event) => setDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev))}
+              placeholder="Name"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input
+              value={draft.group}
+              onChange={(event) => setDraft((prev) => (prev ? { ...prev, group: event.target.value } : prev))}
+              placeholder="Group"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <select
+              value={draft.gender}
+              onChange={(event) => setDraft((prev) => (prev ? { ...prev, gender: event.target.value as EditableGender } : prev))}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="UNKNOWN">UNKNOWN</option>
+              <option value="MALE">MALE</option>
+              <option value="FEMALE">FEMALE</option>
+            </select>
+            <select
+              value={draft.role}
+              onChange={(event) => setDraft((prev) => (prev ? { ...prev, role: event.target.value as EditableRole } : prev))}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="USER">USER</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
+            <select
+              value={draft.status}
+              onChange={(event) => setDraft((prev) => (prev ? { ...prev, status: event.target.value as EditableStatus } : prev))}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="DISABLED">DISABLED</option>
+            </select>
+            <div className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              Joined: {formatDateTime(selectedUser.createdAt)} | Last login: {formatDateTime(selectedUser.lastLoginAt)}
             </div>
             <button
-              type="button"
-              onClick={() => void handleCopyUserId(selectedUser.id)}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              type="submit"
+              disabled={saving}
+              className="md:col-span-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {copiedUserId === selectedUser.id ? "UUID 복사됨" : "UUID 복사"}
+              {saving ? "Saving..." : "Save Changes"}
             </button>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <div className="text-xs text-slate-500">이름</div>
-              <div className="mt-1 text-sm font-semibold text-slate-900">{selectedUser.displayName}</div>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <div className="text-xs text-slate-500">UUID</div>
-              <div className="mt-1 break-all font-mono text-xs text-slate-700">{selectedUser.id}</div>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <div className="text-xs text-slate-500">권한/상태</div>
-              <div className="mt-1 text-sm font-semibold text-slate-900">
-                {roleLabel(selectedUser.role)} / {statusLabel(selectedUser.status)}
-              </div>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <div className="text-xs text-slate-500">가입일 / 최근 로그인</div>
-              <div className="mt-1 text-sm text-slate-700">
-                {formatDateTime(selectedUser.createdAt)} / {formatDateTime(selectedUser.lastLoginAt)}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-900">연동 식별 정보</h4>
-              <span className="text-xs text-slate-500">{(selectedUser.identities ?? []).length}개 연결됨</span>
-            </div>
-
-            {(selectedUser.identities ?? []).length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-xs text-slate-500">
-                연결된 소셜 로그인 정보가 없습니다.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {(selectedUser.identities ?? []).map((identity, index) => (
-                  <div key={`${selectedUser.id}-${identity.createdAt}-${index}`} className="rounded-lg border border-slate-200 px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                        {identityProviderLabel(identity.provider)}
-                      </span>
-                      <span className="text-xs text-slate-500">연동일: {formatDateTime(identity.createdAt)}</span>
-                    </div>
-                    <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
-                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
-                        <div className="text-[11px] text-slate-500">마스킹 이메일</div>
-                        <div className="mt-0.5 font-mono text-xs text-slate-700">{identity.emailMasked ?? "-"}</div>
-                      </div>
-                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
-                        <div className="text-[11px] text-slate-500">마스킹 providerSubject</div>
-                        <div className="mt-0.5 font-mono text-xs text-slate-700">{identity.providerSubjectMasked ?? "-"}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </form>
         </section>
-      )}
-
-      {!loading && !loadError && (
-        <p className="text-sm text-gray-500">
-          {filteredUsers.length}명 표시 / 전체 {users.length}명
-        </p>
       )}
     </div>
   );

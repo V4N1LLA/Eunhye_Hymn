@@ -1,1 +1,332 @@
 @import "tailwindcss";
+
+:root {
+  --sb-primary-rgb: 100 108 255;
+  --sb-layout-rgb: 247 250 252;
+  --sb-container-rgb: 255 255 255;
+  --sb-text-rgb: 31 31 31;
+  --sb-muted-rgb: 100 116 139;
+  --sb-border-rgb: 226 232 240;
+  --sb-header-shadow: 0 1px 2px rgb(0 21 41 / 8%);
+  --sb-sider-shadow: 2px 0 8px rgb(29 35 41 / 5%);
+  --sb-card-shadow: 0 6px 14px rgb(15 23 42 / 5%);
+  --sb-radius: 8px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--sb-layout-rgb));
+  color: rgb(var(--sb-text-rgb));
+  font-family: "Pretendard Variable", "Noto Sans KR", "Segoe UI", sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+.soy-layout-bg {
+  background: radial-gradient(circle at 0% 0%, rgb(99 102 241 / 7%), transparent 34%),
+    radial-gradient(circle at 100% 0%, rgb(14 165 233 / 6%), transparent 28%),
+    rgb(var(--sb-layout-rgb));
+}
+
+.soy-card {
+  border: 1px solid rgb(var(--sb-border-rgb));
+  border-radius: var(--sb-radius);
+  background: rgb(var(--sb-container-rgb));
+  box-shadow: var(--sb-card-shadow);
+}
+
+.soy-kpi-gradient {
+  position: relative;
+  overflow: hidden;
+}
+
+.soy-kpi-gradient::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -45% auto;
+  width: 140px;
+  height: 140px;
+  border-radius: 9999px;
+  opacity: 0.24;
+  filter: blur(10px);
+  background: rgb(255 255 255);
+}
+
+.soy-subtle-scrollbar {
+  scrollbar-width: thin;
+}
+
+.soy-subtle-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.soy-subtle-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgb(148 163 184 / 45%);
+}
+
+.soy-panel {
+  border: 1px solid rgb(var(--sb-border-rgb));
+  border-radius: var(--sb-radius);
+  background: rgb(var(--sb-container-rgb));
+  box-shadow: var(--sb-card-shadow);
+  padding: 1rem;
+}
+
+.soy-panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.soy-kicker {
+  color: rgb(var(--sb-primary-rgb));
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.soy-title {
+  margin: 0.25rem 0 0;
+  color: rgb(var(--sb-text-rgb));
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+
+.soy-description {
+  margin: 0.35rem 0 0;
+  color: rgb(var(--sb-muted-rgb));
+  font-size: 0.875rem;
+}
+
+.soy-input,
+.soy-select,
+.soy-textarea {
+  width: 100%;
+  border: 1px solid rgb(var(--sb-border-rgb));
+  border-radius: 0.55rem;
+  background: #fff;
+  color: rgb(var(--sb-text-rgb));
+  font-size: 0.875rem;
+  padding: 0.58rem 0.75rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.soy-input:focus,
+.soy-select:focus,
+.soy-textarea:focus {
+  border-color: rgb(var(--sb-primary-rgb));
+  box-shadow: 0 0 0 3px rgb(var(--sb-primary-rgb) / 18%);
+  outline: none;
+}
+
+.soy-input:disabled,
+.soy-select:disabled,
+.soy-textarea:disabled {
+  background: rgb(248 250 252);
+  color: rgb(148 163 184);
+}
+
+.soy-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: rgb(71 85 105);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.soy-btn {
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 650;
+  gap: 0.3rem;
+  line-height: 1;
+  padding: 0.6rem 0.85rem;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.soy-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.soy-btn-primary {
+  background: rgb(var(--sb-primary-rgb));
+  border-color: rgb(var(--sb-primary-rgb));
+  color: #fff;
+}
+
+.soy-btn-primary:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.soy-btn-secondary {
+  background: #fff;
+  border-color: rgb(var(--sb-border-rgb));
+  color: rgb(51 65 85);
+}
+
+.soy-btn-secondary:hover:not(:disabled) {
+  background: rgb(248 250 252);
+}
+
+.soy-btn-danger {
+  background: rgb(220 38 38);
+  border-color: rgb(220 38 38);
+  color: #fff;
+}
+
+.soy-btn-danger:hover:not(:disabled) {
+  background: rgb(185 28 28);
+}
+
+.soy-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: rgb(var(--sb-muted-rgb));
+}
+
+.soy-btn-ghost:hover:not(:disabled) {
+  background: rgb(241 245 249);
+  color: rgb(var(--sb-text-rgb));
+}
+
+.soy-stat-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+  .soy-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.soy-stat-card {
+  border: 1px solid rgb(var(--sb-border-rgb));
+  border-radius: 0.55rem;
+  background: rgb(248 250 252);
+  padding: 0.65rem 0.75rem;
+}
+
+.soy-stat-label {
+  color: rgb(var(--sb-muted-rgb));
+  font-size: 0.74rem;
+}
+
+.soy-stat-value {
+  margin-top: 0.22rem;
+  color: rgb(var(--sb-text-rgb));
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.soy-alert {
+  border: 1px solid;
+  border-radius: 0.55rem;
+  font-size: 0.84rem;
+  padding: 0.62rem 0.75rem;
+}
+
+.soy-alert-success {
+  border-color: rgb(167 243 208);
+  background: rgb(236 253 245);
+  color: rgb(4 120 87);
+}
+
+.soy-alert-error {
+  border-color: rgb(254 202 202);
+  background: rgb(254 242 242);
+  color: rgb(185 28 28);
+}
+
+.soy-alert-warning {
+  border-color: rgb(253 230 138);
+  background: rgb(255 251 235);
+  color: rgb(146 64 14);
+}
+
+.soy-pill {
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1;
+  padding: 0.34rem 0.56rem;
+}
+
+.soy-table-wrap {
+  overflow-x: auto;
+}
+
+.soy-table {
+  border-collapse: collapse;
+  min-width: 720px;
+  width: 100%;
+}
+
+.soy-table thead {
+  background: rgb(248 250 252);
+  border-bottom: 1px solid rgb(var(--sb-border-rgb));
+}
+
+.soy-table th,
+.soy-table td {
+  border-bottom: 1px solid rgb(241 245 249);
+  padding: 0.72rem 0.88rem;
+  text-align: left;
+}
+
+.soy-table th {
+  color: rgb(100 116 139);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.soy-table td {
+  color: rgb(51 65 85);
+  font-size: 0.84rem;
+  vertical-align: top;
+}
+
+.soy-table tbody tr:hover {
+  background: rgb(248 250 252);
+}
+
+.soy-empty {
+  border: 1px dashed rgb(var(--sb-border-rgb));
+  border-radius: 0.6rem;
+  color: rgb(var(--sb-muted-rgb));
+  font-size: 0.83rem;
+  padding: 1.4rem 0.9rem;
+  text-align: center;
+}
+
+.soy-divider {
+  border-top: 1px solid rgb(var(--sb-border-rgb));
+  margin: 0.75rem 0;
+}
