@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createInviteCode,
   listInviteCodes,
@@ -19,11 +19,11 @@ function isExhausted(code: InviteCodeResponse): boolean {
   return code.maxUses != null && code.usedCount >= code.maxUses;
 }
 
-function statusLabel(code: InviteCodeResponse): "Active" | "Inactive" | "Expired" | "Exhausted" {
-  if (!code.enabled) return "Inactive";
-  if (isExpired(code)) return "Expired";
-  if (isExhausted(code)) return "Exhausted";
-  return "Active";
+function statusLabel(code: InviteCodeResponse): "활성" | "비활성" | "만료" | "소진" {
+  if (!code.enabled) return "비활성";
+  if (isExpired(code)) return "만료";
+  if (isExhausted(code)) return "소진";
+  return "활성";
 }
 
 function statusBadgeClass(code: InviteCodeResponse): string {
@@ -83,7 +83,7 @@ export default function InviteCodePage() {
         [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
       );
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Failed to load invite codes.");
+      setLoadError(err instanceof Error ? err.message : "초대 코드 목록을 불러오지 못했습니다.");
     } finally {
       setLoading(false);
     }
@@ -118,10 +118,10 @@ export default function InviteCodePage() {
     const query = search.trim().toLowerCase();
     return codes.filter((code) => {
       const label = statusLabel(code);
-      if (statusFilter === "active" && label !== "Active") return false;
-      if (statusFilter === "inactive" && label !== "Inactive") return false;
-      if (statusFilter === "expired" && label !== "Expired") return false;
-      if (statusFilter === "exhausted" && label !== "Exhausted") return false;
+      if (statusFilter === "active" && label !== "활성") return false;
+      if (statusFilter === "inactive" && label !== "비활성") return false;
+      if (statusFilter === "expired" && label !== "만료") return false;
+      if (statusFilter === "exhausted" && label !== "소진") return false;
 
       if (!query) return true;
       return code.code.toLowerCase().includes(query) || (code.description ?? "").toLowerCase().includes(query);
@@ -136,9 +136,9 @@ export default function InviteCodePage() {
 
     for (const code of codes) {
       const label = statusLabel(code);
-      if (label === "Active") active += 1;
-      else if (label === "Inactive") inactive += 1;
-      else if (label === "Expired") expired += 1;
+      if (label === "활성") active += 1;
+      else if (label === "비활성") inactive += 1;
+      else if (label === "만료") expired += 1;
       else exhausted += 1;
     }
 
@@ -161,10 +161,10 @@ export default function InviteCodePage() {
     try {
       await copyTextToClipboard(code);
       setCopiedCode(code);
-      setMutationSuccess(`Copied \"${code}\" to clipboard.`);
+      setMutationSuccess(`"${code}" 코드를 클립보드에 복사했습니다.`);
       window.setTimeout(() => setCopiedCode((prev) => (prev === code ? null : prev)), 1500);
     } catch {
-      setMutationError("Clipboard copy failed. Please copy manually.");
+      setMutationError("클립보드 복사에 실패했습니다. 수동으로 복사해 주세요.");
     }
   };
 
@@ -173,24 +173,24 @@ export default function InviteCodePage() {
     const normalizedCode = newCode.trim().toUpperCase();
 
     if (!normalizedCode) {
-      setMutationError("Code is required.");
+      setMutationError("코드를 입력해 주세요.");
       setMutationSuccess(null);
       return;
     }
     if (normalizedCode.length > CODE_MAX_LENGTH) {
-      setMutationError(`Code must be ${CODE_MAX_LENGTH} characters or fewer.`);
+      setMutationError(`코드는 ${CODE_MAX_LENGTH}자 이하로 입력해 주세요.`);
       setMutationSuccess(null);
       return;
     }
     if (/\s/.test(normalizedCode)) {
-      setMutationError("Code cannot contain spaces.");
+      setMutationError("코드에는 공백을 포함할 수 없습니다.");
       setMutationSuccess(null);
       return;
     }
 
     const parsedMaxUses = maxUses ? parseInt(maxUses, 10) : undefined;
     if (parsedMaxUses !== undefined && (Number.isNaN(parsedMaxUses) || parsedMaxUses < 1)) {
-      setMutationError("Max uses must be at least 1.");
+      setMutationError("최대 사용 횟수는 1 이상이어야 합니다.");
       setMutationSuccess(null);
       return;
     }
@@ -198,7 +198,7 @@ export default function InviteCodePage() {
     if (expiresAt) {
       const expiresAtMillis = new Date(expiresAt).getTime();
       if (Number.isNaN(expiresAtMillis) || expiresAtMillis <= Date.now()) {
-        setMutationError("Expiration must be in the future.");
+        setMutationError("만료일은 현재 시각 이후여야 합니다.");
         setMutationSuccess(null);
         return;
       }
@@ -214,27 +214,27 @@ export default function InviteCodePage() {
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
       });
       setCodes((prev) => [created, ...prev]);
-      setMutationSuccess(`Created invite code \"${created.code}\".`);
+      setMutationSuccess(`"${created.code}" 초대 코드를 생성했습니다.`);
       resetForm();
       setShowForm(false);
     } catch (err) {
-      setMutationError(err instanceof Error ? err.message : "Failed to create invite code.");
+      setMutationError(err instanceof Error ? err.message : "초대 코드 생성에 실패했습니다.");
     } finally {
       setCreating(false);
     }
   };
 
   const handleRevoke = async (code: string) => {
-    if (!window.confirm(`Deactivate code \"${code}\"?`)) return;
+    if (!window.confirm(`"${code}" 코드를 비활성화하시겠습니까?`)) return;
 
     setRevokingCodes((prev) => new Set(prev).add(code));
     clearFeedback();
     try {
       await revokeInviteCode(code);
       setCodes((prev) => prev.map((item) => (item.code === code ? { ...item, enabled: false } : item)));
-      setMutationSuccess(`Code \"${code}\" is now inactive.`);
+      setMutationSuccess(`"${code}" 코드를 비활성화했습니다.`);
     } catch (err) {
-      setMutationError(err instanceof Error ? err.message : "Failed to revoke invite code.");
+      setMutationError(err instanceof Error ? err.message : "코드 비활성화에 실패했습니다.");
     } finally {
       setRevokingCodes((prev) => {
         const next = new Set(prev);
@@ -249,55 +249,55 @@ export default function InviteCodePage() {
       <section className="soy-panel">
         <div className="soy-panel-header">
           <div>
-            <p className="soy-kicker">Onboarding</p>
-            <h2 className="soy-title">Invite Code Management</h2>
-            <p className="soy-description">Create, track, and revoke invite codes used for sign-up.</p>
+            <p className="soy-kicker">온보딩</p>
+            <h2 className="soy-title">초대 코드 관리</h2>
+            <p className="soy-description">회원가입용 초대 코드를 생성/조회/비활성화합니다.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => void loadCodes()} disabled={loading} className="soy-btn soy-btn-secondary">
-              {loading ? "Loading..." : "Reload"}
+              {loading ? "로딩 중..." : "새로고침"}
             </button>
             <button type="button" onClick={handleToggleForm} className="soy-btn soy-btn-primary">
-              {showForm ? "Close Form" : "Create Code"}
+              {showForm ? "생성 폼 닫기" : "코드 생성"}
             </button>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <InsightCard title="Total" value={stats.total} tone="slate" badge="ALL" description="All invite codes" loading={loading} />
+          <InsightCard title="전체 코드" value={stats.total} tone="slate" badge="ALL" description="등록된 코드 수" loading={loading} />
           <InsightCard
-            title="Active"
+            title="활성 코드"
             value={stats.active}
             tone="emerald"
             badge="ON"
-            description="Can be used now"
+            description="즉시 사용 가능"
             ratio={stats.total > 0 ? stats.active / stats.total : 0}
             loading={loading}
           />
           <InsightCard
-            title="Inactive"
+            title="비활성 코드"
             value={stats.inactive}
             tone="indigo"
             badge="OFF"
-            description="Disabled manually"
+            description="관리자 비활성화"
             ratio={stats.total > 0 ? stats.inactive / stats.total : 0}
             loading={loading}
           />
           <InsightCard
-            title="Expired"
+            title="만료 코드"
             value={stats.expired}
             tone="amber"
             badge="EXP"
-            description="Past expiration"
+            description="유효기간 경과"
             ratio={stats.total > 0 ? stats.expired / stats.total : 0}
             loading={loading}
           />
           <InsightCard
-            title="Exhausted"
+            title="소진 코드"
             value={stats.exhausted}
             tone="rose"
             badge="MAX"
-            description="Reached max uses"
+            description="사용 횟수 초과"
             ratio={stats.total > 0 ? stats.exhausted / stats.total : 0}
             loading={loading}
           />
@@ -308,7 +308,7 @@ export default function InviteCodePage() {
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search code or description"
+            placeholder="코드/설명 검색"
             className="soy-input"
           />
           <select
@@ -316,15 +316,15 @@ export default function InviteCodePage() {
             onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
             className="soy-select"
           >
-            <option value="all">All status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="expired">Expired</option>
-            <option value="exhausted">Exhausted</option>
+            <option value="all">전체 상태</option>
+            <option value="active">활성</option>
+            <option value="inactive">비활성</option>
+            <option value="expired">만료</option>
+            <option value="exhausted">소진</option>
           </select>
           {hasActiveFilter && (
             <button type="button" onClick={clearFilters} className="soy-btn soy-btn-secondary">
-              Clear Filters
+              필터 초기화
             </button>
           )}
         </div>
@@ -336,7 +336,7 @@ export default function InviteCodePage() {
       {showForm && (
         <form onSubmit={handleCreate} className="soy-panel space-y-3">
           <div>
-            <label className="soy-label">Code *</label>
+            <label className="soy-label">코드 *</label>
             <input
               type="text"
               value={newCode}
@@ -347,35 +347,35 @@ export default function InviteCodePage() {
               placeholder="EUNHYE-2026"
             />
             <div className="mt-1 text-xs text-slate-500">
-              No spaces ({newCode.trim().length}/{CODE_MAX_LENGTH})
+              공백 없이 입력 ({newCode.trim().length}/{CODE_MAX_LENGTH})
             </div>
           </div>
 
           <div>
-            <label className="soy-label">Description</label>
+            <label className="soy-label">설명</label>
             <input
               type="text"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               className="soy-input"
-              placeholder="2026 special campaign"
+              placeholder="2026년 상반기 등록용"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="soy-label">Max Uses</label>
+              <label className="soy-label">최대 사용 횟수</label>
               <input
                 type="number"
                 value={maxUses}
                 onChange={(event) => setMaxUses(event.target.value)}
                 min="1"
                 className="soy-input"
-                placeholder="Blank for unlimited"
+                placeholder="비워두면 무제한"
               />
             </div>
             <div>
-              <label className="soy-label">Expiration</label>
+              <label className="soy-label">만료 일시</label>
               <input
                 type="datetime-local"
                 value={expiresAt}
@@ -387,7 +387,7 @@ export default function InviteCodePage() {
 
           <div className="flex items-center gap-2">
             <button type="submit" disabled={creating || !newCode.trim()} className="soy-btn soy-btn-primary">
-              {creating ? "Creating..." : "Create"}
+              {creating ? "생성 중..." : "생성"}
             </button>
             <button
               type="button"
@@ -397,18 +397,18 @@ export default function InviteCodePage() {
               }}
               className="soy-btn soy-btn-secondary"
             >
-              Cancel
+              취소
             </button>
           </div>
         </form>
       )}
 
-      {loading && <p className="text-sm text-slate-500">Loading invite codes...</p>}
+      {loading && <p className="text-sm text-slate-500">초대 코드 데이터를 불러오는 중입니다...</p>}
       {loadError && (
         <div className="soy-alert soy-alert-error flex flex-wrap items-center justify-between gap-2">
           <span>{loadError}</span>
           <button type="button" onClick={() => void loadCodes()} className="soy-btn soy-btn-secondary">
-            Retry
+            다시 시도
           </button>
         </div>
       )}
@@ -419,13 +419,13 @@ export default function InviteCodePage() {
             <table className="soy-table min-w-[920px]">
               <thead>
                 <tr>
-                  <th>Code</th>
-                  <th>Description</th>
-                  <th>Usage</th>
-                  <th>Status</th>
-                  <th>Expires At</th>
-                  <th>Created At</th>
-                  <th>Actions</th>
+                  <th>코드</th>
+                  <th>설명</th>
+                  <th>사용량</th>
+                  <th>상태</th>
+                  <th>만료일</th>
+                  <th>생성일</th>
+                  <th>관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -433,7 +433,7 @@ export default function InviteCodePage() {
                   <tr>
                     <td colSpan={7}>
                       <div className="soy-empty m-3">
-                        {hasActiveFilter ? "No codes match the current filters." : "No invite codes yet."}
+                        {hasActiveFilter ? "검색/필터 조건에 맞는 코드가 없습니다." : "등록된 초대 코드가 없습니다."}
                       </div>
                     </td>
                   </tr>
@@ -442,12 +442,12 @@ export default function InviteCodePage() {
                   <tr key={code.code}>
                     <td>
                       <div className="font-mono text-sm">{code.code}</div>
-                      {copiedCode === code.code && <div className="mt-1 text-xs text-emerald-600">Copied</div>}
+                      {copiedCode === code.code && <div className="mt-1 text-xs text-emerald-600">복사됨</div>}
                     </td>
                     <td>{code.description ?? "-"}</td>
                     <td>
                       {code.usedCount}
-                      {code.maxUses != null ? ` / ${code.maxUses}` : " / unlimited"}
+                      {code.maxUses != null ? ` / ${code.maxUses}` : " / 무제한"}
                     </td>
                     <td>
                       <span className={`soy-pill ${statusBadgeClass(code)}`}>{statusLabel(code)}</span>
@@ -465,7 +465,7 @@ export default function InviteCodePage() {
                     <td>
                       <div className="flex items-center gap-1">
                         <button type="button" onClick={() => void handleCopyCode(code.code)} className="soy-btn soy-btn-ghost text-indigo-700">
-                          Copy
+                          복사
                         </button>
                         {code.enabled && (
                           <button
@@ -474,7 +474,7 @@ export default function InviteCodePage() {
                             disabled={revokingCodes.has(code.code)}
                             className="soy-btn soy-btn-ghost text-red-600"
                           >
-                            {revokingCodes.has(code.code) ? "..." : "Deactivate"}
+                            {revokingCodes.has(code.code) ? "..." : "비활성화"}
                           </button>
                         )}
                       </div>
@@ -489,7 +489,7 @@ export default function InviteCodePage() {
 
       {!loading && !loadError && (
         <p className="text-sm text-slate-500">
-          Showing {filteredCodes.length.toLocaleString("ko-KR")} of {codes.length.toLocaleString("ko-KR")} codes.
+          표시 {filteredCodes.length.toLocaleString("ko-KR")}건 / 전체 {codes.length.toLocaleString("ko-KR")}건
         </p>
       )}
     </div>

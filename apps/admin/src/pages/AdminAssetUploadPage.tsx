@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -18,11 +18,11 @@ interface Props {
 }
 
 function toUploadStateLabel(uploadState: UploadState, isPresigning: boolean): string {
-  if (isPresigning) return "Requesting presign...";
-  if (uploadState === "idle") return "Idle";
-  if (uploadState === "presigned") return "Presign complete";
-  if (uploadState === "uploaded") return "Upload complete";
-  return "Confirm complete";
+  if (isPresigning) return "Presign 요청 중";
+  if (uploadState === "idle") return "대기";
+  if (uploadState === "presigned") return "Presign 완료";
+  if (uploadState === "uploaded") return "업로드 완료";
+  return "확정 완료";
 }
 
 export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }: Props) {
@@ -46,7 +46,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
 
   const handlePresign = async (selectedFile: File) => {
     if (!hymnId) {
-      setLastError("hymnId is required.");
+      setLastError("hymnId를 입력해 주세요.");
       return;
     }
     setLastError(null);
@@ -63,7 +63,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
       setPresignResult(result);
       setUploadState("presigned");
     } catch (error) {
-      setLastError(error instanceof Error ? error.message : "Failed to request presign URL.");
+      setLastError(error instanceof Error ? error.message : "Presign URL 요청에 실패했습니다.");
     } finally {
       setIsPresigning(false);
     }
@@ -71,7 +71,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
 
   const handleUpload = async () => {
     if (!presignResult || !file) {
-      setLastError("Presign result and file are required.");
+      setLastError("Presign 결과와 파일이 필요합니다.");
       return;
     }
     setLastError(null);
@@ -83,11 +83,11 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
         body: file,
       });
       if (!response.ok) {
-        throw new Error(`Upload failed (status: ${response.status})`);
+        throw new Error(`업로드 실패 (status: ${response.status})`);
       }
       setUploadState("uploaded");
     } catch (error) {
-      setLastError(error instanceof Error ? error.message : "Failed to upload file.");
+      setLastError(error instanceof Error ? error.message : "파일 업로드에 실패했습니다.");
       setUploadState("presigned");
     } finally {
       setIsUploading(false);
@@ -111,7 +111,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
       setUploadState("confirmed");
       onConfirmed?.();
     } catch (error) {
-      setLastError(error instanceof Error ? error.message : "Failed to confirm uploaded asset.");
+      setLastError(error instanceof Error ? error.message : "업로드 에셋 확정에 실패했습니다.");
       setUploadState("uploaded");
     }
   };
@@ -122,8 +122,8 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
     <div className="space-y-4">
       {showHymnIdField && (
         <div>
-          <h1 className="soy-title">Asset Upload</h1>
-          <p className="soy-description">Follow the sequence: presign, upload, then confirm.</p>
+          <h1 className="soy-title">에셋 업로드</h1>
+          <p className="soy-description">사전 서명 → 업로드 → 확정 순서로 진행합니다.</p>
         </div>
       )}
 
@@ -132,7 +132,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
           {showHymnIdField && (
             <div className="md:col-span-2">
               <label htmlFor="hymnId" className="soy-label">
-                Hymn ID (UUID)
+                찬양 ID (UUID)
               </label>
               <input
                 id="hymnId"
@@ -147,7 +147,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
 
           <div>
             <label htmlFor="assetType" className="soy-label">
-              Asset Type
+              에셋 타입
             </label>
             <select
               id="assetType"
@@ -166,7 +166,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
 
           <div>
             <label htmlFor="partType" className="soy-label">
-              Part (optional)
+              파트 (선택)
             </label>
             <select
               id="partType"
@@ -175,7 +175,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
               disabled={assetType === "PNG"}
               className="soy-select"
             >
-              <option value="">(none)</option>
+              <option value="">(없음)</option>
               <option value="ALL">ALL</option>
               <option value="S">S</option>
               <option value="A">A</option>
@@ -186,7 +186,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
 
           <div className="md:col-span-2">
             <label htmlFor="file" className="soy-label">
-              File
+              파일
             </label>
             <input
               id="file"
@@ -200,7 +200,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
               }}
               className="w-full text-sm text-slate-700"
             />
-            {file && <p className="mt-1 text-xs text-slate-500">Selected: {file.name}</p>}
+            {file && <p className="mt-1 text-xs text-slate-500">선택 파일: {file.name}</p>}
           </div>
         </div>
 
@@ -215,7 +215,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
             disabled={!hymnId || !file || isPresigning}
             className="soy-btn soy-btn-secondary"
           >
-            {isPresigning ? "Presigning..." : "1) Presign"}
+            {isPresigning ? "요청 중..." : "1) Presign"}
           </button>
           <button
             type="button"
@@ -223,7 +223,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
             disabled={!presignResult || !file || isUploading}
             className="soy-btn bg-blue-600 text-white hover:bg-blue-700"
           >
-            {isUploading ? "Uploading..." : "2) Upload"}
+            {isUploading ? "업로드 중..." : "2) Upload"}
           </button>
           <button
             type="button"
@@ -237,17 +237,17 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
       </section>
 
       <section className="soy-panel">
-        <h2 className="soy-title">Presign Result</h2>
+        <h2 className="soy-title">Presign 결과</h2>
         <div className="mt-2 space-y-1 text-xs text-slate-600">
           <div className="break-all">uploadUrl: {presignResult?.uploadUrl ?? "-"}</div>
           <div className="break-all">publicUrl: {presignResult?.publicUrl ?? "-"}</div>
           <div className="break-all">objectKey: {presignResult?.objectKey ?? "-"}</div>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Object key format: hymns/&lt;hymnId&gt;/&lt;type&gt;/&lt;part&gt;.</p>
+        <p className="mt-2 text-xs text-slate-500">Object key 형식: hymns/&lt;hymnId&gt;/&lt;type&gt;/&lt;part&gt;</p>
       </section>
 
       <section className="soy-panel">
-        <h2 className="soy-title">Optional Metadata</h2>
+        <h2 className="soy-title">옵션 메타데이터</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <div>
             <label htmlFor="checksum" className="soy-label">
@@ -266,7 +266,7 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
 
       {confirmResult && (
         <section className="soy-panel border-emerald-200 bg-emerald-50">
-          <h2 className="soy-title text-emerald-900">Confirm Result</h2>
+          <h2 className="soy-title text-emerald-900">확정 결과</h2>
           <pre className="mt-2 overflow-x-auto rounded-lg bg-white/80 p-3 text-xs text-emerald-900">
             {JSON.stringify(confirmResult, null, 2)}
           </pre>
@@ -274,9 +274,9 @@ export default function AdminAssetUploadPage({ hymnId: hymnIdProp, onConfirmed }
       )}
 
       <section className="soy-panel px-4 py-3 text-sm">
-        <span className="text-slate-500">Status: </span>
+        <span className="text-slate-500">상태: </span>
         <span className="font-semibold text-slate-900">{toUploadStateLabel(uploadState, isPresigning)}</span>
-        {lastError && <span className="ml-2 text-red-600">Error: {lastError}</span>}
+        {lastError && <span className="ml-2 text-red-600">오류: {lastError}</span>}
       </section>
     </div>
   );

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { deleteAsset } from "../api/adminAssets";
 import { deleteHymn, getHymnDetail, updateHymn, type HymnDetailResponse } from "../api/hymns";
@@ -44,7 +44,7 @@ export default function HymnEditPage() {
       setTags(data.tags ?? "");
       setEnabled(data.enabled);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load hymn details.");
+      setError(err instanceof Error ? err.message : "찬양 상세를 불러오지 못했습니다.");
     } finally {
       setLoading(false);
     }
@@ -73,19 +73,19 @@ export default function HymnEditPage() {
     if (!id) return;
 
     if (!normalizedTitle) {
-      setError("Title is required.");
+      setError("제목을 입력해 주세요.");
       return;
     }
     if (normalizedTitle.length > TITLE_MAX_LENGTH) {
-      setError(`Title must be ${TITLE_MAX_LENGTH} characters or fewer.`);
+      setError(`제목은 ${TITLE_MAX_LENGTH}자 이하로 입력해 주세요.`);
       return;
     }
     if (normalizedNumber.length > NUMBER_MAX_LENGTH) {
-      setError(`Number must be ${NUMBER_MAX_LENGTH} characters or fewer.`);
+      setError(`번호는 ${NUMBER_MAX_LENGTH}자 이하로 입력해 주세요.`);
       return;
     }
     if (!hasDirtyChanges) {
-      setError("No changes to save.");
+      setError("변경된 항목이 없습니다.");
       return;
     }
 
@@ -100,7 +100,7 @@ export default function HymnEditPage() {
       });
       navigate("/hymns", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update hymn.");
+      setError(err instanceof Error ? err.message : "찬양 수정에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -113,47 +113,47 @@ export default function HymnEditPage() {
       setHymn(data);
       setAssetActionError(null);
     } catch (err) {
-      setAssetActionError(err instanceof Error ? err.message : "Failed to refresh asset list.");
+      setAssetActionError(err instanceof Error ? err.message : "에셋 목록을 새로고침하지 못했습니다.");
     }
   }, [id]);
 
   const handleDeleteHymn = async () => {
     if (!id || !hymn) return;
-    if (!window.confirm(`Delete \"${hymn.title}\"? This removes linked assets and metadata.`)) return;
+    if (!window.confirm(`"${hymn.title}" 찬양을 삭제하시겠습니까? 연결된 에셋/메타데이터도 함께 삭제됩니다.`)) return;
     setDeleting(true);
     setError(null);
     try {
       await deleteHymn(id);
       navigate("/hymns", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete hymn.");
+      setError(err instanceof Error ? err.message : "찬양 삭제에 실패했습니다.");
     } finally {
       setDeleting(false);
     }
   };
 
   const handleDeleteAsset = async (assetId: string) => {
-    if (!window.confirm("Delete this asset?")) return;
+    if (!window.confirm("이 에셋을 삭제하시겠습니까?")) return;
     setDeletingAssetId(assetId);
     setAssetActionError(null);
     try {
       await deleteAsset(assetId);
       await handleAssetUploaded();
     } catch (err) {
-      setAssetActionError(err instanceof Error ? err.message : "Failed to delete asset.");
+      setAssetActionError(err instanceof Error ? err.message : "에셋 삭제에 실패했습니다.");
     } finally {
       setDeletingAssetId(null);
     }
   };
 
-  if (loading) return <p className="text-sm text-slate-500">Loading hymn details...</p>;
+  if (loading) return <p className="text-sm text-slate-500">찬양 상세를 불러오는 중입니다...</p>;
 
   if (!hymn && error) {
     return (
       <div className="space-y-3">
         <div className="soy-alert soy-alert-error">{error}</div>
         <button type="button" onClick={() => void loadHymn()} className="soy-btn soy-btn-secondary">
-          Retry
+          다시 시도
         </button>
       </div>
     );
@@ -164,18 +164,18 @@ export default function HymnEditPage() {
       <section className="soy-panel max-w-4xl">
         <div className="soy-panel-header">
           <div>
-            <p className="soy-kicker">Catalog</p>
-            <h1 className="soy-title">Edit Hymn</h1>
+            <p className="soy-kicker">카탈로그</p>
+            <h1 className="soy-title">찬양 수정</h1>
             {hymn && <p className="soy-description font-mono">ID: {hymn.id}</p>}
           </div>
           <button type="button" onClick={() => void loadHymn()} className="soy-btn soy-btn-secondary">
-            Refresh
+            새로고침
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="md:col-span-2">
-            <span className="soy-label">Title *</span>
+            <span className="soy-label">제목 *</span>
             <input
               id="title"
               type="text"
@@ -190,20 +190,20 @@ export default function HymnEditPage() {
           </label>
 
           <label>
-            <span className="soy-label">Number</span>
+            <span className="soy-label">번호</span>
             <input
               id="number"
               type="text"
               value={number}
               onChange={(event) => setNumber(event.target.value)}
               maxLength={NUMBER_MAX_LENGTH}
-              placeholder="e.g. 23, A-12"
+              placeholder="예: 23, A-12"
               className="soy-input"
             />
           </label>
 
           <label>
-            <span className="soy-label">Tags (comma separated)</span>
+            <span className="soy-label">태그 (쉼표 구분)</span>
             <input
               id="tags"
               type="text"
@@ -221,21 +221,21 @@ export default function HymnEditPage() {
               onChange={(event) => setEnabled(event.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
             />
-            Enabled in app
+            앱에서 활성화
           </label>
 
-          {!hasDirtyChanges && <p className="md:col-span-2 text-xs text-slate-500">No local changes yet.</p>}
+          {!hasDirtyChanges && <p className="md:col-span-2 text-xs text-slate-500">변경된 항목이 없습니다.</p>}
           {error && <div className="md:col-span-2 soy-alert soy-alert-error">{error}</div>}
 
           <div className="md:col-span-2 flex flex-wrap gap-2">
             <button type="submit" disabled={saving || !normalizedTitle || !hasDirtyChanges} className="soy-btn soy-btn-primary">
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? "저장 중..." : "변경 저장"}
             </button>
             <button type="button" onClick={() => navigate("/hymns")} className="soy-btn soy-btn-secondary">
-              Cancel
+              취소
             </button>
             <button type="button" onClick={handleDeleteHymn} disabled={deleting} className="soy-btn soy-btn-danger ml-auto">
-              {deleting ? "Deleting..." : "Delete Hymn"}
+              {deleting ? "삭제 중..." : "찬양 삭제"}
             </button>
           </div>
         </form>
@@ -245,17 +245,17 @@ export default function HymnEditPage() {
         <>
           {hymn.assets.length > 0 && (
             <section className="soy-panel">
-              <h2 className="soy-title">Registered Assets</h2>
+              <h2 className="soy-title">등록된 에셋</h2>
               {assetActionError && <div className="mt-3 soy-alert soy-alert-error">{assetActionError}</div>}
               <div className="soy-table-wrap mt-3">
                 <table className="soy-table min-w-[760px]">
                   <thead>
                     <tr>
-                      <th>Type</th>
-                      <th>Part</th>
+                      <th>타입</th>
+                      <th>파트</th>
                       <th>Object Key</th>
                       <th>URL</th>
-                      <th>Action</th>
+                      <th>관리</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -269,7 +269,7 @@ export default function HymnEditPage() {
                         <td>
                           {/^https?:\/\//i.test(asset.url) ? (
                             <a href={asset.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-700 hover:underline">
-                              Open
+                              열기
                             </a>
                           ) : (
                             <span className="text-slate-400">-</span>
@@ -282,7 +282,7 @@ export default function HymnEditPage() {
                             disabled={deletingAssetId === asset.id}
                             className="soy-btn soy-btn-ghost text-red-600 hover:text-red-700"
                           >
-                            {deletingAssetId === asset.id ? "Deleting..." : "Delete"}
+                            {deletingAssetId === asset.id ? "삭제 중..." : "삭제"}
                           </button>
                         </td>
                       </tr>
@@ -294,8 +294,8 @@ export default function HymnEditPage() {
           )}
 
           <section className="soy-panel">
-            <h2 className="soy-title">Upload Asset</h2>
-            <p className="soy-description">Presign, upload, then confirm to register.</p>
+            <h2 className="soy-title">에셋 업로드</h2>
+            <p className="soy-description">Presign, Upload, Confirm 순서로 업로드를 완료합니다.</p>
             <div className="mt-3">
               <AdminAssetUploadPage hymnId={id} onConfirmed={handleAssetUploaded} />
             </div>

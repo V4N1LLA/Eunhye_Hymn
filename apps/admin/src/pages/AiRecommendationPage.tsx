@@ -1,4 +1,4 @@
-﻿import { FormEvent, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { recommendHymns, type RecommendHymnItem } from "../api/ai";
 
@@ -17,7 +17,7 @@ export default function AiRecommendationPage() {
     event.preventDefault();
     const normalized = situation.trim();
     if (!normalized) {
-      setError("Situation description is required.");
+      setError("상황 설명을 입력해 주세요.");
       return;
     }
 
@@ -39,7 +39,7 @@ export default function AiRecommendationPage() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Failed to get recommendations. Please try again.",
+          : "AI 추천 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.",
       );
     } finally {
       setLoading(false);
@@ -49,34 +49,34 @@ export default function AiRecommendationPage() {
   return (
     <div className="space-y-4">
       <section className="soy-panel">
-        <p className="soy-kicker">AI Assistant</p>
-        <h2 className="soy-title">Hymn Recommendation</h2>
-        <p className="soy-description">Describe your worship context and get situation-based hymn suggestions.</p>
+        <p className="soy-kicker">AI 도우미</p>
+        <h2 className="soy-title">찬양 추천</h2>
+        <p className="soy-description">예배/모임 상황을 입력하면 상황 기반 추천 목록을 제공합니다.</p>
 
         <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-          <p className="font-semibold text-slate-900">How to use</p>
-          <p className="mt-1">1. Describe the context 2. Choose result count 3. Run recommendation.</p>
-          <p className="mt-1 text-xs text-slate-500">The final selection should still be reviewed by the operator.</p>
+          <p className="font-semibold text-slate-900">사용 방법</p>
+          <p className="mt-1">1) 상황 입력 2) 추천 개수 선택 3) 추천 실행</p>
+          <p className="mt-1 text-xs text-slate-500">최종 선택은 예배 목적/대상에 맞게 운영자가 확인해 주세요.</p>
         </div>
       </section>
 
       <section className="soy-panel">
         <form className="space-y-4" onSubmit={runRecommendation}>
           <label className="block">
-            <span className="soy-label">Situation Description</span>
+            <span className="soy-label">상황 설명</span>
             <textarea
               value={situation}
               onChange={(event) => setSituation(event.target.value)}
               rows={4}
               maxLength={180}
-              placeholder="Sunday worship, calm prayer mood"
+              placeholder="예: 주일 예배, 차분한 묵상 분위기"
               className="soy-textarea"
             />
             <div className="mt-1 text-xs text-slate-500">{situation.trim().length}/180</div>
           </label>
 
           <label className="block">
-            <span className="soy-label">Max Results</span>
+            <span className="soy-label">추천 개수</span>
             <select
               value={maxResults}
               onChange={(event) => setMaxResults(Number(event.target.value))}
@@ -92,11 +92,11 @@ export default function AiRecommendationPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button type="submit" disabled={loading} className="soy-btn soy-btn-primary">
-              {loading ? "Generating..." : "Get Recommendations"}
+              {loading ? "추천 생성 중..." : "추천 받기"}
             </button>
             {requestedCount != null && candidateCount != null && (
               <span className="soy-pill bg-slate-100 text-slate-600">
-                Requested {requestedCount} | Candidates {candidateCount}
+                요청 {requestedCount}건 | 후보 {candidateCount}건
               </span>
             )}
           </div>
@@ -107,12 +107,12 @@ export default function AiRecommendationPage() {
 
       <section className="soy-panel">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-900">Recommendation Results</h3>
-          <span className="text-sm text-slate-500">{items.length}</span>
+          <h3 className="text-base font-semibold text-slate-900">추천 결과</h3>
+          <span className="text-sm text-slate-500">{items.length}건</span>
         </div>
 
         {items.length === 0 ? (
-          <div className="soy-empty">No results yet. Enter a situation and run recommendation.</div>
+          <div className="soy-empty">아직 결과가 없습니다. 상황을 입력하고 추천을 실행해 주세요.</div>
         ) : (
           <div className="space-y-3">
             {items.map((item) => (
@@ -121,10 +121,10 @@ export default function AiRecommendationPage() {
                   <div>
                     <div className="text-xs font-semibold text-slate-500">{item.number?.trim() || "-"}</div>
                     <div className="mt-1 text-base font-semibold text-slate-900">{item.title}</div>
-                    <div className="mt-1 text-xs text-slate-500">{item.tags?.trim() || "No tags"}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.tags?.trim() || "태그 없음"}</div>
                   </div>
                   <Link to={`/hymns/${item.id}/edit`} className="soy-btn soy-btn-secondary">
-                    Open Hymn
+                    찬양 열기
                   </Link>
                 </div>
                 <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm text-slate-700">{item.reason}</p>

@@ -1,4 +1,4 @@
-﻿import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   createAdminEventExportJob,
   downloadAdminEventExportJobCsv,
@@ -15,11 +15,11 @@ import {
 import { listUsers } from "../api/adminUsers";
 
 const EVENT_TYPE_OPTIONS: Array<{ label: string; value: "all" | EventType }> = [
-  { label: "All", value: "all" },
-  { label: "Hymn Opened", value: "HYMN_OPENED" },
-  { label: "Part Played", value: "PART_PLAYED" },
-  { label: "Note Saved", value: "NOTE_SAVED" },
-  { label: "Favorite Toggled", value: "FAVORITE_TOGGLED" },
+  { label: "전체", value: "all" },
+  { label: "찬양 열람", value: "HYMN_OPENED" },
+  { label: "파트 재생", value: "PART_PLAYED" },
+  { label: "메모 저장", value: "NOTE_SAVED" },
+  { label: "즐겨찾기 토글", value: "FAVORITE_TOGGLED" },
 ];
 
 const DAY_PRESETS = [1, 7, 30, 60, 90];
@@ -66,20 +66,20 @@ function clampSummaryDays(days: number): number {
 }
 
 function formatSeconds(value: number): string {
-  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}s`;
+  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}초`;
 }
 
 function formatAsyncJobStatus(status: AdminEventExportJob["status"]): string {
   if (status === "QUEUED") {
-    return "Queued";
+    return "대기";
   }
   if (status === "RUNNING") {
-    return "Running";
+    return "실행 중";
   }
   if (status === "COMPLETED") {
-    return "Completed";
+    return "완료";
   }
-  return "Failed";
+  return "실패";
 }
 
 function asyncStatusPillClass(status: AdminEventExportJob["status"]): string {
@@ -145,7 +145,7 @@ export default function AdminEventPage() {
       setSummary(data.summary);
       setPagination(data.pagination);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load audit events.");
+      setError(err instanceof Error ? err.message : "감사 이벤트를 불러오지 못했습니다.");
     } finally {
       setLoading(false);
     }
@@ -157,7 +157,7 @@ export default function AdminEventPage() {
       const data = await getAdminEventExportOpsMetrics(days);
       setOpsMetrics(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load export ops metrics.");
+      setError(err instanceof Error ? err.message : "비동기 내보내기 운영 지표를 불러오지 못했습니다.");
     } finally {
       setOpsMetricsLoading(false);
     }
@@ -172,7 +172,7 @@ export default function AdminEventPage() {
       }
       setUserNamesById(nextMap);
     } catch {
-      // Ignore failures. Table still works with raw UUID.
+      // 사용자 매핑 실패 시 UUID만 표시.
     }
   };
 
@@ -207,7 +207,7 @@ export default function AdminEventPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to check async export status.");
+          setError(err instanceof Error ? err.message : "비동기 내보내기 상태 조회에 실패했습니다.");
         }
       }
     };
@@ -243,7 +243,7 @@ export default function AdminEventPage() {
       });
       triggerDownload(result.blob, result.filename);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to export CSV.");
+      setError(err instanceof Error ? err.message : "CSV 내보내기에 실패했습니다.");
     } finally {
       setExporting(false);
     }
@@ -263,7 +263,7 @@ export default function AdminEventPage() {
       });
       setAsyncJob(job);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create async export job.");
+      setError(err instanceof Error ? err.message : "비동기 내보내기 작업 생성에 실패했습니다.");
     } finally {
       setCreatingAsyncJob(false);
     }
@@ -282,28 +282,28 @@ export default function AdminEventPage() {
       const refreshed = await getAdminEventExportJob(asyncJob.id);
       setAsyncJob(refreshed);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to download async CSV.");
+      setError(err instanceof Error ? err.message : "비동기 CSV 다운로드에 실패했습니다.");
     } finally {
       setDownloadingAsyncJob(false);
     }
   };
 
   const resolveUserName = (targetUserId: string): string => {
-    return userNamesById[targetUserId] ?? "Unknown user";
+    return userNamesById[targetUserId] ?? "미등록 사용자";
   };
 
   return (
     <div className="space-y-4">
       <section className="soy-panel">
-        <p className="soy-kicker">Audit</p>
-        <h1 className="soy-title">Audit Events and Export</h1>
-        <p className="soy-description">Filter events, inspect summary windows, and export CSV (sync/async).</p>
+        <p className="soy-kicker">감사 로그</p>
+        <h1 className="soy-title">이벤트 조회 및 내보내기</h1>
+        <p className="soy-description">필터 조회, 기간 요약, CSV 내보내기(동기/비동기)를 지원합니다.</p>
       </section>
 
       <section className="soy-panel">
         <div className="soy-panel-header">
           <div>
-            <h2 className="soy-title">Async Export Ops Metrics</h2>
+            <h2 className="soy-title">비동기 내보내기 운영 지표</h2>
             {opsMetrics && (
               <p className="soy-description">
                 {formatDateTime(opsMetrics.fromInclusive)} ~ {formatDateTime(opsMetrics.toExclusive)}
@@ -318,41 +318,41 @@ export default function AdminEventPage() {
                 onClick={() => setOpsMetricsDays(days)}
                 className={`soy-btn ${opsMetricsDays === days ? "soy-btn-primary" : "soy-btn-secondary"}`}
               >
-                {`${days}d`}
+                {`${days}일`}
               </button>
             ))}
           </div>
         </div>
 
-        {opsMetricsLoading && <p className="mt-3 text-sm text-slate-500">Loading metrics...</p>}
+        {opsMetricsLoading && <p className="mt-3 text-sm text-slate-500">지표를 불러오는 중입니다...</p>}
 
         {!opsMetricsLoading && opsMetrics && (
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div className="soy-stat-card">
-              <p className="soy-stat-label">Total Jobs</p>
+              <p className="soy-stat-label">총 작업 수</p>
               <p className="soy-stat-value">{opsMetrics.jobs.total.toLocaleString("ko-KR")}</p>
               <p className="mt-1 text-xs text-slate-500">
-                completed {opsMetrics.jobs.completed.toLocaleString("ko-KR")} / failed {opsMetrics.jobs.failed.toLocaleString("ko-KR")}
+                완료 {opsMetrics.jobs.completed.toLocaleString("ko-KR")} / 실패 {opsMetrics.jobs.failed.toLocaleString("ko-KR")}
               </p>
             </div>
             <div className="soy-stat-card">
-              <p className="soy-stat-label">Failure Rate</p>
+              <p className="soy-stat-label">실패율</p>
               <p className="soy-stat-value text-rose-600">{opsMetrics.jobs.failureRatePercent.toFixed(2)}%</p>
               <p className="mt-1 text-xs text-slate-500">
-                queued {opsMetrics.jobs.queued.toLocaleString("ko-KR")} / running {opsMetrics.jobs.running.toLocaleString("ko-KR")}
+                대기 {opsMetrics.jobs.queued.toLocaleString("ko-KR")} / 실행 {opsMetrics.jobs.running.toLocaleString("ko-KR")}
               </p>
             </div>
             <div className="soy-stat-card">
-              <p className="soy-stat-label">Processing Time</p>
+              <p className="soy-stat-label">처리 시간</p>
               <p className="soy-stat-value">{formatSeconds(opsMetrics.processing.averageSeconds)}</p>
               <p className="mt-1 text-xs text-slate-500">
-                p95 {formatSeconds(opsMetrics.processing.p95Seconds)} / sample {opsMetrics.processing.measuredJobs.toLocaleString("ko-KR")}
+                p95 {formatSeconds(opsMetrics.processing.p95Seconds)} / 표본 {opsMetrics.processing.measuredJobs.toLocaleString("ko-KR")}
               </p>
             </div>
             <div className="soy-stat-card">
-              <p className="soy-stat-label">Cleanup Deleted</p>
+              <p className="soy-stat-label">정리 삭제 건수</p>
               <p className="soy-stat-value text-emerald-700">{opsMetrics.cleanup.deletedJobs.toLocaleString("ko-KR")}</p>
-              <p className="mt-1 text-xs text-slate-500">runs {opsMetrics.cleanup.runCount.toLocaleString("ko-KR")}</p>
+              <p className="mt-1 text-xs text-slate-500">실행 {opsMetrics.cleanup.runCount.toLocaleString("ko-KR")}회</p>
             </div>
           </div>
         )}
@@ -397,10 +397,10 @@ export default function AdminEventPage() {
               value={size}
               onChange={(event) => setSize(Number(event.target.value))}
               className="soy-select"
-              title="Page size"
+              title="페이지 크기"
             >
               {SIZE_OPTIONS.map((option) => (
-                <option key={option} value={option}>{`${option} rows`}</option>
+                <option key={option} value={option}>{`${option}건`}</option>
               ))}
             </select>
             <input
@@ -418,14 +418,14 @@ export default function AdminEventPage() {
               }}
               onBlur={() => setSummaryDays((prev) => clampSummaryDays(prev))}
               className="soy-input"
-              title="Summary days"
-              placeholder="Summary days"
+              title="요약 기간(일)"
+              placeholder="요약 기간"
             />
           </div>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-500">Summary presets:</span>
+          <span className="text-xs text-slate-500">요약 프리셋:</span>
           {DAY_PRESETS.map((days) => (
             <button
               key={days}
@@ -433,10 +433,10 @@ export default function AdminEventPage() {
               onClick={() => setSummaryDays(days)}
               className={`soy-btn ${summaryDays === days ? "soy-btn-primary" : "soy-btn-secondary"}`}
             >
-              {`${days}d`}
+              {`${days}일`}
             </button>
           ))}
-          <span className="text-xs text-slate-500">Range: 1~90 days</span>
+          <span className="text-xs text-slate-500">허용 범위: 1~90일</span>
         </div>
 
         <div className="mt-3 flex flex-wrap justify-end gap-2">
@@ -445,9 +445,9 @@ export default function AdminEventPage() {
             onClick={() => void handleCreateAsyncExportJob()}
             className="soy-btn border-emerald-600 text-emerald-700 hover:bg-emerald-50"
             disabled={loading || creatingAsyncJob}
-            title={`Create async export up to ${ASYNC_EXPORT_LIMIT.toLocaleString("ko-KR")} rows`}
+            title={`최대 ${ASYNC_EXPORT_LIMIT.toLocaleString("ko-KR")}건 비동기 내보내기`}
           >
-            {creatingAsyncJob ? "Requesting..." : "Async CSV Request"}
+            {creatingAsyncJob ? "요청 중..." : "비동기 CSV 요청"}
           </button>
           <button
             type="button"
@@ -455,10 +455,10 @@ export default function AdminEventPage() {
             className="soy-btn border-indigo-600 text-indigo-700 hover:bg-indigo-50"
             disabled={loading || exporting}
           >
-            {exporting ? "Exporting..." : "CSV Export"}
+            {exporting ? "내보내는 중..." : "CSV 내보내기"}
           </button>
           <button type="submit" className="soy-btn soy-btn-primary" disabled={loading}>
-            {loading ? "Loading..." : "Search"}
+            {loading ? "조회 중..." : "조회"}
           </button>
         </div>
       </form>
@@ -469,24 +469,24 @@ export default function AdminEventPage() {
         <section className="soy-panel border-emerald-100">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm text-slate-500">Async export job</p>
+              <p className="text-sm text-slate-500">비동기 내보내기 작업</p>
               <p className="break-all text-xs text-slate-500">jobId: {asyncJob.id}</p>
             </div>
             <span className={`soy-pill ${asyncStatusPillClass(asyncJob.status)}`}>{formatAsyncJobStatus(asyncJob.status)}</span>
           </div>
 
           <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-600 md:grid-cols-2">
-            <div>Export limit: {asyncJob.exportLimit.toLocaleString("ko-KR")}</div>
-            <div>Rows: {(asyncJob.rowCount ?? 0).toLocaleString("ko-KR")}</div>
-            <div>Created: {formatDateTime(asyncJob.createdAt)}</div>
-            <div>Completed: {asyncJob.completedAt ? formatDateTime(asyncJob.completedAt) : "-"}</div>
+            <div>요청 상한: {asyncJob.exportLimit.toLocaleString("ko-KR")}건</div>
+            <div>결과 행수: {(asyncJob.rowCount ?? 0).toLocaleString("ko-KR")}건</div>
+            <div>생성 시각: {formatDateTime(asyncJob.createdAt)}</div>
+            <div>완료 시각: {asyncJob.completedAt ? formatDateTime(asyncJob.completedAt) : "-"}</div>
           </div>
 
           {asyncJob.errorMessage && <p className="mt-2 text-sm text-red-600">{asyncJob.errorMessage}</p>}
 
           <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
             {(asyncJob.status === "QUEUED" || asyncJob.status === "RUNNING") && (
-              <span className="text-xs text-slate-500">Auto-refresh every 2 seconds.</span>
+              <span className="text-xs text-slate-500">2초 간격으로 상태를 자동 갱신합니다.</span>
             )}
             <button
               type="button"
@@ -494,7 +494,7 @@ export default function AdminEventPage() {
               disabled={!asyncJob.downloadable || downloadingAsyncJob}
               className="soy-btn border-emerald-600 text-emerald-700 hover:bg-emerald-50"
             >
-              {downloadingAsyncJob ? "Downloading..." : "Download Async CSV"}
+              {downloadingAsyncJob ? "다운로드 중..." : "비동기 CSV 다운로드"}
             </button>
           </div>
         </section>
@@ -504,14 +504,14 @@ export default function AdminEventPage() {
         <section className="soy-panel">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-slate-900">
-              {isSummaryWindowFromDateFilter ? "Selected Window Summary" : `Last ${summaryDays}d Summary`}
+              {isSummaryWindowFromDateFilter ? "지정 기간 이벤트 요약" : `최근 ${summaryDays}일 이벤트 요약`}
             </h2>
             <div className="text-sm text-slate-500">
               {formatDateTime(summary.fromInclusive)} ~ {formatDateTime(summary.toExclusive)}
             </div>
           </div>
 
-          <p className="mb-3 text-sm text-slate-600">Total events: {summary.total.toLocaleString("ko-KR")}</p>
+          <p className="mb-3 text-sm text-slate-600">총 이벤트: {summary.total.toLocaleString("ko-KR")}건</p>
           <div className="space-y-2">
             {summary.byType.map((row) => {
               const width = `${(row.count / maxSummaryCount) * 100}%`;
@@ -536,19 +536,19 @@ export default function AdminEventPage() {
           <table className="soy-table min-w-[980px]">
             <thead>
               <tr>
-                <th>Time</th>
-                <th>Event</th>
-                <th>User</th>
+                <th>시각</th>
+                <th>이벤트</th>
+                <th>사용자</th>
                 <th>hymnId</th>
-                <th>Part</th>
-                <th>Metadata</th>
+                <th>파트</th>
+                <th>메타데이터</th>
               </tr>
             </thead>
             <tbody>
               {!loading && items.length === 0 && (
                 <tr>
                   <td colSpan={6}>
-                    <div className="soy-empty m-3">No events matched your query.</div>
+                    <div className="soy-empty m-3">조회 결과가 없습니다.</div>
                   </td>
                 </tr>
               )}
@@ -575,7 +575,7 @@ export default function AdminEventPage() {
 
       <div className="flex items-center justify-between text-sm text-slate-600">
         <span>
-          Page {pagination.totalPages === 0 ? 0 : pagination.page} / {pagination.totalPages}, total {pagination.total.toLocaleString("ko-KR")} rows
+          페이지 {pagination.totalPages === 0 ? 0 : pagination.page} / {pagination.totalPages}, 전체 {pagination.total.toLocaleString("ko-KR")}건
         </span>
         <div className="flex items-center gap-2">
           <button
@@ -584,7 +584,7 @@ export default function AdminEventPage() {
             disabled={loading || !pagination.hasPrevious}
             className="soy-btn soy-btn-secondary"
           >
-            Previous
+            이전
           </button>
           <button
             type="button"
@@ -592,7 +592,7 @@ export default function AdminEventPage() {
             disabled={loading || !pagination.hasNext}
             className="soy-btn soy-btn-secondary"
           >
-            Next
+            다음
           </button>
         </div>
       </div>

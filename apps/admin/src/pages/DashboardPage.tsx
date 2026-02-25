@@ -48,9 +48,20 @@ function KpiCard({ title, value, suffix, gradientClass, helper }: KpiCardProps) 
 }
 
 function systemRiskLabel(activeAdmins: number | null): string {
-  if (activeAdmins == null) return "Checking admin status...";
-  if (activeAdmins <= 1) return "Single-point admin risk";
-  return "Admin redundancy is healthy";
+  if (activeAdmins == null) return "관리자 구성 상태를 확인 중입니다.";
+  if (activeAdmins <= 1) return "활성 관리자 1명: 단일 장애 위험";
+  return "활성 관리자 이중화 상태가 양호합니다.";
+}
+
+function roleLabel(role: string | null | undefined): string {
+  switch ((role ?? "").trim().toUpperCase()) {
+    case "ADMIN":
+      return "관리자";
+    case "USER":
+      return "일반 사용자";
+    default:
+      return "미확인";
+  }
 }
 
 export default function DashboardPage() {
@@ -101,7 +112,7 @@ export default function DashboardPage() {
 
     setMetrics(next);
     if (failures > 0) {
-      setError("Some metrics could not be loaded. You can still continue operations.");
+      setError("일부 지표를 불러오지 못했습니다. 페이지를 새로고침해 주세요.");
     }
     setLoading(false);
   }, []);
@@ -120,49 +131,49 @@ export default function DashboardPage() {
       <section className="soy-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">Soybean-style Console</p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-900">Operations Dashboard</h2>
-            <p className="mt-1 text-sm text-slate-500">Welcome back, {user?.role ?? "ADMIN"} operator.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">운영 콘솔</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-900">관리자 대시보드</h2>
+            <p className="mt-1 text-sm text-slate-500">환영합니다. 현재 권한: {roleLabel(user?.role)}</p>
           </div>
           <div className="flex gap-2">
             <Link
               to="/users"
               className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              Manage Users
+              사용자 관리
             </Link>
             <Link
               to="/events"
               className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
             >
-              Open Events
+              이벤트 로그
             </Link>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            title="Total Hymns"
+            title="전체 찬양"
             value={metrics.hymns}
-            helper={loading ? "Loading metrics..." : "Registered in catalog"}
+            helper={loading ? "지표 로딩 중..." : "등록된 찬양 수"}
             gradientClass="bg-gradient-to-br from-fuchsia-500 to-purple-600"
           />
           <KpiCard
-            title="Available Hymns"
+            title="활성 찬양"
             value={metrics.enabledHymns}
-            helper={loading ? "Loading metrics..." : "Enabled for users"}
+            helper={loading ? "지표 로딩 중..." : "사용자에게 노출 중"}
             gradientClass="bg-gradient-to-br from-cyan-500 to-blue-600"
           />
           <KpiCard
-            title="Active Invite Codes"
+            title="활성 초대코드"
             value={metrics.activeInvites}
-            helper={loading ? "Loading metrics..." : "Ready for onboarding"}
+            helper={loading ? "지표 로딩 중..." : "회원가입 가능 코드"}
             gradientClass="bg-gradient-to-br from-emerald-500 to-teal-600"
           />
           <KpiCard
-            title="7-day Events"
+            title="최근 7일 이벤트"
             value={metrics.weeklyEvents}
-            helper={loading ? "Loading metrics..." : "Recent activity volume"}
+            helper={loading ? "지표 로딩 중..." : "이용 활동 볼륨"}
             gradientClass="bg-gradient-to-br from-orange-500 to-amber-600"
           />
         </div>
@@ -170,18 +181,18 @@ export default function DashboardPage() {
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="soy-card p-4">
-          <h3 className="text-base font-semibold text-slate-900">System Health</h3>
-          <p className="mt-1 text-sm text-slate-500">Quick check for account and access stability.</p>
+          <h3 className="text-base font-semibold text-slate-900">시스템 상태</h3>
+          <p className="mt-1 text-sm text-slate-500">계정/권한 운영 안정성을 빠르게 점검합니다.</p>
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <div className="text-xs text-slate-500">Total Users</div>
+              <div className="text-xs text-slate-500">전체 사용자</div>
               <div className="mt-1 text-lg font-semibold text-slate-900">{metrics.users?.toLocaleString("ko-KR") ?? "--"}</div>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <div className="text-xs text-slate-500">Active Admins</div>
+              <div className="text-xs text-slate-500">활성 관리자</div>
               <div className="mt-1 text-lg font-semibold text-slate-900">{metrics.activeAdmins?.toLocaleString("ko-KR") ?? "--"}</div>
-              {activeRatio != null && <div className="text-xs text-slate-500">Admin ratio: {activeRatio}%</div>}
+              {activeRatio != null && <div className="text-xs text-slate-500">관리자 비율: {activeRatio}%</div>}
             </div>
           </div>
 
@@ -195,21 +206,21 @@ export default function DashboardPage() {
         </div>
 
         <div className="soy-card p-4">
-          <h3 className="text-base font-semibold text-slate-900">Quick Links</h3>
-          <p className="mt-1 text-sm text-slate-500">Direct access to frequent operational tasks.</p>
+          <h3 className="text-base font-semibold text-slate-900">빠른 이동</h3>
+          <p className="mt-1 text-sm text-slate-500">자주 사용하는 운영 화면으로 바로 이동합니다.</p>
 
           <div className="mt-4 grid grid-cols-1 gap-2">
             <Link to="/hymns" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Hymn Catalog Management
+              찬양 카탈로그 관리
             </Link>
             <Link to="/assets/upload" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Asset Upload
+              에셋 업로드
             </Link>
             <Link to="/invite-codes" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Invite Code Operations
+              초대 코드 운영
             </Link>
             <Link to="/profile-change-requests" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Profile Change Approval
+              프로필 변경 승인
             </Link>
           </div>
         </div>

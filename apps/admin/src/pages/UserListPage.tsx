@@ -40,6 +40,39 @@ function formatPhone(value: string | null | undefined): string {
   return digits;
 }
 
+function roleLabel(role: string | null | undefined): string {
+  switch ((role ?? "").trim().toUpperCase()) {
+    case "ADMIN":
+      return "관리자";
+    case "USER":
+      return "일반 사용자";
+    default:
+      return "미확인";
+  }
+}
+
+function statusLabel(status: string | null | undefined): string {
+  switch ((status ?? "").trim().toUpperCase()) {
+    case "ACTIVE":
+      return "활성";
+    case "DISABLED":
+      return "비활성";
+    default:
+      return "미확인";
+  }
+}
+
+function genderLabel(gender: string | null | undefined): string {
+  switch ((gender ?? "").trim().toUpperCase()) {
+    case "MALE":
+      return "남성";
+    case "FEMALE":
+      return "여성";
+    default:
+      return "미상";
+  }
+}
+
 function toDraft(user: UserResponse): UserDraft {
   return {
     displayName: user.displayName,
@@ -57,8 +90,8 @@ function buildPayload(user: UserResponse, draft: UserDraft): { payload: UpdateUs
   const payload: UpdateUserRequest = {};
 
   const displayName = normalizeText(draft.displayName);
-  if (!displayName) return { payload: null, error: "Display name is required." };
-  if (displayName.length > 64) return { payload: null, error: "Display name is too long." };
+  if (!displayName) return { payload: null, error: "표시 이름을 입력해 주세요." };
+  if (displayName.length > 64) return { payload: null, error: "표시 이름은 64자 이하로 입력해 주세요." };
   if (displayName !== user.displayName) {
     payload.displayName = displayName;
   }
@@ -81,7 +114,7 @@ function buildPayload(user: UserResponse, draft: UserDraft): { payload: UpdateUs
     nextGender !== currentGender;
   if (profileChanged) {
     if (!nextChurch || !nextName || !nextGroup) {
-      return { payload: null, error: "Church, name, and group are required when updating profile." };
+      return { payload: null, error: "프로필 변경 시 교회/이름/구역은 필수입니다." };
     }
     payload.churchName = nextChurch;
     payload.name = nextName;
@@ -93,7 +126,7 @@ function buildPayload(user: UserResponse, draft: UserDraft): { payload: UpdateUs
   const currentPhone = normalizePhone(user.verification?.phoneNumber);
   if (nextPhone !== currentPhone) {
     if (nextPhone && (nextPhone.length < 10 || nextPhone.length > 11)) {
-      return { payload: null, error: "Phone number must be 10-11 digits." };
+      return { payload: null, error: "전화번호는 숫자 10~11자리여야 합니다." };
     }
     payload.phoneNumber = nextPhone;
   }
@@ -136,7 +169,7 @@ export default function UserListPage() {
       setUsers(data);
       setSelectedUserId((prev) => (prev && data.some((item) => item.id === prev) ? prev : data[0]?.id ?? null));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load users.");
+      setError(err instanceof Error ? err.message : "사용자 목록을 불러오지 못했습니다.");
     } finally {
       setLoading(false);
     }
@@ -200,11 +233,11 @@ export default function UserListPage() {
     setMessage(null);
 
     if (currentUser?.userId === selectedUser.id && draft.role !== selectedUser.role) {
-      setError("You cannot change your own role.");
+      setError("본인 계정의 역할은 변경할 수 없습니다.");
       return;
     }
     if (currentUser?.userId === selectedUser.id && draft.status !== selectedUser.status) {
-      setError("You cannot change your own status.");
+      setError("본인 계정의 상태는 변경할 수 없습니다.");
       return;
     }
     const wouldLoseAdmin =
@@ -212,7 +245,7 @@ export default function UserListPage() {
       selectedUser.status === "ACTIVE" &&
       (draft.role !== "ADMIN" || draft.status !== "ACTIVE");
     if (wouldLoseAdmin && activeAdminCount <= 1) {
-      setError("You cannot demote/disable the last active admin.");
+      setError("마지막 활성 관리자 계정은 강등/비활성화할 수 없습니다.");
       return;
     }
 
@@ -222,7 +255,7 @@ export default function UserListPage() {
       return;
     }
     if (!payload) {
-      setMessage("No changes to save.");
+      setMessage("변경된 항목이 없습니다.");
       return;
     }
 
@@ -231,9 +264,9 @@ export default function UserListPage() {
       const updated = await updateUser(selectedUser.id, payload);
       setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setDraft(toDraft(updated));
-      setMessage("User updated.");
+      setMessage("사용자 정보를 저장했습니다.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update user.");
+      setError(err instanceof Error ? err.message : "사용자 저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -241,15 +274,15 @@ export default function UserListPage() {
 
   const handleDisable = async (targetUser: UserResponse) => {
     if (currentUser?.userId === targetUser.id) {
-      setError("You cannot disable your own account.");
+      setError("본인 계정은 비활성화할 수 없습니다.");
       return;
     }
     if (targetUser.role === "ADMIN" && targetUser.status === "ACTIVE" && activeAdminCount <= 1) {
-      setError("You cannot disable the last active admin.");
+      setError("마지막 활성 관리자 계정은 비활성화할 수 없습니다.");
       return;
     }
     if (targetUser.status === "DISABLED") {
-      setError("This user is already disabled.");
+      setError("이미 비활성화된 사용자입니다.");
       return;
     }
 
@@ -259,9 +292,9 @@ export default function UserListPage() {
     try {
       const deleted = await deleteUser(targetUser.id);
       setUsers((prev) => prev.map((item) => (item.id === deleted.id ? deleted : item)));
-      setMessage(`Disabled ${deleted.displayName}.`);
+      setMessage(`${deleted.displayName} 계정을 비활성화했습니다.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to disable user.");
+      setError(err instanceof Error ? err.message : "비활성화 처리에 실패했습니다.");
     } finally {
       setDeletingId(null);
     }
@@ -271,11 +304,11 @@ export default function UserListPage() {
     event.preventDefault();
     const displayName = normalizeText(newDisplayName);
     if (!displayName) {
-      setError("Display name is required.");
+      setError("새 사용자 표시 이름을 입력해 주세요.");
       return;
     }
     if (displayName.length > 64) {
-      setError("Display name is too long.");
+      setError("표시 이름은 64자 이하로 입력해 주세요.");
       return;
     }
 
@@ -293,9 +326,9 @@ export default function UserListPage() {
       setNewDisplayName("");
       setNewRole("USER");
       setNewStatus("ACTIVE");
-      setMessage(`Created ${created.displayName}.`);
+      setMessage(`${created.displayName} 계정을 생성했습니다.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create user.");
+      setError(err instanceof Error ? err.message : "사용자 생성에 실패했습니다.");
     } finally {
       setCreating(false);
     }
@@ -306,36 +339,36 @@ export default function UserListPage() {
       <section className="soy-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">User Console</p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-900">User Management</h2>
-            <p className="mt-1 text-sm text-slate-500">Filter by church and identify users with phone/email quickly.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">사용자 콘솔</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-900">사용자 관리</h2>
+            <p className="mt-1 text-sm text-slate-500">교회별 조회와 전화번호 중심 식별로 사용자 정보를 관리합니다.</p>
           </div>
           <button
             type="button"
             onClick={() => void loadUsers()}
             className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Reload
+            새로고침
           </button>
         </div>
 
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-            <div className="text-xs text-slate-500">Total Users</div>
+            <div className="text-xs text-slate-500">전체 사용자</div>
             <div className="mt-1 text-lg font-semibold text-slate-900">{users.length.toLocaleString("ko-KR")}</div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-            <div className="text-xs text-slate-500">Active Users</div>
+            <div className="text-xs text-slate-500">활성 사용자</div>
             <div className="mt-1 text-lg font-semibold text-slate-900">
               {users.filter((item) => item.status === "ACTIVE").length.toLocaleString("ko-KR")}
             </div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-            <div className="text-xs text-slate-500">Active Admins</div>
+            <div className="text-xs text-slate-500">활성 관리자</div>
             <div className="mt-1 text-lg font-semibold text-slate-900">{activeAdminCount.toLocaleString("ko-KR")}</div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-            <div className="text-xs text-slate-500">Phone Verified</div>
+            <div className="text-xs text-slate-500">전화번호 인증</div>
             <div className="mt-1 text-lg font-semibold text-slate-900">
               {users.filter((item) => normalizePhone(item.verification?.phoneNumber).length > 0).length.toLocaleString("ko-KR")}
             </div>
@@ -346,7 +379,7 @@ export default function UserListPage() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search name/email/phone/UUID"
+            placeholder="이름/이메일/전화번호/UUID 검색"
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 md:col-span-2"
           />
           <select
@@ -354,7 +387,7 @@ export default function UserListPage() {
             onChange={(event) => setChurchFilter(event.target.value)}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="all">All churches</option>
+            <option value="all">전체 교회</option>
             {churchOptions.map((churchName) => (
               <option key={churchName} value={churchName}>
                 {churchName}
@@ -362,7 +395,7 @@ export default function UserListPage() {
             ))}
           </select>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
-            Filtered: {filteredUsers.length.toLocaleString("ko-KR")}
+            필터 결과: {filteredUsers.length.toLocaleString("ko-KR")}명
           </div>
         </div>
         <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -371,18 +404,18 @@ export default function UserListPage() {
             onChange={(event) => setRoleFilter(event.target.value as RoleFilter)}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="all">All roles</option>
-            <option value="ADMIN">ADMIN</option>
-            <option value="USER">USER</option>
+            <option value="all">전체 역할</option>
+            <option value="ADMIN">관리자</option>
+            <option value="USER">일반 사용자</option>
           </select>
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="all">All status</option>
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="DISABLED">DISABLED</option>
+            <option value="all">전체 상태</option>
+            <option value="ACTIVE">활성</option>
+            <option value="DISABLED">비활성</option>
           </select>
         </div>
 
@@ -390,7 +423,7 @@ export default function UserListPage() {
           <input
             value={newDisplayName}
             onChange={(event) => setNewDisplayName(event.target.value)}
-            placeholder="New user display name"
+            placeholder="새 사용자 표시 이름"
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 md:col-span-2"
           />
           <select
@@ -398,8 +431,8 @@ export default function UserListPage() {
             onChange={(event) => setNewRole(event.target.value as EditableRole)}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="USER">USER</option>
-            <option value="ADMIN">ADMIN</option>
+            <option value="USER">일반 사용자</option>
+            <option value="ADMIN">관리자</option>
           </select>
           <div className="flex gap-2">
             <select
@@ -407,21 +440,21 @@ export default function UserListPage() {
               onChange={(event) => setNewStatus(event.target.value as EditableStatus)}
               className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="DISABLED">DISABLED</option>
+              <option value="ACTIVE">활성</option>
+              <option value="DISABLED">비활성</option>
             </select>
             <button
               type="submit"
               disabled={creating}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {creating ? "Creating..." : "Create"}
+              {creating ? "생성 중..." : "생성"}
             </button>
           </div>
         </form>
       </section>
 
-      {loading && <p className="text-sm text-gray-500">Loading...</p>}
+      {loading && <p className="text-sm text-gray-500">로딩 중...</p>}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
       {message && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</div>}
 
@@ -431,43 +464,46 @@ export default function UserListPage() {
             <table className="min-w-[980px] w-full text-left">
               <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">User</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Church</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Contact</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Role</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">사용자</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">교회</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">식별 정보</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">역할</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">상태</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-600">관리</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.map((user) => (
-                  <tr key={user.id} className={`border-b border-slate-100 last:border-b-0 ${selectedUserId === user.id ? "bg-indigo-50/40" : ""}`}>
+                  <tr
+                    key={user.id}
+                    onClick={() => setSelectedUserId(user.id)}
+                    className={`border-b border-slate-100 last:border-b-0 cursor-pointer ${
+                      selectedUserId === user.id ? "bg-indigo-50/40" : "hover:bg-slate-50"
+                    }`}
+                    title="클릭하면 상세 정보가 열립니다."
+                  >
                     <td className="px-4 py-3">
                       <div className="font-medium">{user.displayName}</div>
                       <div className="font-mono text-xs text-slate-500">{user.id}</div>
                     </td>
                     <td className="px-4 py-3 text-sm">{user.profile?.churchName ?? "-"}</td>
                     <td className="px-4 py-3 text-sm">
-                      <div>{primaryContact(user)}</div>
+                      <div className="font-medium">{primaryContact(user)}</div>
                       <div className="text-xs text-slate-500">{user.primaryEmail ?? "-"}</div>
                     </td>
-                    <td className="px-4 py-3 text-sm">{user.role}</td>
-                    <td className="px-4 py-3 text-sm">{user.status}</td>
+                    <td className="px-4 py-3 text-sm">{roleLabel(user.role)}</td>
+                    <td className="px-4 py-3 text-sm">{statusLabel(user.status)}</td>
                     <td className="px-4 py-3 text-sm">
                       <button
                         type="button"
-                        onClick={() => setSelectedUserId(user.id)}
-                        className="mr-3 font-semibold text-indigo-700 hover:text-indigo-900"
-                      >
-                        Details
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDisable(user)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleDisable(user);
+                        }}
                         disabled={deletingId === user.id}
                         className="font-semibold text-red-600 hover:text-red-800 disabled:opacity-40"
                       >
-                        {deletingId === user.id ? "Disabling..." : "Disable"}
+                        {deletingId === user.id ? "비활성화 중..." : "비활성화"}
                       </button>
                     </td>
                   </tr>
@@ -475,7 +511,7 @@ export default function UserListPage() {
                 {!filteredUsers.length && (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
-                      No users found.
+                      조회된 사용자가 없습니다.
                     </td>
                   </tr>
                 )}
@@ -487,37 +523,37 @@ export default function UserListPage() {
 
       {selectedUser && draft && (
         <section className="soy-card p-4">
-          <h3 className="text-lg font-semibold text-slate-900">User Details</h3>
-          <p className="mt-1 text-sm text-slate-600">Update profile, account status, and phone info.</p>
+          <h3 className="text-lg font-semibold text-slate-900">사용자 상세</h3>
+          <p className="mt-1 text-sm text-slate-600">프로필, 계정 상태, 전화번호를 수정할 수 있습니다.</p>
           <form onSubmit={handleSave} className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <input
               value={draft.displayName}
               onChange={(event) => setDraft((prev) => (prev ? { ...prev, displayName: event.target.value } : prev))}
-              placeholder="Display name"
+              placeholder="표시 이름"
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <input
               value={draft.phoneNumber}
               onChange={(event) => setDraft((prev) => (prev ? { ...prev, phoneNumber: event.target.value } : prev))}
-              placeholder="Phone number"
+              placeholder="전화번호"
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <input
               value={draft.churchName}
               onChange={(event) => setDraft((prev) => (prev ? { ...prev, churchName: event.target.value } : prev))}
-              placeholder="Church"
+              placeholder="교회"
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <input
               value={draft.name}
               onChange={(event) => setDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev))}
-              placeholder="Name"
+              placeholder="이름"
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <input
               value={draft.group}
               onChange={(event) => setDraft((prev) => (prev ? { ...prev, group: event.target.value } : prev))}
-              placeholder="Group"
+              placeholder="구역"
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <select
@@ -525,35 +561,35 @@ export default function UserListPage() {
               onChange={(event) => setDraft((prev) => (prev ? { ...prev, gender: event.target.value as EditableGender } : prev))}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="UNKNOWN">UNKNOWN</option>
-              <option value="MALE">MALE</option>
-              <option value="FEMALE">FEMALE</option>
+              <option value="UNKNOWN">{genderLabel("UNKNOWN")}</option>
+              <option value="MALE">{genderLabel("MALE")}</option>
+              <option value="FEMALE">{genderLabel("FEMALE")}</option>
             </select>
             <select
               value={draft.role}
               onChange={(event) => setDraft((prev) => (prev ? { ...prev, role: event.target.value as EditableRole } : prev))}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="USER">USER</option>
-              <option value="ADMIN">ADMIN</option>
+              <option value="USER">{roleLabel("USER")}</option>
+              <option value="ADMIN">{roleLabel("ADMIN")}</option>
             </select>
             <select
               value={draft.status}
               onChange={(event) => setDraft((prev) => (prev ? { ...prev, status: event.target.value as EditableStatus } : prev))}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="DISABLED">DISABLED</option>
+              <option value="ACTIVE">{statusLabel("ACTIVE")}</option>
+              <option value="DISABLED">{statusLabel("DISABLED")}</option>
             </select>
             <div className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              Joined: {formatDateTime(selectedUser.createdAt)} | Last login: {formatDateTime(selectedUser.lastLoginAt)}
+              가입일: {formatDateTime(selectedUser.createdAt)} | 최근 로그인: {formatDateTime(selectedUser.lastLoginAt)}
             </div>
             <button
               type="submit"
               disabled={saving}
               className="md:col-span-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? "저장 중..." : "변경 저장"}
             </button>
           </form>
         </section>

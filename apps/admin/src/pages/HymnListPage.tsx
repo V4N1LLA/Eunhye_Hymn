@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { deleteHymn, listHymns, updateHymn, type HymnResponse } from "../api/hymns";
 import InsightCard from "../components/InsightCard";
@@ -24,7 +24,7 @@ export default function HymnListPage() {
       const data = await listHymns();
       setHymns(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load hymns.");
+      setError(err instanceof Error ? err.message : "찬양 목록을 불러오지 못했습니다.");
     } finally {
       setLoading(false);
     }
@@ -71,9 +71,9 @@ export default function HymnListPage() {
     try {
       const updated = await updateHymn(hymn.id, { enabled: !hymn.enabled });
       setHymns((prev) => prev.map((item) => (item.id === hymn.id ? { ...item, enabled: updated.enabled } : item)));
-      setActionSuccess(`Updated \"${updated.title}\" to ${updated.enabled ? "enabled" : "disabled"}.`);
+      setActionSuccess(`"${updated.title}" 찬양 상태를 ${updated.enabled ? "활성" : "비활성"}으로 변경했습니다.`);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to update hymn status.");
+      setActionError(err instanceof Error ? err.message : "찬양 상태 변경에 실패했습니다.");
     } finally {
       setTogglingIds((prev) => {
         const next = new Set(prev);
@@ -84,15 +84,15 @@ export default function HymnListPage() {
   };
 
   const handleDelete = async (hymn: HymnResponse) => {
-    if (!window.confirm(`Delete \"${hymn.title}\"? This removes linked assets and metadata.`)) return;
+    if (!window.confirm(`"${hymn.title}" 찬양을 삭제하시겠습니까? 연결된 에셋/메타데이터도 함께 삭제됩니다.`)) return;
     clearActionFeedback();
     setDeletingIds((prev) => new Set(prev).add(hymn.id));
     try {
       await deleteHymn(hymn.id);
       setHymns((prev) => prev.filter((item) => item.id !== hymn.id));
-      setActionSuccess(`Deleted \"${hymn.title}\".`);
+      setActionSuccess(`"${hymn.title}" 찬양을 삭제했습니다.`);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to delete hymn.");
+      setActionError(err instanceof Error ? err.message : "찬양 삭제에 실패했습니다.");
     } finally {
       setDeletingIds((prev) => {
         const next = new Set(prev);
@@ -107,37 +107,37 @@ export default function HymnListPage() {
       <section className="soy-panel">
         <div className="soy-panel-header">
           <div>
-            <p className="soy-kicker">Catalog</p>
-            <h2 className="soy-title">Hymn Management</h2>
-            <p className="soy-description">Search by title/number/tags and manage availability.</p>
+            <p className="soy-kicker">카탈로그</p>
+            <h2 className="soy-title">찬양 관리</h2>
+            <p className="soy-description">제목/번호/태그 검색과 노출 상태 관리를 한 화면에서 처리합니다.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => void loadHymns()} disabled={loading} className="soy-btn soy-btn-secondary">
-              {loading ? "Loading..." : "Reload"}
+              {loading ? "로딩 중..." : "새로고침"}
             </button>
             <Link to="/hymns/new" className="soy-btn soy-btn-primary">
-              Add Hymn
+              찬양 추가
             </Link>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <InsightCard title="Total Hymns" value={hymns.length} tone="indigo" badge="HM" description="Registered entries" loading={loading} />
+          <InsightCard title="전체 찬양" value={hymns.length} tone="indigo" badge="HM" description="등록된 찬양 수" loading={loading} />
           <InsightCard
-            title="Enabled"
+            title="활성 찬양"
             value={enabledCount}
             tone="emerald"
             badge="LIVE"
-            description="Visible to users"
+            description="사용자 노출 중"
             ratio={hymns.length > 0 ? enabledCount / hymns.length : 0}
             loading={loading}
           />
           <InsightCard
-            title="Disabled"
+            title="비활성 찬양"
             value={disabledCount}
             tone="amber"
             badge="OFF"
-            description="Hidden from users"
+            description="노출 중지 상태"
             ratio={hymns.length > 0 ? disabledCount / hymns.length : 0}
             loading={loading}
           />
@@ -147,29 +147,29 @@ export default function HymnListPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search title, number, tags"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="제목, 번호, 태그 검색"
             className="soy-input"
           />
-          <select value={enabledFilter} onChange={(e) => setEnabledFilter(e.target.value as EnabledFilter)} className="soy-select">
-            <option value="all">All</option>
-            <option value="enabled">Enabled</option>
-            <option value="disabled">Disabled</option>
+          <select value={enabledFilter} onChange={(event) => setEnabledFilter(event.target.value as EnabledFilter)} className="soy-select">
+            <option value="all">전체</option>
+            <option value="enabled">활성</option>
+            <option value="disabled">비활성</option>
           </select>
           {hasActiveFilter && (
             <button type="button" onClick={clearFilters} className="soy-btn soy-btn-secondary">
-              Clear Filters
+              필터 초기화
             </button>
           )}
         </div>
       </section>
 
-      {loading && <p className="text-sm text-slate-500">Loading hymns...</p>}
+      {loading && <p className="text-sm text-slate-500">찬양 데이터를 불러오는 중입니다...</p>}
       {error && (
         <div className="soy-alert soy-alert-error flex flex-wrap items-center justify-between gap-2">
           <span>{error}</span>
           <button type="button" onClick={() => void loadHymns()} className="soy-btn soy-btn-secondary">
-            Retry
+            다시 시도
           </button>
         </div>
       )}
@@ -182,11 +182,11 @@ export default function HymnListPage() {
             <table className="soy-table min-w-[760px]">
               <thead>
                 <tr>
-                  <th>Number</th>
-                  <th>Title</th>
-                  <th>Tags</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>번호</th>
+                  <th>제목</th>
+                  <th>태그</th>
+                  <th>상태</th>
+                  <th>관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -194,11 +194,11 @@ export default function HymnListPage() {
                   <tr>
                     <td colSpan={5}>
                       <div className="soy-empty m-3">
-                        {hasActiveFilter ? "No hymns match the current filters." : "No hymns yet."}
+                        {hasActiveFilter ? "검색/필터 조건에 맞는 찬양이 없습니다." : "등록된 찬양이 없습니다."}
                         {!hasActiveFilter && (
                           <div className="mt-3">
                             <Link to="/hymns/new" className="soy-btn soy-btn-secondary">
-                              Create First Hymn
+                              첫 찬양 추가하기
                             </Link>
                           </div>
                         )}
@@ -222,7 +222,7 @@ export default function HymnListPage() {
                         disabled={togglingIds.has(hymn.id)}
                         className={`soy-pill ${hymn.enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
                       >
-                        {togglingIds.has(hymn.id) ? "Updating..." : hymn.enabled ? "Enabled" : "Disabled"}
+                        {togglingIds.has(hymn.id) ? "변경 중..." : hymn.enabled ? "활성" : "비활성"}
                       </button>
                     </td>
                     <td>
@@ -232,7 +232,7 @@ export default function HymnListPage() {
                         disabled={deletingIds.has(hymn.id)}
                         className="soy-btn soy-btn-ghost text-red-600 hover:text-red-700"
                       >
-                        {deletingIds.has(hymn.id) ? "Deleting..." : "Delete"}
+                        {deletingIds.has(hymn.id) ? "삭제 중..." : "삭제"}
                       </button>
                     </td>
                   </tr>
@@ -245,7 +245,7 @@ export default function HymnListPage() {
 
       {!loading && !error && (
         <p className="text-sm text-slate-500">
-          Showing {filteredHymns.length.toLocaleString("ko-KR")} of {hymns.length.toLocaleString("ko-KR")} hymns.
+          표시 {filteredHymns.length.toLocaleString("ko-KR")}건 / 전체 {hymns.length.toLocaleString("ko-KR")}건
         </p>
       )}
     </div>

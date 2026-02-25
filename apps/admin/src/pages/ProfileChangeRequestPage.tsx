@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   listProfileChangeRequests,
   reviewProfileChangeRequest,
@@ -14,22 +14,22 @@ function formatDateTime(value: string | null): string {
 function statusLabel(status: ProfileChangeRequestStatus): string {
   switch (status) {
     case "APPROVED":
-      return "Approved";
+      return "승인됨";
     case "REJECTED":
-      return "Rejected";
+      return "반려됨";
     default:
-      return "Pending";
+      return "대기중";
   }
 }
 
 function genderLabel(gender: string | null | undefined): string {
   switch ((gender ?? "").trim().toUpperCase()) {
     case "MALE":
-      return "Male";
+      return "남성";
     case "FEMALE":
-      return "Female";
+      return "여성";
     default:
-      return "Unknown";
+      return "미상";
   }
 }
 
@@ -54,7 +54,7 @@ export default function ProfileChangeRequestPage() {
       const data = await listProfileChangeRequests(statusFilter);
       setItems(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load profile change requests.");
+      setError(err instanceof Error ? err.message : "프로필 변경 요청 목록을 불러오지 못했습니다.");
     } finally {
       setLoading(false);
     }
@@ -70,12 +70,13 @@ export default function ProfileChangeRequestPage() {
     if (busyId) return;
     setBusyId(item.id);
     setNotice(null);
+    setError(null);
     try {
       await reviewProfileChangeRequest(item.id, { action: "APPROVE" });
-      setNotice("Request approved.");
+      setNotice("요청을 승인했습니다.");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to approve request.");
+      setError(err instanceof Error ? err.message : "요청 승인에 실패했습니다.");
     } finally {
       setBusyId(null);
     }
@@ -83,20 +84,21 @@ export default function ProfileChangeRequestPage() {
 
   const handleReject = async (item: ProfileChangeRequestResponse) => {
     if (busyId) return;
-    const reason = window.prompt("Enter reject reason (optional)", "");
+    const reason = window.prompt("반려 사유를 입력하세요. (선택)", "");
     if (reason === null) return;
 
     setBusyId(item.id);
     setNotice(null);
+    setError(null);
     try {
       await reviewProfileChangeRequest(item.id, {
         action: "REJECT",
         rejectReason: reason.trim() || undefined,
       });
-      setNotice("Request rejected.");
+      setNotice("요청을 반려했습니다.");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reject request.");
+      setError(err instanceof Error ? err.message : "요청 반려에 실패했습니다.");
     } finally {
       setBusyId(null);
     }
@@ -104,54 +106,59 @@ export default function ProfileChangeRequestPage() {
 
   return (
     <div className="space-y-4">
-      <section className="soy-panel">
-        <div className="soy-panel-header">
+      <section className="soy-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="soy-kicker">Review Queue</p>
-            <h2 className="soy-title">Profile Change Requests</h2>
-            <p className="soy-description">Approve or reject requested profile updates from users.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">검수 큐</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-900">프로필 변경 요청</h2>
+            <p className="mt-1 text-sm text-slate-500">사용자 프로필 변경 요청을 승인 또는 반려합니다.</p>
           </div>
           <div className="flex items-center gap-2">
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as ProfileChangeRequestStatus)}
-              className="soy-select w-[180px]"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
+              <option value="PENDING">대기중</option>
+              <option value="APPROVED">승인됨</option>
+              <option value="REJECTED">반려됨</option>
             </select>
-            <button type="button" onClick={() => void load()} disabled={loading} className="soy-btn soy-btn-secondary">
-              Reload
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            >
+              새로고침
             </button>
           </div>
         </div>
 
         <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
-          Current list: {items.length.toLocaleString("ko-KR")} | Pending: {pendingCount.toLocaleString("ko-KR")}
+          현재 목록: {items.length.toLocaleString("ko-KR")}건 | 대기중: {pendingCount.toLocaleString("ko-KR")}건
         </div>
       </section>
 
-      {notice && <div className="soy-alert soy-alert-success">{notice}</div>}
-      {error && <div className="soy-alert soy-alert-error">{error}</div>}
+      {notice && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{notice}</div>}
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
 
-      <section className="soy-panel p-0">
-        <div className="soy-table-wrap">
-          <table className="soy-table min-w-[1080px]">
-            <thead>
+      <section className="soy-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-[1080px] w-full text-left">
+            <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
-                <th>User</th>
-                <th>Requested Profile</th>
-                <th>Status</th>
-                <th>Requested / Reviewed</th>
-                <th>Review</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600">사용자</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600">요청 프로필</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600">상태</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600">요청/검수 시각</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600">검수</th>
               </tr>
             </thead>
             <tbody>
               {!loading && items.length === 0 && (
                 <tr>
-                  <td colSpan={5}>
-                    <div className="soy-empty m-3">No requests for this status.</div>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-400">
+                    선택한 상태의 요청이 없습니다.
                   </td>
                 </tr>
               )}
@@ -159,47 +166,49 @@ export default function ProfileChangeRequestPage() {
               {items.map((item) => {
                 const isBusy = busyId === item.id;
                 return (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="font-semibold text-slate-900">{item.userDisplayName ?? "(No display name)"}</div>
+                  <tr key={item.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-slate-900">{item.userDisplayName ?? "(표시 이름 없음)"}</div>
                       <div className="mt-1 font-mono text-xs text-slate-500">{item.userId}</div>
                     </td>
-                    <td>
-                      <div>Church: {item.churchName}</div>
-                      <div>Name: {item.name}</div>
-                      <div>Group: {item.group}</div>
-                      <div>Gender: {genderLabel(item.gender)}</div>
-                      {item.rejectReason && <div className="mt-1 text-xs text-red-600">Reject reason: {item.rejectReason}</div>}
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      <div>교회: {item.churchName}</div>
+                      <div>이름: {item.name}</div>
+                      <div>구역: {item.group}</div>
+                      <div>성별: {genderLabel(item.gender)}</div>
+                      {item.rejectReason && <div className="mt-1 text-xs text-red-600">반려 사유: {item.rejectReason}</div>}
                     </td>
-                    <td>
-                      <span className={`soy-pill ${statusClass(item.status)}`}>{statusLabel(item.status)}</span>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusClass(item.status)}`}>
+                        {statusLabel(item.status)}
+                      </span>
                     </td>
-                    <td className="text-xs text-slate-600">
-                      <div>Requested: {formatDateTime(item.requestedAt)}</div>
-                      <div>Reviewed: {formatDateTime(item.reviewedAt)}</div>
+                    <td className="px-4 py-3 text-xs text-slate-600">
+                      <div>요청: {formatDateTime(item.requestedAt)}</div>
+                      <div>검수: {formatDateTime(item.reviewedAt)}</div>
                     </td>
-                    <td>
+                    <td className="px-4 py-3 text-sm">
                       {item.status === "PENDING" ? (
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() => void handleApprove(item)}
                             disabled={isBusy}
-                            className="soy-btn bg-emerald-600 text-white hover:bg-emerald-700"
+                            className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
                           >
-                            Approve
+                            {isBusy ? "처리 중..." : "승인"}
                           </button>
                           <button
                             type="button"
                             onClick={() => void handleReject(item)}
                             disabled={isBusy}
-                            className="soy-btn soy-btn-secondary text-red-700"
+                            className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
                           >
-                            Reject
+                            {isBusy ? "처리 중..." : "반려"}
                           </button>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-500">Completed</span>
+                        <span className="text-xs text-slate-500">처리 완료</span>
                       )}
                     </td>
                   </tr>
