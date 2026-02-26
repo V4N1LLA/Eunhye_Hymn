@@ -267,19 +267,11 @@ export default function Layout() {
             mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
-          <div className="flex h-14 items-center justify-between border-b border-slate-200 px-3">
-            <NavLink to="/" className="flex min-w-0 items-center gap-2 overflow-hidden">
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-100 text-sm font-bold text-indigo-700">
-                EH
-              </span>
-              {!siderCollapsed && (
-                <span className="truncate text-sm font-semibold text-slate-900">은혜찬양 관리자</span>
-              )}
-            </NavLink>
+          <div className="flex h-14 items-center justify-end border-b border-slate-200 px-3">
             <button
               type="button"
               onClick={() => setSiderCollapsed((prev) => !prev)}
-              className="hidden h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 lg:inline-flex"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50"
               aria-label="사이드바 너비 전환"
               title={siderCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
             >

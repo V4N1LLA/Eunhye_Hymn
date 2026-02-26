@@ -38,6 +38,14 @@
   - `cd apps/admin && npx tsc --noEmit`
   - `cd apps/admin && npm run build`
 
+### Admin sidebar top-line simplification
+- Updated sidebar top row to show menu toggle button only
+  - `apps/admin/src/components/Layout.tsx`
+  - Removed logo/title block from the top header line
+- Verification
+  - `cd apps/admin && npx tsc --noEmit`
+  - `cd apps/admin && npm run build`
+
 ## 2026-02-25
 
 ### Korean terminology standardization (user-facing)
