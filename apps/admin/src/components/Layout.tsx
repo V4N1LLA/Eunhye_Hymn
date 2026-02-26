@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -7,6 +7,7 @@ type NavItem = {
   label: string;
   desc: string;
   matchPrefix?: string;
+  icon: ReactNode;
 };
 
 type NotificationItem = {
@@ -14,19 +15,88 @@ type NotificationItem = {
   title: string;
   message: string;
   timeLabel: string;
+  to: string;
   read: boolean;
 };
 
+function NavIcon({ path }: { path: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+      <path
+        d={path}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "대시보드", desc: "운영 현황과 핵심 지표" },
-  { to: "/hymns", label: "찬양 관리", desc: "카탈로그와 노출 상태", matchPrefix: "/hymns" },
-  { to: "/assets/upload", label: "에셋 업로드", desc: "악보/미디어 등록", matchPrefix: "/assets" },
-  { to: "/invite-codes", label: "초대 코드", desc: "코드 발급 및 비활성화", matchPrefix: "/invite-codes" },
-  { to: "/users", label: "사용자 관리", desc: "교회/역할/프로필 관리", matchPrefix: "/users" },
-  { to: "/profile-change-requests", label: "프로필 요청", desc: "변경 요청 승인/반려", matchPrefix: "/profile-change-requests" },
-  { to: "/events", label: "감사 이벤트", desc: "사용 로그 조회/내보내기", matchPrefix: "/events" },
-  { to: "/ai/recommendations", label: "AI 추천", desc: "상황 기반 찬양 추천", matchPrefix: "/ai" },
-  { to: "/help", label: "도움말", desc: "권한 및 로그인 가이드", matchPrefix: "/help" },
+  {
+    to: "/",
+    label: "대시보드",
+    desc: "운영 현황과 핵심 지표",
+    icon: <NavIcon path="M4 11.5L12 5l8 6.5V20H4zM9.5 20v-5h5V20" />,
+  },
+  {
+    to: "/hymns",
+    label: "찬양 관리",
+    desc: "카탈로그와 노출 상태",
+    matchPrefix: "/hymns",
+    icon: <NavIcon path="M9 18V7l9-2v11M9 12l9-2M9 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm9-2a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />,
+  },
+  {
+    to: "/assets/upload",
+    label: "에셋 업로드",
+    desc: "악보/미디어 등록",
+    matchPrefix: "/assets",
+    icon: <NavIcon path="M12 15V5m0 0l-4 4m4-4l4 4M5 15v4h14v-4" />,
+  },
+  {
+    to: "/invite-codes",
+    label: "초대 코드",
+    desc: "코드 발급 및 비활성화",
+    matchPrefix: "/invite-codes",
+    icon: <NavIcon path="M8 7h8l3 3-8 8-3-3 1.8-1.8a2 2 0 0 0 0-2.8A2 2 0 0 0 6.8 8.6L8 7zM14 10l1 1" />,
+  },
+  {
+    to: "/users",
+    label: "사용자 관리",
+    desc: "교회/역할/프로필 관리",
+    matchPrefix: "/users",
+    icon: <NavIcon path="M16.5 10a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM7.5 11A3.5 3.5 0 1 0 7.5 4a3.5 3.5 0 0 0 0 7zM3.5 20a4.5 4.5 0 0 1 8 0M13 20a3.5 3.5 0 0 1 7 0" />,
+  },
+  {
+    to: "/profile-change-requests",
+    label: "프로필 요청",
+    desc: "변경 요청 승인/반려",
+    matchPrefix: "/profile-change-requests",
+    icon: <NavIcon path="M8 4h8v4h4v12H8zM16 4v4h4M11 13h6M11 16h6M11 10h3" />,
+  },
+  {
+    to: "/events",
+    label: "감사 이벤트",
+    desc: "사용 로그 조회/내보내기",
+    matchPrefix: "/events",
+    icon: <NavIcon path="M5 6h14M5 12h14M5 18h10M3 6h.01M3 12h.01M3 18h.01" />,
+  },
+  {
+    to: "/ai/recommendations",
+    label: "AI 추천",
+    desc: "상황 기반 찬양 추천",
+    matchPrefix: "/ai",
+    icon: <NavIcon path="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zm6 12l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15zM6 14l.7 1.8L8.5 16l-1.8.7L6 18.5l-.7-1.8L3.5 16l1.8-.7L6 14z" />,
+  },
+  {
+    to: "/help",
+    label: "도움말",
+    desc: "권한 및 로그인 가이드",
+    matchPrefix: "/help",
+    icon: <NavIcon path="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM9.7 9a2.3 2.3 0 1 1 3.6 1.9c-.9.6-1.3 1.1-1.3 2.1M12 16h.01" />,
+  },
 ];
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
@@ -35,6 +105,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     title: "운영 상태 점검",
     message: "이번 주 운영 사이클 로그가 갱신되었습니다. 점검 결과를 확인해 주세요.",
     timeLabel: "5분 전",
+    to: "/events",
     read: false,
   },
   {
@@ -42,6 +113,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     title: "프로필 요청",
     message: "검토 대기 중인 프로필 변경 요청이 있습니다.",
     timeLabel: "23분 전",
+    to: "/profile-change-requests",
     read: false,
   },
   {
@@ -49,9 +121,48 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     title: "AI 추천",
     message: "최근 추천 응답 지표가 기록되었습니다.",
     timeLabel: "1시간 전",
+    to: "/ai/recommendations",
     read: true,
   },
 ];
+
+const NOTIFICATION_STORAGE_KEY = "adminNotifications";
+
+function isNotificationItem(value: unknown): value is NotificationItem {
+  if (!value || typeof value !== "object") return false;
+  const row = value as NotificationItem;
+  return (
+    typeof row.id === "string" &&
+    typeof row.title === "string" &&
+    typeof row.message === "string" &&
+    typeof row.timeLabel === "string" &&
+    typeof row.to === "string" &&
+    typeof row.read === "boolean"
+  );
+}
+
+function loadNotificationsFromStorage(): NotificationItem[] {
+  if (typeof window === "undefined") {
+    return INITIAL_NOTIFICATIONS;
+  }
+  try {
+    const raw = window.localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+    if (!raw) {
+      return INITIAL_NOTIFICATIONS;
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return INITIAL_NOTIFICATIONS;
+    }
+    const normalized = parsed.filter(isNotificationItem);
+    if (normalized.length !== parsed.length) {
+      return INITIAL_NOTIFICATIONS;
+    }
+    return normalized;
+  } catch {
+    return INITIAL_NOTIFICATIONS;
+  }
+}
 
 function resolveCurrentSection(pathname: string): NavItem {
   if (pathname === "/") return NAV_ITEMS[0];
@@ -59,7 +170,7 @@ function resolveCurrentSection(pathname: string): NavItem {
 }
 
 function sidebarLinkClass(isActive: boolean): string {
-  const base = "group flex items-start justify-between rounded-lg border px-3 py-2.5 text-sm transition";
+  const base = "group flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition";
   if (isActive) {
     return `${base} border-indigo-200 bg-indigo-50 text-indigo-900`;
   }
@@ -84,7 +195,7 @@ export default function Layout() {
   const [siderCollapsed, setSiderCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => loadNotificationsFromStorage());
   const notificationLayerRef = useRef<HTMLDivElement | null>(null);
   const currentSection = useMemo(() => resolveCurrentSection(location.pathname), [location.pathname]);
   const host = window.location.host;
@@ -115,19 +226,29 @@ export default function Layout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [notificationsOpen]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notifications));
+    } catch {
+      // ignore storage failures
+    }
+  }, [notifications]);
+
   const handleLogout = async () => {
     await logout();
     navigate("/login", { replace: true });
   };
 
-  const markNotificationRead = (targetId: string) => {
-    setNotifications((prev) =>
-      prev.map((item) => (item.id === targetId ? { ...item, read: true } : item)),
-    );
-  };
-
   const dismissNotification = (targetId: string) => {
     setNotifications((prev) => prev.filter((item) => item.id !== targetId));
+  };
+
+  const openNotification = (target: NotificationItem) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === target.id ? { ...item, read: true } : item)),
+    );
+    setNotificationsOpen(false);
+    navigate(target.to);
   };
 
   const markAllNotificationsRead = () => {
@@ -182,11 +303,25 @@ export default function Layout() {
               {NAV_ITEMS.map((item) => (
                 <NavLink key={item.to} to={item.to} end={item.to === "/"}>
                   {({ isActive }) => (
-                    <div className={sidebarLinkClass(isActive)}>
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold">{siderCollapsed ? item.label.slice(0, 1) : item.label}</div>
-                        {!siderCollapsed && <div className="mt-0.5 truncate text-xs text-slate-500">{item.desc}</div>}
-                      </div>
+                    <div
+                      className={`${sidebarLinkClass(isActive)} ${siderCollapsed ? "justify-center px-2.5" : ""}`}
+                      title={siderCollapsed ? item.label : undefined}
+                    >
+                      <span
+                        className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition ${
+                          isActive
+                            ? "bg-indigo-100 text-indigo-700"
+                            : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
+                        }`}
+                      >
+                        {item.icon}
+                      </span>
+                      {!siderCollapsed && (
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold">{item.label}</div>
+                          <div className="mt-0.5 truncate text-xs text-slate-500">{item.desc}</div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </NavLink>
@@ -275,7 +410,7 @@ export default function Layout() {
                             <li key={item.id} className="flex items-start gap-2 border-b border-slate-100 px-2 py-2 last:border-b-0">
                               <button
                                 type="button"
-                                onClick={() => markNotificationRead(item.id)}
+                                onClick={() => openNotification(item)}
                                 className={`min-w-0 flex-1 rounded-lg px-2 py-2 text-left transition ${
                                   item.read
                                     ? "bg-slate-50 text-slate-500 opacity-60"

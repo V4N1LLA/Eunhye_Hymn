@@ -22,6 +22,22 @@
   - `cd apps/admin && npx tsc --noEmit`
   - `cd apps/admin && npm run build`
 
+### Admin notification persistence/navigation follow-up
+- Refined notification behavior in admin layout
+  - `apps/admin/src/components/Layout.tsx`
+  - Notification click now:
+    - marks item as read
+    - routes to related admin page (`to`)
+    - closes dropdown
+  - Notification read/dismiss state now persists across refresh via `localStorage` (`adminNotifications`)
+- Refined collapsed sidebar UX
+  - Replaced one-letter collapsed labels with icon-only navigation buttons
+  - Expanded state shows icon + label + description; collapsed state shows icon with tooltip
+- Verification
+  - `cd apps/admin && npm run test`
+  - `cd apps/admin && npx tsc --noEmit`
+  - `cd apps/admin && npm run build`
+
 ## 2026-02-25
 
 ### Korean terminology standardization (user-facing)
