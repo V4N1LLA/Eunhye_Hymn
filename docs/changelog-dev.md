@@ -2,6 +2,26 @@
 
 작업 단위별 핵심 변경만 기록한다. 상세 구현은 각 PR 본문과 커밋 로그를 참고한다.
 
+## 2026-02-26
+
+### Admin notification interaction + wording cleanup
+- Improved header notification panel UX in admin layout
+  - `apps/admin/src/components/Layout.tsx`
+  - Added dropdown notification list with:
+    - item click -> keep item and mark as read (dimmed style)
+    - per-item dismiss (`x`) button
+    - `모두 읽음` action
+  - Updated unread badge count to reflect unread items only
+- Replaced sidebar width toggle text icon (`<` / `>`) with hamburger-style menu icon
+  - `apps/admin/src/components/Layout.tsx`
+- Removed user-facing `예배` wording from admin page copy
+  - `apps/admin/src/pages/AiRecommendationPage.tsx`
+  - Updated descriptions and placeholder to neutral wording (`모임`, `말씀`)
+- Verification
+  - `cd apps/admin && npm run test`
+  - `cd apps/admin && npx tsc --noEmit`
+  - `cd apps/admin && npm run build`
+
 ## 2026-02-25
 
 ### Korean terminology standardization (user-facing)
@@ -10,6 +30,26 @@
   - `apps/admin/src/pages/AiRecommendationPage.tsx`
   - `apps/mobile/lib/src/features/hymn/hymn_recommendation_page.dart`
   - `docs/api-contract.md`
+
+### Auth/AI failure-rate ops alert baseline
+- Added scheduler-based threshold evaluation for auth/AI metric alerts
+  - `apps/api/src/main/java/com/eunhyehymn/infrastructure/scheduling/AuthAiOpsAlertScheduler.java`
+  - Evaluates:
+    - auth failure rate from `auth_requests_total`
+    - AI failure rate from `ai_recommend_requests_total`
+    - AI fallback ratio from `ai_recommend_fallback_total`
+  - Default thresholds:
+    - auth failure > 5% (min samples 100)
+    - AI failure > 1% (min samples 30)
+    - AI fallback > 5% (min samples 30)
+  - Schedule defaults: every 10 minutes (`ops.auth-ai-alert.cron`)
+- Added focused unit tests
+  - `apps/api/src/test/java/com/eunhyehymn/infrastructure/scheduling/AuthAiOpsAlertSchedulerTest.java`
+- Synced env/docs
+  - `apps/api/.env.example`
+  - `.env.example`
+  - `docs/dev-guide.md`
+  - `docs/runbook.md`
 
 ## 2026-02-24
 

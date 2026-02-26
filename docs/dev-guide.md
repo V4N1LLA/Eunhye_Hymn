@@ -97,6 +97,19 @@ cd apps/mobile
 - `AI_RECOMMEND_MAX_CANDIDATE_HYMNS`, `AI_RECOMMEND_MAX_RESULTS`, `AI_RECOMMEND_MAX_SITUATION_CHARS`
 - 운영 관측 지표(Micrometer): `ai_recommend_requests_total`, `ai_recommend_latency_seconds`, `ai_recommend_fallback_total`, `ai_recommend_candidate_count`, `ai_recommend_response_items`
 
+### 5.6 Auth/AI 운영 알림 임계값
+- `OPS_AUTH_AI_ALERT_ENABLED`
+- `OPS_AUTH_AI_ALERT_MIN_AUTH_REQUESTS`, `OPS_AUTH_AI_ALERT_MIN_AI_REQUESTS`
+- `OPS_AUTH_AI_ALERT_MAX_AUTH_FAILURE_RATE_PERCENT`
+- `OPS_AUTH_AI_ALERT_MAX_AI_FAILURE_RATE_PERCENT`
+- `OPS_AUTH_AI_ALERT_MAX_AI_FALLBACK_RATE_PERCENT`
+- `OPS_AUTH_AI_ALERT_AUTH_SCOPES` (기본: `admin_login,social_login,user_signup,user_login,invite_validate`)
+- `OPS_AUTH_AI_ALERT_CRON`, `OPS_AUTH_AI_ALERT_ZONE`
+- 기본 판정(10분 주기):
+  - 인증 실패율(`auth_requests_total`) > 5% and 샘플 >= 100 -> WARN 로그
+  - AI 실패율(`ai_recommend_requests_total`) > 1% and 샘플 >= 30 -> WARN 로그
+  - AI fallback 비율(`ai_recommend_fallback_total`) > 5% and 샘플 >= 30 -> WARN 로그
+
 ## 6. Flyway/테스트 DB
 - `V1__baseline.sql`은 베이스라인용 빈 파일이다.
 - 실제 스키마는 `V2__init.sql` 이후 마이그레이션에서 생성한다.

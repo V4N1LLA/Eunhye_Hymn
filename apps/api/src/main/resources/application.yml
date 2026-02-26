@@ -104,3 +104,15 @@ ai:
     max-candidate-hymns: ${AI_RECOMMEND_MAX_CANDIDATE_HYMNS:25}
     max-results: ${AI_RECOMMEND_MAX_RESULTS:3}
     max-situation-chars: ${AI_RECOMMEND_MAX_SITUATION_CHARS:180}
+
+ops:
+  auth-ai-alert:
+    enabled: ${OPS_AUTH_AI_ALERT_ENABLED:true}
+    min-auth-requests: ${OPS_AUTH_AI_ALERT_MIN_AUTH_REQUESTS:100}
+    min-ai-requests: ${OPS_AUTH_AI_ALERT_MIN_AI_REQUESTS:30}
+    max-auth-failure-rate-percent: ${OPS_AUTH_AI_ALERT_MAX_AUTH_FAILURE_RATE_PERCENT:5}
+    max-ai-failure-rate-percent: ${OPS_AUTH_AI_ALERT_MAX_AI_FAILURE_RATE_PERCENT:1}
+    max-ai-fallback-rate-percent: ${OPS_AUTH_AI_ALERT_MAX_AI_FALLBACK_RATE_PERCENT:5}
+    auth-scopes: ${OPS_AUTH_AI_ALERT_AUTH_SCOPES:admin_login,social_login,user_signup,user_login,invite_validate}
+    cron: ${OPS_AUTH_AI_ALERT_CRON:0 */10 * * * *}
+    zone: ${OPS_AUTH_AI_ALERT_ZONE:UTC}

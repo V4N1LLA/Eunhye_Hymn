@@ -126,6 +126,11 @@
 - 주 1회 AI 추천 운영 지표 점검
   - `ai_recommend_requests_total`, `ai_recommend_latency_seconds`, `ai_recommend_fallback_total`
   - 기준: success rate >= 99%, p95 latency <= 2.0s, fallback ratio <= 5%
+- API Auth/AI 임계값 스케줄러(기본 10분 주기) 운영
+  - 인증 실패율(`auth_requests_total`, scope: `admin_login,social_login,user_signup,user_login,invite_validate`) > 5% and 샘플 >= 100 -> WARN
+  - AI 실패율(`ai_recommend_requests_total`) > 1% and 샘플 >= 30 -> WARN
+  - AI fallback 비율(`ai_recommend_fallback_total`) > 5% and 샘플 >= 30 -> WARN
+  - 조정 변수: `OPS_AUTH_AI_ALERT_*`
 - 월 1회 롤백 시나리오 점검
 
 ## 10. Mobile Store Failure Recovery
