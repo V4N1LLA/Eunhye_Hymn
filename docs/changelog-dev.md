@@ -4,6 +4,23 @@
 
 ## 2026-02-26
 
+### Auth/AI ops alert delta-window refactor (review follow-up)
+- Refactored auth/AI ops alert snapshot evaluation to use per-run deltas instead of process-lifetime totals
+  - `apps/api/src/main/java/com/eunhyehymn/infrastructure/scheduling/AuthAiOpsAlertScheduler.java`
+  - behavior:
+    - stores previous raw counter snapshot in memory
+    - computes current-run window as `current - previous` (non-negative clamp)
+    - first run is warm-up only (no alert sample)
+- Updated tests for delta-based behavior
+  - `apps/api/src/test/java/com/eunhyehymn/infrastructure/scheduling/AuthAiOpsAlertSchedulerTest.java`
+  - verifies:
+    - warm-up run does not breach
+    - second run evaluates scoped auth deltas
+    - AI failure/fallback breach checks use delta window
+    - min-sample gate still works on delta counts
+- Verification
+  - `cd apps/api && .\\gradlew.bat test --tests "*AuthAiOpsAlertSchedulerTest*" --no-daemon --stacktrace`
+
 ### Admin notification interaction + wording cleanup
 - Improved header notification panel UX in admin layout
   - `apps/admin/src/components/Layout.tsx`

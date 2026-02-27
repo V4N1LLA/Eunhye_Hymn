@@ -1,7 +1,7 @@
 ﻿# CLAUDE.md - Eunhye Hymn 프로젝트 컨텍스트
 
 > 이 파일은 Claude Code가 프로젝트를 빠르게 파악하고 작업할 수 있도록 작성된 종합 레퍼런스입니다.
-> 마지막 업데이트: 2026-02-26
+> 마지막 업데이트: 2026-02-27
 > 정합성 기준 문서: `docs/api-contract.md`, `docs/data-model.md`, `.env.example`, `apps/api/.env.example`
 
 ---
@@ -27,6 +27,9 @@
   - `AuthAiOpsAlertScheduler` 신규 추가 (`apps/api`)
   - 기본 기준: auth 실패율 5%(min 100), AI 실패율 1%(min 30), AI fallback 5%(min 30)
   - 환경변수 `OPS_AUTH_AI_ALERT_*`로 임계값/스케줄 조정
+- Auth/AI 임계값 계산 로직 정밀화(코드리뷰 후속)
+  - 누적 counter 총합 대신 스케줄 실행 간 delta(`current - previous`)로 비율 계산
+  - 첫 실행은 baseline 수집만 수행하고 알림 판정은 스킵
 - Admin UI 용어/알림 UX 조정
   - 알림 패널: 항목 클릭 시 읽음 처리(유지), 개별 삭제(`x`), `모두 읽음` 추가
   - 사이드바 접기/펼치기 버튼: `<`/`>` 텍스트 대신 햄버거 아이콘 사용

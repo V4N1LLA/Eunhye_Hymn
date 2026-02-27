@@ -31,6 +31,8 @@ public class AuthAiOpsAlertScheduler {
     private final double maxAiFailureRatePercent;
     private final double maxAiFallbackRatePercent;
     private final List<String> authScopes;
+    private final Object snapshotLock = new Object();
+    private RawCounts previousRawCounts;
 
     public AuthAiOpsAlertScheduler(
         MeterRegistry meterRegistry,
@@ -99,20 +101,50 @@ public class AuthAiOpsAlertScheduler {
     }
 
     OpsSnapshot evaluateSnapshot() {
+        synchronized (snapshotLock) {
+            RawCounts current = collectRawCounts();
+            RawCounts baseline = previousRawCounts;
+            previousRawCounts = current;
+
+            if (baseline == null) {
+                return buildSnapshot(0.0, 0.0, 0.0, 0.0, 0.0);
+            }
+
+            double authSuccessDelta = nonNegativeDelta(current.authSuccessCount(), baseline.authSuccessCount());
+            double authFailureDelta = nonNegativeDelta(current.authFailureCount(), baseline.authFailureCount());
+            double aiSuccessDelta = nonNegativeDelta(current.aiSuccessCount(), baseline.aiSuccessCount());
+            double aiTotalDelta = nonNegativeDelta(current.aiTotalCount(), baseline.aiTotalCount());
+            double aiFailureDelta = Math.max(0.0, aiTotalDelta - aiSuccessDelta);
+            double aiFallbackDelta = nonNegativeDelta(current.aiFallbackCount(), baseline.aiFallbackCount());
+
+            return buildSnapshot(authSuccessDelta, authFailureDelta, aiSuccessDelta, aiFailureDelta, aiFallbackDelta);
+        }
+    }
+
+    private RawCounts collectRawCounts() {
         double authSuccessCount = 0.0;
         double authFailureCount = 0.0;
         for (String scope : authScopes) {
             authSuccessCount += counterValue("auth_requests_total", "scope", scope, "result", "success");
             authFailureCount += counterValue("auth_requests_total", "scope", scope, "result", "failure");
         }
-        double authTotal = authSuccessCount + authFailureCount;
-        double authFailureRatePercent = toRatePercent(authFailureCount, authTotal);
-
         double aiSuccessCount = counterValue("ai_recommend_requests_total", "result", "success");
         double aiTotalCount = sumCounters("ai_recommend_requests_total");
-        double aiFailureCount = Math.max(0.0, aiTotalCount - aiSuccessCount);
-        double aiFailureRatePercent = toRatePercent(aiFailureCount, aiTotalCount);
         double aiFallbackCount = sumCounters("ai_recommend_fallback_total");
+        return new RawCounts(authSuccessCount, authFailureCount, aiSuccessCount, aiTotalCount, aiFallbackCount);
+    }
+
+    private OpsSnapshot buildSnapshot(
+        double authSuccessCount,
+        double authFailureCount,
+        double aiSuccessCount,
+        double aiFailureCount,
+        double aiFallbackCount
+    ) {
+        double authTotal = authSuccessCount + authFailureCount;
+        double aiTotalCount = aiSuccessCount + aiFailureCount;
+        double authFailureRatePercent = toRatePercent(authFailureCount, authTotal);
+        double aiFailureRatePercent = toRatePercent(aiFailureCount, aiTotalCount);
         double aiFallbackRatePercent = toRatePercent(aiFallbackCount, aiTotalCount);
 
         return new OpsSnapshot(
@@ -201,6 +233,10 @@ public class AuthAiOpsAlertScheduler {
         return (numerator * 100.0) / denominator;
     }
 
+    private static double nonNegativeDelta(double current, double baseline) {
+        return Math.max(0.0, current - baseline);
+    }
+
     public record OpsSnapshot(
         double authSuccessCount,
         double authFailureCount,
@@ -226,6 +262,15 @@ public class AuthAiOpsAlertScheduler {
         int minSampleCount,
         boolean sampleReady,
         boolean breached
+    ) {
+    }
+
+    private record RawCounts(
+        double authSuccessCount,
+        double authFailureCount,
+        double aiSuccessCount,
+        double aiTotalCount,
+        double aiFallbackCount
     ) {
     }
 }
