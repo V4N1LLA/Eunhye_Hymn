@@ -51,12 +51,12 @@ export default function AiRecommendationPage() {
       <section className="soy-panel">
         <p className="soy-kicker">AI 도우미</p>
         <h2 className="soy-title">찬양 추천</h2>
-        <p className="soy-description">예배/모임 상황을 입력하면 상황 기반 추천 목록을 제공합니다.</p>
+        <p className="soy-description">모임/말씀 상황을 입력하면 상황 기반 추천 목록을 제공합니다.</p>
 
         <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
           <p className="font-semibold text-slate-900">사용 방법</p>
           <p className="mt-1">1) 상황 입력 2) 추천 개수 선택 3) 추천 실행</p>
-          <p className="mt-1 text-xs text-slate-500">최종 선택은 예배 목적/대상에 맞게 운영자가 확인해 주세요.</p>
+          <p className="mt-1 text-xs text-slate-500">최종 선택은 모임 목적/대상에 맞게 운영자가 확인해 주세요.</p>
         </div>
       </section>
 
@@ -69,7 +69,7 @@ export default function AiRecommendationPage() {
               onChange={(event) => setSituation(event.target.value)}
               rows={4}
               maxLength={180}
-              placeholder="예: 주일 예배, 차분한 묵상 분위기"
+              placeholder="예: 주일 말씀 나눔, 차분한 묵상 분위기"
               className="soy-textarea"
             />
             <div className="mt-1 text-xs text-slate-500">{situation.trim().length}/180</div>
